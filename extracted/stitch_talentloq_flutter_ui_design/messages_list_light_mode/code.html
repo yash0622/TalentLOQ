@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TalentLOQ | Messages</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-effect {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        body {
+            background-color: #f7f9fb;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .conversations-scroll {
+            height: calc(100vh - 144px); /* TopAppBar (64px) + BottomNavBar (80px) */
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+        .conversations-scroll::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary-fixed-dim": "#c3c0ff",
+                      "on-tertiary-fixed": "#25005a",
+                      "text-secondary": "#475569",
+                      "on-error-container": "#93000a",
+                      "on-error": "#ffffff",
+                      "background": "#f7f9fb",
+                      "surface-container": "#eceef0",
+                      "primary-fixed": "#e2dfff",
+                      "surface-container-highest": "#e0e3e5",
+                      "surface-container-high": "#e6e8ea",
+                      "outline-variant": "#c7c4d8",
+                      "surface-container-low": "#f2f4f6",
+                      "warning": "#F59E0B",
+                      "inverse-on-surface": "#eff1f3",
+                      "primary-container": "#3525cd",
+                      "on-secondary": "#ffffff",
+                      "on-secondary-container": "#fffbff",
+                      "success": "#22C55E",
+                      "surface-tint": "#4d44e3",
+                      "on-primary-fixed-variant": "#3323cc",
+                      "outline": "#777587",
+                      "tertiary-fixed": "#eaddff",
+                      "on-primary": "#ffffff",
+                      "tertiary-fixed-dim": "#d2bbff",
+                      "on-surface-variant": "#464555",
+                      "text-primary": "#111827",
+                      "on-tertiary-fixed-variant": "#5a00c6",
+                      "on-tertiary-container": "#c5a9ff",
+                      "on-secondary-fixed-variant": "#2e2ebe",
+                      "on-primary-fixed": "#0f0069",
+                      "primary": "#1e00a9",
+                      "surface": "#f7f9fb",
+                      "surface-container-lowest": "#ffffff",
+                      "inverse-primary": "#c3c0ff",
+                      "error-container": "#ffdad6",
+                      "tertiary": "#400091",
+                      "surface-glass": "rgba(255, 255, 255, 0.7)",
+                      "on-primary-container": "#b1afff",
+                      "on-background": "#191c1e",
+                      "error": "#EF4444",
+                      "on-surface": "#191c1e",
+                      "surface-variant": "#e0e3e5",
+                      "secondary-fixed": "#e1e0ff",
+                      "surface-dim": "#d8dadc",
+                      "surface-bright": "#f7f9fb",
+                      "on-secondary-fixed": "#06006c",
+                      "secondary-container": "#6063ee",
+                      "inverse-surface": "#2d3133",
+                      "on-tertiary": "#ffffff",
+                      "tertiary-container": "#5c00c9",
+                      "secondary-fixed-dim": "#c0c1ff",
+                      "secondary": "#4648d4"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "card-gap": "12px",
+                      "container-padding": "20px",
+                      "section-margin": "32px",
+                      "gutter": "16px",
+                      "base": "8px"
+              },
+              "fontFamily": {
+                      "headline-md": ["Plus Jakarta Sans"],
+                      "headline-sm": ["Plus Jakarta Sans"],
+                      "display-lg": ["Plus Jakarta Sans"],
+                      "label-md": ["Inter"],
+                      "title-lg": ["Inter"],
+                      "label-sm": ["Inter"],
+                      "body-md": ["Inter"],
+                      "body-lg": ["Inter"]
+              },
+              "fontSize": {
+                      "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                      "title-lg": ["18px", {"lineHeight": "26px", "fontWeight": "600"}],
+                      "label-sm": ["11px", {"lineHeight": "14px", "fontWeight": "600"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "headline-sm-mobile": ["18px", {"lineHeight": "24px", "fontWeight": "600"}]
+              }
+            },
+          },
+        }
+      </script>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface-glass backdrop-blur-md shadow-sm h-16 flex justify-between items-center px-container-padding">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/10">
+<img class="w-full h-full object-cover" data-alt="A high-quality professional portrait of a young student for a profile avatar. The student is smiling warmly against a soft-focus office background with natural lighting. The style is clean, modern, and corporate-appropriate, using a palette of soft blues and whites to match a professional tech platform aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAAnWUSzwK8Gf32awwE1eVHSLtElGEg0iytlYrzlNnvny9iecvvUr4YSvKy90MkxCCjxHwrit6Axn-guU29I38Fd8kJEyRllUGrUVX8ZQ5wyspiw-pVDOcTHLXp7dpd_Kb2FwqS-R3xbg9vZXBOVfd2_vrsIQ1-nN2bIxLVWUgriQx_JEWg9EHa_UMJO5TJ3iVnbhVW3aPybOaxP4XLU_bVToQi37L9seSkL7vBagTbjC7YaT6s_vEh"/>
+</div>
+<h1 class="font-headline-md text-headline-md text-primary tracking-tight">TalentLOQ</h1>
+</div>
+<button class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-container-low transition-colors active:scale-95 duration-150 text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</header>
+<!-- Main Content Area -->
+<main class="pt-16 pb-20 max-w-4xl mx-auto">
+<!-- Search and Filter Section -->
+<div class="px-container-padding py-4 sticky top-16 bg-surface/90 backdrop-blur-sm z-40">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full pl-12 pr-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-full text-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" placeholder="Search conversations..." type="text"/>
+</div>
+<div class="flex gap-2 mt-4 overflow-x-auto pb-2 -mx-container-padding px-container-padding no-scrollbar">
+<button class="px-4 py-2 rounded-full bg-primary text-white text-label-md font-semibold whitespace-nowrap">All Messages</button>
+<button class="px-4 py-2 rounded-full bg-surface-container border border-outline-variant text-on-surface-variant text-label-md font-semibold whitespace-nowrap hover:bg-surface-container-high transition-colors">Unread</button>
+<button class="px-4 py-2 rounded-full bg-surface-container border border-outline-variant text-on-surface-variant text-label-md font-semibold whitespace-nowrap hover:bg-surface-container-high transition-colors">Recruiters</button>
+<button class="px-4 py-2 rounded-full bg-surface-container border border-outline-variant text-on-surface-variant text-label-md font-semibold whitespace-nowrap hover:bg-surface-container-high transition-colors">Interviews</button>
+</div>
+</div>
+<!-- Conversations List -->
+<section class="conversations-scroll px-container-padding space-y-2">
+<!-- Message Item (Unread) -->
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant shadow-[0_4px_20px_-4px_rgba(79,70,229,0.08)] flex items-center gap-4 cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98] duration-150">
+<div class="relative flex-shrink-0">
+<div class="w-14 h-14 rounded-full overflow-hidden bg-surface-container border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A professional recruiter headshot with a friendly and approachable expression. The individual is a middle-aged professional in a modern, brightly lit office environment. The lighting is crisp and the background features subtle tech-office elements like glass partitions and indoor plants, fitting a high-end corporate career platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAueXTT4dxwnnB9RwLxLd2EdyXJjFBZG5Yg90QyAOfZ7DgNdVesDGUHYNyHjXERcWqPHacXA0QZWgYkeuTnjWvKEIsgrrYGUqeR_bKOrbKTvwF3l3iL0XSQB1cqtJoFQb8VFoXFhf076oUZpSAxcJ8icEr3UQD4gy0qLqJAI5OcUwArjmcRP1Sspi6LA7yiReQSG0EfdMqt1MFIruAqb4mTpaDYrmgsyBHu4Dk4Gyd_qHjNnFhHbfS8"/>
+</div>
+<div class="absolute bottom-0 right-0 w-4 h-4 bg-success border-2 border-surface-container-lowest rounded-full"></div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-title-lg text-text-primary truncate">Sarah Jenkins</h3>
+<span class="text-label-sm text-primary font-bold">10:45 AM</span>
+</div>
+<div class="flex justify-between items-center">
+<p class="text-body-md text-on-surface-variant truncate font-semibold">Goldman Sachs • Great news! We'd like to schedule your final interview...</p>
+<span class="ml-2 bg-primary-container text-white text-[10px] px-2 py-0.5 rounded-full font-bold">2</span>
+</div>
+</div>
+</div>
+<!-- Message Item -->
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/50 flex items-center gap-4 cursor-pointer hover:bg-surface-container-low transition-colors active:scale-[0.98] duration-150">
+<div class="relative flex-shrink-0">
+<div class="w-14 h-14 rounded-full overflow-hidden bg-surface-container border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A professional portrait of a senior tech recruiter for a large corporation. The man has a confident smile and is wearing smart-casual business attire. The setting is a contemporary corporate lounge with soft warm lighting and a sophisticated navy and grey color scheme that conveys trust and authority." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCyCSJLZ9vjk6jDz9o5kPLSDWNme-pN4UjKAQWp0Hm3ph-O_LbWgYDT2S0Ji1QhXwj18IYDUwgIjWkwNyd-tfmsgpBnIKkhbDhmheGnHCTY4cAK714rJG7NiCvmtVEhWXrBoB28a84xAQLxbpxUIO_HiCtn6QtU6PgYPCywUffyp8j_Bg0OIj-rZBXFEuOvnlYbjSFEsEbyUoDcotw8otJZr7BfPrzV7-Z4HqnSRU-e3oFshCABO1Kb"/>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-title-lg text-text-primary truncate">David Chen</h3>
+<span class="text-label-sm text-outline">Yesterday</span>
+</div>
+<div class="flex justify-between items-center">
+<p class="text-body-md text-on-surface-variant truncate">Google • Thanks for the updated portfolio, David. The team is reviewing...</p>
+</div>
+</div>
+</div>
+<!-- Message Item (Unread) -->
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant shadow-[0_4px_20px_-4px_rgba(79,70,229,0.08)] flex items-center gap-4 cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98] duration-150">
+<div class="relative flex-shrink-0">
+<div class="w-14 h-14 rounded-full overflow-hidden bg-surface-container border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A high-quality image of a diverse recruitment team leader with a welcoming expression. She is in a minimalist, bright architectural space with clean lines and soft shadows. The overall aesthetic is professional, modern, and high-end, using a sophisticated corporate color palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2dFn1iXpAhtQXcxi0br8XUiS5sLyE6sRSquIwAFfiUV-Ju9ZwZNs2P0T3hKn6JR-slQQkSWZ3fVl02u39FeCaj5unzIRK1OPwSnXCrdLXoIMd9TfNSRnyCIdGbbyBhAl-lJCfvv7z2fpawEEt6sum94egoxI03ilwuFxoQjUrptlpVCEjSRTaYf6epp7_0ITLpqmia6_J0DXw-HTqLMswGOZ0CeycFS6BmUkT5W_uJAcJPhr4U0NW"/>
+</div>
+<div class="absolute bottom-0 right-0 w-4 h-4 bg-success border-2 border-surface-container-lowest rounded-full"></div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-title-lg text-text-primary truncate">Elena Rodriguez</h3>
+<span class="text-label-sm text-primary font-bold">2:15 PM</span>
+</div>
+<div class="flex justify-between items-center">
+<p class="text-body-md text-on-surface-variant truncate font-semibold">J.P. Morgan • Your application for the Summer Analyst role has been...</p>
+<span class="ml-2 bg-primary-container text-white text-[10px] px-2 py-0.5 rounded-full font-bold">1</span>
+</div>
+</div>
+</div>
+<!-- Message Item -->
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/50 flex items-center gap-4 cursor-pointer hover:bg-surface-container-low transition-colors active:scale-[0.98] duration-150">
+<div class="relative flex-shrink-0">
+<div class="w-14 h-14 rounded-full overflow-hidden bg-surface-container border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A studio portrait of a young, professional female recruiter in a business setting. She is wearing a modern blazer and has a friendly, professional smile. The background is a clean, neutral gradient with soft studio lighting that highlights her professional demeanor for a career-focused application." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAcjxivu2m3pKgeRF4ZTAWFcWVWIhaOj6lolMsvcJf6N2D1UmskCHhsbQdsVnMxPsB_LravkE2Y-qTyeThCFpF84TUZbJqrGet9lfZPxoo_WB96YZIyez3Wu8esEjde3xzaCyMSxgL9FsUV3D-doRazGw6XAvOM6df29RXREL3acdIoNooBRcD4gF5_DJ74ZwR3-ypxkdSSZJFqJDjSY8lNCI7PdrROIy-X7LawwVCQMWRCsnMH-Ia2"/>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-title-lg text-text-primary truncate">Marcus Thorne</h3>
+<span class="text-label-sm text-outline">Tue</span>
+</div>
+<div class="flex justify-between items-center">
+<p class="text-body-md text-on-surface-variant truncate">Morgan Stanley • The technical assessment has been received. You will hear...</p>
+</div>
+</div>
+</div>
+<!-- Message Item -->
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/50 flex items-center gap-4 cursor-pointer hover:bg-surface-container-low transition-colors active:scale-[0.98] duration-150">
+<div class="relative flex-shrink-0">
+<div class="w-14 h-14 rounded-full overflow-hidden bg-surface-container border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a corporate talent acquisition specialist. He is dressed in business attire against a background of a modern, glass-walled office building during the day. The lighting is natural and bright, emphasizing a clean and corporate look that matches a high-end financial recruitment platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAqGiY_ltcTaKiwUr8o2g-cRImsxy4mwqbL0PyKuekCeTSwihpeDHDvKGrdD4S0uFHjLJODssLSMrRKllV59UtPXOffF6C2gbSqlmCgJ9tmI15vZsbiRjU3lLvUcKrY4A9JdwPWrHDXKbKq9W_sixqWQHbGIYJ14Cx0OXVW5JT99VvVgqXPEAtJyhhuhOipgla-Kk1ep5eTjil8hKSioVTKUlPN2pUX84bHbT48hkW_WfhtG3WjEp-i"/>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-title-lg text-text-primary truncate">Sophie Amara</h3>
+<span class="text-label-sm text-outline">Aug 12</span>
+</div>
+<div class="flex justify-between items-center">
+<p class="text-body-md text-on-surface-variant truncate">BlackRock • Regarding your query about the internship benefits package...</p>
+</div>
+</div>
+</div>
+<!-- Message Item -->
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/50 flex items-center gap-4 cursor-pointer hover:bg-surface-container-low transition-colors active:scale-[0.98] duration-150">
+<div class="relative flex-shrink-0">
+<div class="w-14 h-14 rounded-full overflow-hidden bg-surface-container border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="Professional profile photo of a tech recruiter in a bright, modern co-working space. The recruiter is smiling and engaging with the camera. The background is softly blurred with hints of modern furniture and white walls, creating a clean, professional, and trustworthy image for a talent platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB0QXxCYrRL5jZcrKt8aZyI1GWA-GXyaLw0ZqWZO2g6kBa6efUw8k8qq6ERkUHh8fKjYd7ATSsfd2MMO1KxXt2673geHrRAz9GxfESHGsDlobw2xWYK2Wt6gPMeYOGEE1H00-uaszYufmGs0pSZL25pEhbwHRq2WMRRHUQTWlBE40fdVx5L4d44X7Qf7ZPoDELiK_LfYvQWR9pzLFbDMMLqrquIGiZR0r9U-R1wx2t5pglEpuH1LxVB"/>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-title-lg text-text-primary truncate">James Wilson</h3>
+<span class="text-label-sm text-outline">Aug 10</span>
+</div>
+<div class="flex justify-between items-center">
+<p class="text-body-md text-on-surface-variant truncate">Bloomberg • Thank you for attending the career fair last week. We were impressed...</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center h-20 px-2 pb-2 bg-surface-container-lowest border-none shadow-[0_-4px_20px_-4px_rgba(79,70,229,0.08)] z-50 rounded-t-xl">
+<!-- Messages - ACTIVE -->
+<a class="flex flex-col items-center justify-center bg-primary-container text-white rounded-full px-5 py-1 active:scale-90 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="chat_bubble" style="font-variation-settings: 'FILL' 1;">chat_bubble</span>
+<span class="font-label-sm text-label-sm">Messages</span>
+</a>
+<!-- Calendar -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:opacity-80 transition-opacity active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+<span class="font-label-sm text-label-sm">Calendar</span>
+</a>
+<!-- Placements -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:opacity-80 transition-opacity active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="work">work</span>
+<span class="font-label-sm text-label-sm">Placements</span>
+</a>
+<!-- Profile -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:opacity-80 transition-opacity active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-sm text-label-sm">Profile</span>
+</a>
+</nav>
+<script>
+        // Micro-interactions for list items
+        document.querySelectorAll('.conversations-scroll > div').forEach(item => {
+            item.addEventListener('click', () => {
+                // Mock transition to a message detail view
+                item.style.backgroundColor = 'rgba(79, 70, 229, 0.05)';
+                setTimeout(() => {
+                    item.style.backgroundColor = '';
+                }, 200);
+            });
+        });
+
+        // Simple horizontal scroll behavior for filters
+        const filterContainer = document.querySelector('.overflow-x-auto');
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+
+        filterContainer.addEventListener('mousedown', (e) => {
+            isDown = true;
+            startX = e.pageX - filterContainer.offsetLeft;
+            scrollLeft = filterContainer.scrollLeft;
+        });
+        filterContainer.addEventListener('mouseleave', () => {
+            isDown = false;
+        });
+        filterContainer.addEventListener('mouseup', () => {
+            isDown = false;
+        });
+        filterContainer.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - filterContainer.offsetLeft;
+            const walk = (x - startX) * 2;
+            filterContainer.scrollLeft = scrollLeft - walk;
+        });
+    </script>
+</body></html>

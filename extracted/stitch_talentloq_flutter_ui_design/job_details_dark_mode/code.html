@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Job Details | TalentLOQ</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@100..900&display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid #334155;
+        }
+        .sticky-apply-blur {
+            background: linear-gradient(to top, #13121b 80%, transparent);
+        }
+        body {
+            background-color: #13121b;
+            color: #e4e1ee;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-container": "#4f46e5",
+                        "on-background": "#e4e1ee",
+                        "tertiary-container": "#a44100",
+                        "outline": "#918fa1",
+                        "secondary": "#bdc2ff",
+                        "on-tertiary-fixed": "#351000",
+                        "inverse-surface": "#e4e1ee",
+                        "surface-container-highest": "#35343e",
+                        "on-primary-container": "#dad7ff",
+                        "on-primary": "#1d00a5",
+                        "on-secondary-fixed": "#000767",
+                        "on-tertiary-container": "#ffd2be",
+                        "secondary-fixed-dim": "#bdc2ff",
+                        "background": "#13121b",
+                        "on-error": "#690005",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "on-primary-fixed": "#0f0069",
+                        "tertiary-fixed-dim": "#ffb695",
+                        "tertiary-fixed": "#ffdbcc",
+                        "on-error-container": "#ffdad6",
+                        "tertiary": "#ffb695",
+                        "secondary-container": "#2f3aa3",
+                        "on-surface": "#e4e1ee",
+                        "inverse-on-surface": "#302f39",
+                        "surface": "#13121b",
+                        "on-surface-variant": "#c7c4d8",
+                        "primary": "#c3c0ff",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "surface-container-high": "#2a2933",
+                        "on-secondary-fixed-variant": "#2f3aa3",
+                        "secondary-fixed": "#e0e0ff",
+                        "on-tertiary": "#571f00",
+                        "error": "#ffb4ab",
+                        "on-secondary-container": "#a8afff",
+                        "surface-container-low": "#1b1b24",
+                        "error-container": "#93000a",
+                        "surface-container": "#1f1f28",
+                        "primary-fixed": "#e2dfff",
+                        "on-tertiary-fixed-variant": "#7b2f00",
+                        "on-secondary": "#131e8c",
+                        "surface-dim": "#13121b",
+                        "outline-variant": "#464555",
+                        "inverse-primary": "#4d44e3",
+                        "surface-bright": "#393842",
+                        "surface-tint": "#c3c0ff",
+                        "surface-variant": "#35343e",
+                        "surface-container-lowest": "#0e0d16"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-desktop": "48px",
+                        "lg": "24px",
+                        "xl": "40px",
+                        "base": "4px",
+                        "gutter": "24px",
+                        "md": "16px",
+                        "sm": "8px",
+                        "xs": "4px",
+                        "2xl": "64px",
+                        "margin-mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Plus Jakarta Sans"],
+                        "body-md": ["Plus Jakarta Sans"],
+                        "title-md": ["Plus Jakarta Sans"],
+                        "headline-xl": ["Plus Jakarta Sans"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "body-lg": ["Plus Jakarta Sans"],
+                        "label-sm": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-xl": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                        "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 backdrop-blur-md bg-surface-glass dark:bg-surface-container-low shadow-[0_4px_20px_-4px_rgba(79,70,229,0.08)]">
+<div class="flex items-center justify-between px-4 h-16 max-w-4xl mx-auto">
+<button class="text-primary active:scale-95 duration-150 p-2 rounded-full hover:bg-primary/5">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="font-display-lg text-title-md font-bold text-primary">TalentLOQ</h1>
+<div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a female executive in a modern tech office, soft bokeh background with indigo lighting accents, high-end photography, sharp focus, professional color grading, dark mode aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBhWdFSeJ1mzyWMXgeNgLoSPMy7yNSegj3siy7rnvloMd8bbtie8tkHBtemc3hGBPVCOLuVK3vaKrsU-m6brCv_eRTNAXIsR1d7GFSeAUn_c4GbH4bwDKUeJBcsMwYY-OaHrWWECnUzb4i38Nr998Xngw5BIIUbd67fSNI7keW2yYvbnaBGAMj_3AK56k_-sWx8Y6nWjLTf5LQE4EbE_ZUchXYKazKkwsXNKhX0_bSRmZCM8IPalkS2"/>
+</div>
+</div>
+</header>
+<main class="pt-24 px-4 max-w-4xl mx-auto space-y-8">
+<!-- Hero Section -->
+<section class="space-y-6">
+<div class="flex items-start gap-4">
+<div class="w-16 h-16 rounded-xl bg-surface-container-high flex items-center justify-center border border-outline-variant shrink-0">
+<span class="material-symbols-outlined text-primary text-4xl" style="font-variation-settings: 'FILL' 1;">rocket_launch</span>
+</div>
+<div class="space-y-1">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Senior Product Designer</h2>
+<p class="font-body-md text-on-surface-variant">CloudSphere Analytics • San Francisco, CA (Remote)</p>
+</div>
+</div>
+<div class="flex flex-wrap gap-2">
+<div class="flex items-center gap-1 bg-primary-container/10 border border-primary-container/20 px-3 py-1.5 rounded-full text-primary font-label-md">
+<span class="material-symbols-outlined text-sm">payments</span>
+                    $140k - $185k
+                </div>
+<div class="flex items-center gap-1 bg-secondary-container/10 border border-secondary-container/20 px-3 py-1.5 rounded-full text-secondary font-label-md">
+<span class="material-symbols-outlined text-sm">schedule</span>
+                    Full-time
+                </div>
+<div class="flex items-center gap-1 bg-surface-container-highest border border-outline-variant px-3 py-1.5 rounded-full text-on-surface-variant font-label-md">
+<span class="material-symbols-outlined text-sm">language</span>
+                    Remote Friendly
+                </div>
+</div>
+</section>
+<!-- About the Role -->
+<section class="space-y-4">
+<h3 class="font-title-md text-title-md text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">info</span>
+                About the Role
+            </h3>
+<div class="glass-card p-6 rounded-xl space-y-4">
+<p class="font-body-md text-on-surface-variant leading-relaxed">
+                    We're looking for a visionary Senior Product Designer to lead the evolution of our core analytics dashboard. You'll be responsible for creating high-performance interfaces that handle complex data sets while maintaining a refined, user-centric experience. 
+                </p>
+<p class="font-body-md text-on-surface-variant leading-relaxed">
+                    At CloudSphere, we value design as a strategic pillar. You will work directly with our CTO and Head of Product to define the visual language of the next generation of SaaS infrastructure tools.
+                </p>
+</div>
+</section>
+<!-- Requirements -->
+<section class="space-y-4">
+<h3 class="font-title-md text-title-md text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">verified</span>
+                Requirements
+            </h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="flex items-start gap-3 p-4 bg-surface-container-low border border-outline-variant rounded-xl">
+<span class="material-symbols-outlined text-primary mt-1">check_circle</span>
+<span class="font-body-md text-on-surface-variant">5+ years of experience in SaaS product design</span>
+</div>
+<div class="flex items-start gap-3 p-4 bg-surface-container-low border border-outline-variant rounded-xl">
+<span class="material-symbols-outlined text-primary mt-1">check_circle</span>
+<span class="font-body-md text-on-surface-variant">Expert knowledge of Figma and prototyping tools</span>
+</div>
+<div class="flex items-start gap-3 p-4 bg-surface-container-low border border-outline-variant rounded-xl">
+<span class="material-symbols-outlined text-primary mt-1">check_circle</span>
+<span class="font-body-md text-on-surface-variant">Strong portfolio showcasing data visualization</span>
+</div>
+<div class="flex items-start gap-3 p-4 bg-surface-container-low border border-outline-variant rounded-xl">
+<span class="material-symbols-outlined text-primary mt-1">check_circle</span>
+<span class="font-body-md text-on-surface-variant">Experience working with Design Systems at scale</span>
+</div>
+</div>
+</section>
+<!-- Benefits -->
+<section class="space-y-4">
+<h3 class="font-title-md text-title-md text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">redeem</span>
+                Benefits
+            </h3>
+<div class="bg-surface-container-highest/30 rounded-xl border border-outline-variant overflow-hidden">
+<div class="grid grid-cols-2 md:grid-cols-4 divide-x divide-y divide-outline-variant">
+<div class="p-6 flex flex-col items-center gap-2 text-center">
+<span class="material-symbols-outlined text-primary">health_and_safety</span>
+<span class="font-label-md text-on-surface">Premium Health</span>
+</div>
+<div class="p-6 flex flex-col items-center gap-2 text-center">
+<span class="material-symbols-outlined text-primary">flight_takeoff</span>
+<span class="font-label-md text-on-surface">Unlimited PTO</span>
+</div>
+<div class="p-6 flex flex-col items-center gap-2 text-center">
+<span class="material-symbols-outlined text-primary">laptop_mac</span>
+<span class="font-label-md text-on-surface">Tech Stipend</span>
+</div>
+<div class="p-6 flex flex-col items-center gap-2 text-center">
+<span class="material-symbols-outlined text-primary">savings</span>
+<span class="font-label-md text-on-surface">401k Match</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Meet the Team -->
+<section class="space-y-4">
+<h3 class="font-title-md text-title-md text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">group</span>
+                Meet the Team
+            </h3>
+<div class="flex -space-x-4 overflow-hidden py-2">
+<img class="inline-block h-14 w-14 rounded-full ring-4 ring-background object-cover" data-alt="Close up portrait of a male developer with glasses, warm workspace lighting, deep indigo background, modern professional tech look, high quality bokeh." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC1gTcGgWoGXG0JkIkwvxZqiAGt8zfIKGzReBeQntRfJ3OPLdBWipOmeDLLPoxLRWX3k_yUjzIxVjGognze8777gWMMi7hEDPiMREvIsVDc8VIf8ZJXzcp1P46aXtfBDmo_vslYseH28a0r3eLuOnFduoXNKvDguOPcw09xyj9cp4m2jhu98Zv4wOKsIS6i19j0gSsF-Ep7t30D0BjpYYwzgDpxXdmjl3kfjb-P14FiJBIF9QpezJEX"/>
+<img class="inline-block h-14 w-14 rounded-full ring-4 ring-background object-cover" data-alt="Portrait of a smiling female product manager, soft cinematic lighting, professional office environment with dark indigo accents, sleek and modern aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-VLzqO7Q7oUErBW5D8JJMYaJK5vm64tO0YVSRBerLiryMd2u9yiPPGYplLLASiagWOZG0z6jDLRGjyKRfdVW9G0t9JZyY__1fxf5a49tUfaHrvNXDNme6Quq0zneWbbCXkxcBGhEtmJWab2pbVK97vinbqyrGyOqmW0SGDijah6JvSDRYJgNC5vfqCK33t1w0T5OFHnhovIjJYBQMKCB4FFfwp1HFqI4kQO5ffJp6I6yHnyPUuHpr"/>
+<img class="inline-block h-14 w-14 rounded-full ring-4 ring-background object-cover" data-alt="Candid shot of a creative director in a minimalist studio, focused expression, dark mode photography style, indigo color grading, premium feel." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxOy9kGV0meMduhPUlKDk-RMnaJJojOq6Z06pB4IzLvYBeYF7KnwGBNtTdxr91o6x49fyfMgPxhgoeOK6NrXq0vBAXOMggYRZbOeT4uVaNyJ1SIqR8t8wPRdcX2XKUOrOREkBzzEsW95TZ3laW7q8njsX46lqsef6gFCuC9Jal4AgF_gsoRS7x3a-FTevNnjyfuZBMxXGhZEXzaleXZwgJ3A3iHV_Iq0LjcihYx_b_OfdcD6EqtK2J"/>
+<div class="flex items-center justify-center h-14 w-14 rounded-full ring-4 ring-background bg-surface-container-highest font-label-md text-primary">+12</div>
+</div>
+<p class="font-body-md text-on-surface-variant">You'll be joining a diverse group of 15 makers, builders, and dreamers.</p>
+</section>
+</main>
+<!-- Sticky Apply Button Area -->
+<div class="fixed bottom-0 left-0 right-0 p-6 sticky-apply-blur z-40">
+<div class="max-w-4xl mx-auto flex items-center gap-4">
+<button class="flex-1 bg-primary text-on-primary font-label-md text-lg h-14 rounded-xl flex items-center justify-center gap-2 hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/20">
+                Apply Now
+                <span class="material-symbols-outlined">send</span>
+</button>
+<button class="w-14 h-14 border border-outline-variant flex items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined">bookmark</span>
+</button>
+</div>
+</div>
+<!-- BottomNavBar (Hidden on desktop as per rules, showing for mobile feel) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 rounded-t-xl bg-surface-container-lowest shadow-lg">
+<div class="flex justify-around items-center h-20 px-4 pb-2">
+<div class="flex flex-col items-center justify-center bg-primary-fixed text-on-primary-fixed rounded-full px-4 py-1 active:scale-90 duration-200">
+<span class="material-symbols-outlined">work</span>
+<span class="font-label-md text-label-md">Marketplace</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-90 duration-200">
+<span class="material-symbols-outlined">assignment_turned_in</span>
+<span class="font-label-md text-label-md">Applications</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-90 duration-200">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="font-label-md text-label-md">Messages</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-90 duration-200">
+<span class="material-symbols-outlined">account_circle</span>
+<span class="font-label-md text-label-md">Profile</span>
+</div>
+</div>
+</nav>
+<script>
+        // Micro-interaction for the apply button
+        const applyBtn = document.querySelector('button.bg-primary');
+        applyBtn.addEventListener('mouseenter', () => {
+            applyBtn.querySelector('.material-symbols-outlined').style.transform = 'translateX(4px)';
+            applyBtn.querySelector('.material-symbols-outlined').style.transition = 'transform 0.3s ease';
+        });
+        applyBtn.addEventListener('mouseleave', () => {
+            applyBtn.querySelector('.material-symbols-outlined').style.transform = 'translateX(0)';
+        });
+    </script>
+</body></html>

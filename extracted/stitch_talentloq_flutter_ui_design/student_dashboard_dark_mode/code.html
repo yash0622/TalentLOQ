@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TalentLOQ - Student Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-surface": "#e4e1ee",
+                        "on-surface-variant": "#c7c4d8",
+                        "surface-variant": "#35343e",
+                        "on-secondary-container": "#a8afff",
+                        "on-tertiary-container": "#ffd2be",
+                        "inverse-on-surface": "#302f39",
+                        "on-primary-container": "#dad7ff",
+                        "surface-container-high": "#2a2933",
+                        "primary-container": "#4f46e5",
+                        "on-primary-fixed": "#0f0069",
+                        "on-background": "#e4e1ee",
+                        "on-tertiary-fixed-variant": "#7b2f00",
+                        "secondary-fixed-dim": "#bdc2ff",
+                        "on-error": "#690005",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "surface": "#13121b",
+                        "tertiary-fixed": "#ffdbcc",
+                        "on-surface": "#e4e1ee",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-lowest": "#0e0d16",
+                        "surface-container": "#1f1f28",
+                        "on-tertiary": "#571f00",
+                        "primary": "#c3c0ff",
+                        "error": "#ffb4ab",
+                        "surface-container-low": "#1b1b24",
+                        "surface-container-highest": "#35343e",
+                        "on-primary": "#1d00a5",
+                        "surface-bright": "#393842",
+                        "tertiary": "#ffb695",
+                        "error-container": "#93000a",
+                        "secondary-container": "#2f3aa3",
+                        "inverse-primary": "#4d44e3",
+                        "tertiary-fixed-dim": "#ffb695",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "on-secondary-fixed": "#000767",
+                        "on-tertiary-fixed": "#351000",
+                        "on-secondary": "#131e8c",
+                        "primary-fixed": "#e2dfff",
+                        "secondary": "#bdc2ff",
+                        "tertiary-container": "#a44100",
+                        "on-secondary-fixed-variant": "#2f3aa3",
+                        "background": "#13121b",
+                        "surface-tint": "#c3c0ff",
+                        "outline-variant": "#464555",
+                        "surface-dim": "#13121b",
+                        "secondary-fixed": "#e0e0ff",
+                        "outline": "#918fa1"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "sm": "8px",
+                        "margin-mobile": "16px",
+                        "margin-desktop": "48px",
+                        "md": "16px",
+                        "lg": "24px",
+                        "2xl": "64px",
+                        "base": "4px",
+                        "xs": "4px",
+                        "xl": "40px"
+                    },
+                    "fontFamily": {
+                        "headline-xl": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "body-lg": ["Plus Jakarta Sans"],
+                        "label-md": ["Plus Jakarta Sans"],
+                        "title-md": ["Plus Jakarta Sans"],
+                        "body-md": ["Plus Jakarta Sans"],
+                        "label-sm": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "headline-xl": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }],
+                        "title-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #0f172a;
+            color: #e4e1ee;
+        }
+        .card-surface {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+        }
+        .glass-overlay {
+            backdrop-filter: blur(12px);
+            background-color: rgba(30, 41, 59, 0.6);
+        }
+        .text-gradient {
+            background: linear-gradient(to right, #c3c0ff, #bdc2ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-body-md min-h-screen flex flex-col pb-24 md:pb-0 pt-16">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-surface fixed top-0 w-full z-50 bg-surface dark:bg-surface border-b border-outline-variant flex justify-between items-center px-margin-mobile h-16 w-full">
+<button class="text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-variant/50 transition-colors active:scale-95 duration-200 p-2 rounded-full">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">menu</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-extrabold text-primary dark:text-primary tracking-tight">TalentLOQ</h1>
+<button class="text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-variant/50 transition-colors active:scale-95 duration-200 p-2 rounded-full relative">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-error rounded-full"></span>
+</button>
+</header>
+<!-- Main Content -->
+<main class="flex-grow px-margin-mobile md:px-margin-desktop py-lg max-w-7xl mx-auto w-full flex flex-col gap-lg">
+<!-- Header Section -->
+<section class="flex items-center gap-md mt-sm">
+<div class="w-16 h-16 rounded-full overflow-hidden border-2 border-primary-container shrink-0">
+<img class="w-full h-full object-cover" data-alt="A highly professional yet approachable headshot of a young adult software engineering student. They are smiling warmly, dressed in smart casual attire, set against a dark, moody background with subtle neon indigo and violet rim lighting. The style is modern, cinematic, and perfectly integrated into a high-end dark mode interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCkkbpBdc-C4CWVcqjkij1vgXHD2UpAsVB_A5Yzkbrw9kF2PmeXaota_HOLFIscgo-oiqhCTRy2iRCDyVEJyMAb_S35uVtJpDWacrzVxpvUjKUXDgFZEr1XZSdC6xcdoEZxUKe6mtz242D_GIGR63iICr2JtuUOf7EZjVnBY-5cMsuVM522qyikUMYedcW8J9SQL0ShYotq0mXHfl4M84S9bCJ6YIRs8cX5Zu-eFkDTZ7hb8-JNHbR1"/>
+</div>
+<div>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-on-surface">Hi, Alex! 👋</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Ready to land your dream job?</p>
+</div>
+</section>
+<!-- Profile Strength -->
+<section class="card-surface rounded-xl p-md md:p-lg flex flex-col gap-sm">
+<div class="flex justify-between items-end">
+<div>
+<h3 class="font-title-md text-title-md text-on-surface">Profile Strength</h3>
+<p class="font-body-sm text-label-md text-on-surface-variant">Almost there! Add a portfolio link.</p>
+</div>
+<span class="font-headline-lg-mobile text-headline-lg-mobile text-primary font-bold">85%</span>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-3 mt-xs overflow-hidden">
+<div class="bg-primary-container h-full rounded-full w-[85%] relative overflow-hidden">
+<div class="absolute inset-0 bg-white/20 animate-pulse"></div>
+</div>
+</div>
+</section>
+<!-- Quick Actions Bento -->
+<section class="grid grid-cols-2 md:grid-cols-4 gap-sm md:gap-md">
+<button class="card-surface rounded-xl p-md flex flex-col items-center justify-center gap-sm hover:bg-surface-variant transition-colors active:scale-95">
+<div class="w-12 h-12 rounded-full bg-primary-container/20 flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">upload_file</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface text-center">Upload Resume</span>
+</button>
+<button class="card-surface rounded-xl p-md flex flex-col items-center justify-center gap-sm hover:bg-surface-variant transition-colors active:scale-95">
+<div class="w-12 h-12 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary-container">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bookmark</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface text-center">Saved Jobs</span>
+</button>
+<button class="card-surface rounded-xl p-md flex flex-col items-center justify-center gap-sm hover:bg-surface-variant transition-colors active:scale-95">
+<div class="w-12 h-12 rounded-full bg-tertiary-container/20 flex items-center justify-center text-tertiary-container">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">model_training</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface text-center">Interview Prep</span>
+</button>
+<button class="card-surface rounded-xl p-md flex flex-col items-center justify-center gap-sm hover:bg-surface-variant transition-colors active:scale-95">
+<div class="w-12 h-12 rounded-full bg-error-container/20 flex items-center justify-center text-error-container">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">event</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface text-center">Events</span>
+</button>
+</section>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-lg">
+<!-- Application Status -->
+<section class="flex flex-col gap-sm">
+<h3 class="font-title-md text-title-md text-on-surface px-xs">Application Status</h3>
+<div class="card-surface rounded-xl p-md flex justify-around items-center h-full">
+<div class="flex flex-col items-center text-center">
+<span class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface font-bold">12</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Applied</span>
+</div>
+<div class="w-px h-12 bg-outline-variant"></div>
+<div class="flex flex-col items-center text-center">
+<span class="font-headline-lg-mobile text-headline-lg-mobile text-primary font-bold">3</span>
+<span class="font-label-sm text-label-sm text-primary">Shortlisted</span>
+</div>
+<div class="w-px h-12 bg-outline-variant"></div>
+<div class="flex flex-col items-center text-center">
+<span class="font-headline-lg-mobile text-headline-lg-mobile text-tertiary font-bold">1</span>
+<span class="font-label-sm text-label-sm text-tertiary">Interview</span>
+</div>
+</div>
+</section>
+<!-- Upcoming Interviews -->
+<section class="flex flex-col gap-sm">
+<div class="flex justify-between items-center px-xs">
+<h3 class="font-title-md text-title-md text-on-surface">Upcoming Interviews</h3>
+<button class="font-label-sm text-label-sm text-primary hover:underline">View All</button>
+</div>
+<div class="card-surface rounded-xl p-md flex items-start gap-md hover:bg-surface-variant/30 transition-colors cursor-pointer group h-full">
+<div class="w-12 h-12 rounded-lg bg-surface flex items-center justify-center shrink-0 border border-outline-variant group-hover:border-primary-container transition-colors overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A stylized, modern geometric logo for a fictional tech company named TechNova Inc., designed with abstract interconnected nodes in vibrant indigo and stark white against a deep dark navy background. The logo feels corporate yet cutting-edge, perfectly suited for a dark mode SaaS dashboard interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnxPssyrdvvgPeXn0x48VsXq_CQ_-zoEhUBS64h3GtLjVelAJ8ak5LCiLOfbUuhB91Dk2Bkk8oyx0uwb6sJuIwV4lBdkRDmHE3f5Z7I_hYa027gSnNAyhKzZPtMoAsvycVYEGlYqg-v9xJ304QU5tGGkRLzjIY8BGjQ8FrqLdQC-KyKpdfF2Oqh8Iyw7kD15DgOaUuwf2QlF-X8yVhwwXmjKOH9gllDCU1p7GyY4-M8FmQHAZnwJjY"/>
+</div>
+<div class="flex-grow">
+<h4 class="font-label-md text-label-md text-on-surface group-hover:text-primary transition-colors">TechNova Inc.</h4>
+<p class="font-body-sm text-label-sm text-on-surface-variant">Technical Interview</p>
+<div class="flex items-center gap-xs mt-xs text-primary-fixed-dim">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 0;">schedule</span>
+<span class="font-label-sm text-label-sm">Tomorrow, 10:00 AM</span>
+</div>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors self-center p-2">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">arrow_forward_ios</span>
+</button>
+</div>
+</section>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="bg-surface-container dark:bg-surface-container fixed bottom-0 w-full z-50 rounded-t-xl bg-surface-container dark:bg-surface-container shadow-2xl shadow-lg fixed bottom-0 left-0 w-full h-20 flex justify-around items-center px-4 pb-safe md:hidden border-t border-outline-variant/30">
+<button class="flex flex-col items-center justify-center bg-secondary-container dark:bg-secondary-container text-on-secondary-container dark:text-on-secondary-container rounded-full px-5 py-1 active:scale-90 transition-transform duration-150">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="font-label-sm text-label-sm mt-1">Dashboard</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-5 py-1 hover:bg-surface-variant dark:hover:bg-surface-variant rounded-full active:scale-90 transition-transform duration-150">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">work</span>
+<span class="font-label-sm text-label-sm mt-1">Jobs</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-5 py-1 hover:bg-surface-variant dark:hover:bg-surface-variant rounded-full active:scale-90 transition-transform duration-150">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">layers</span>
+<span class="font-label-sm text-label-sm mt-1">Apps</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-5 py-1 hover:bg-surface-variant dark:hover:bg-surface-variant rounded-full active:scale-90 transition-transform duration-150">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">person</span>
+<span class="font-label-sm text-label-sm mt-1">Profile</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-5 py-1 hover:bg-surface-variant dark:hover:bg-surface-variant rounded-full active:scale-90 transition-transform duration-150">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">more_horiz</span>
+<span class="font-label-sm text-label-sm mt-1">More</span>
+</button>
+</nav>
+</body></html>

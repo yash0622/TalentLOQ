@@ -1,0 +1,17 @@
+
+    Jane Smith
+    jane.smith@email.com | +1 555-123-4567 | github.com/janesmith
+
+    SUMMARY
+    Full Stack Developer with 4 years of experience building web applications.
+
+    EDUCATION
+    B.Tech Computer Science Engineering | GSFC University | 2020 - 2024 | CGPA: 8.8 / 10.0
+
+    WORK EXPERIENCE
+    Software Developer | Web Corp | 2022 - Present
+    - Developed backend APIs using Python FastAPI and MongoDB.
+
+    TECHNICAL SKILLS
+    Python, FastAPI, Flutter, JavaScript, HTML, CSS, Git, MongoDB
+    

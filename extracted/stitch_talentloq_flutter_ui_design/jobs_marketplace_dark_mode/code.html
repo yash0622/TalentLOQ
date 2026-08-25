@@ -1,0 +1,420 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet"><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">try{
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "background": "#13121b",
+                      "on-background": "#e5e1e8",
+                      "surface": "#13121b",
+                      "surface-dim": "#13121b",
+                      "surface-bright": "#393842",
+                      "surface-container-lowest": "#0e0d16",
+                      "surface-container-low": "#1b1b24",
+                      "surface-container": "#1f1f28",
+                      "surface-container-high": "#292933",
+                      "surface-container-highest": "#34343d",
+                      "on-surface": "#e5e1e8",
+                      "surface-variant": "#474650",
+                      "on-surface-variant": "#c9c5d1",
+                      "inverse-surface": "#e5e1e8",
+                      "inverse-on-surface": "#302f37",
+                      "outline": "#928f9a",
+                      "outline-variant": "#474650",
+                      "shadow": "#000000",
+                      "scrim": "#000000",
+                      "surface-tint": "#c2c1ff",
+                      "primary": "#c2c1ff",
+                      "on-primary": "#200d72",
+                      "primary-container": "#37278a",
+                      "on-primary-container": "#e3dfff",
+                      "inverse-primary": "#5143a4",
+                      "secondary": "#cac3dc",
+                      "on-secondary": "#312e41",
+                      "secondary-container": "#484458",
+                      "on-secondary-container": "#e7dff8",
+                      "tertiary": "#ecb8cb",
+                      "on-tertiary": "#482535",
+                      "tertiary-container": "#613b4b",
+                      "on-tertiary-container": "#ffd9e7",
+                      "error": "#ffb4ab",
+                      "on-error": "#690005",
+                      "error-container": "#93000a",
+                      "on-error-container": "#ffdad6",
+                      "surface-glass": "rgba(19, 18, 27, 0.7)",
+                      "text-primary": "#e5e1e8",
+                      "text-secondary": "#c9c5d1",
+                      "success": "#22C55E",
+                      "warning": "#F59E0B"
+              },
+              "borderRadius": {
+                      "none": "0px",
+                      "sm": "4px",
+                      "DEFAULT": "8px",
+                      "md": "12px",
+                      "lg": "16px",
+                      "xl": "24px",
+                      "2xl": "32px",
+                      "3xl": "48px",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "section-margin": "32px",
+                      "card-gap": "12px",
+                      "gutter": "16px",
+                      "container-padding": "20px",
+                      "base": "8px"
+              },
+              "fontFamily": {
+                      "display-lg": [
+                              "Plus Jakarta Sans",
+                              "sans-serif"
+                      ],
+                      "display-md": [
+                              "Plus Jakarta Sans",
+                              "sans-serif"
+                      ],
+                      "display-sm": [
+                              "Plus Jakarta Sans",
+                              "sans-serif"
+                      ],
+                      "headline-lg": [
+                              "Plus Jakarta Sans",
+                              "sans-serif"
+                      ],
+                      "headline-md": [
+                              "Plus Jakarta Sans",
+                              "sans-serif"
+                      ],
+                      "headline-sm": [
+                              "Plus Jakarta Sans",
+                              "sans-serif"
+                      ],
+                      "title-lg": [
+                              "Plus Jakarta Sans",
+                              "sans-serif"
+                      ],
+                      "title-md": [
+                              "Plus Jakarta Sans",
+                              "sans-serif"
+                      ],
+                      "title-sm": [
+                              "Plus Jakarta Sans",
+                              "sans-serif"
+                      ],
+                      "label-lg": [
+                              "Plus Jakarta Sans",
+                              "sans-serif"
+                      ],
+                      "label-md": [
+                              "Plus Jakarta Sans",
+                              "sans-serif"
+                      ],
+                      "label-sm": [
+                              "Plus Jakarta Sans",
+                              "sans-serif"
+                      ],
+                      "body-lg": [
+                              "Plus Jakarta Sans",
+                              "sans-serif"
+                      ],
+                      "body-md": [
+                              "Plus Jakarta Sans",
+                              "sans-serif"
+                      ],
+                      "body-sm": [
+                              "Plus Jakarta Sans",
+                              "sans-serif"
+                      ]
+              },
+              "fontSize": {
+                      "display-lg": [
+                              "57px",
+                              {
+                                      "lineHeight": "64px",
+                                      "letterSpacing": "-0.25px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-md": [
+                              "45px",
+                              {
+                                      "lineHeight": "52px",
+                                      "letterSpacing": "0px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-sm": [
+                              "36px",
+                              {
+                                      "lineHeight": "44px",
+                                      "letterSpacing": "0px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "0px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-md": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "letterSpacing": "0px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-sm": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "0px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "title-lg": [
+                              "22px",
+                              {
+                                      "lineHeight": "28px",
+                                      "letterSpacing": "0px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "title-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "letterSpacing": "0.15px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "title-sm": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "letterSpacing": "0.1px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "label-lg": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "letterSpacing": "0.1px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "label-md": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.5px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "label-sm": [
+                              "11px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.5px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "letterSpacing": "0.5px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "letterSpacing": "0.25px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.4px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      }catch(_e){}</script></head><body class="min-h-screen flex flex-col font-body-md text-body-md bg-background selection:bg-primary-container selection:text-on-primary-container dark">
+<!-- Top App Bar -->
+<header class="bg-surface-glass text-primary font-headline-sm text-headline-sm docked full-width top-0 sticky backdrop-blur-xl border-b border-outline-variant shadow-sm flex items-center justify-between px-container-padding h-16 w-full z-40 transition-colors">
+<button class="flex items-center justify-center p-2 rounded-full hover:bg-surface-container-high transition-colors active:scale-95 duration-200 text-on-surface-variant">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-primary tracking-tight">TalentLOQ</h1>
+<button class="flex items-center justify-center p-2 rounded-full hover:bg-surface-container-high transition-colors active:scale-95 duration-200 text-on-surface-variant">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</header>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col px-container-padding pt-6 pb-[100px] gap-6 max-w-4xl mx-auto w-full">
+<!-- Search & Filter Area -->
+<section class="flex flex-col gap-4">
+<div class="relative flex items-center w-full">
+<span class="material-symbols-outlined absolute left-4 text-outline pointer-events-none">search</span>
+<input class="w-full h-12 pl-12 pr-12 rounded-full bg-surface-container-low border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary transition-all font-body-lg text-body-lg text-on-surface placeholder:text-outline outline-none shadow-sm" placeholder="Search roles, companies..." type="text">
+<button class="absolute right-2 p-2 rounded-full bg-surface-container hover:bg-surface-container-high transition-colors text-primary flex items-center justify-center border border-outline-variant shadow-sm active:scale-95 duration-150">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">tune</span>
+</button>
+</div>
+<!-- Filter Chips (Horizontal Scroll) -->
+<div class="flex overflow-x-auto hide-scrollbar gap-2 pb-2 -mx-container-padding px-container-padding snap-x snap-mandatory">
+<button class="snap-start shrink-0 flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary font-label-md text-label-md shadow-sm active:scale-95 transition-transform">
+<span class="">All Jobs</span>
+</button>
+<button class="snap-start shrink-0 flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container border border-outline-variant text-on-surface-variant hover:bg-surface-container-high font-label-md text-label-md transition-colors active:scale-95">
+<span class="">Full-time</span>
+</button>
+<button class="snap-start shrink-0 flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container border border-outline-variant text-on-surface-variant hover:bg-surface-container-high font-label-md text-label-md transition-colors active:scale-95">
+<span class="">Internship</span>
+</button>
+<button class="snap-start shrink-0 flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container border border-outline-variant text-on-surface-variant hover:bg-surface-container-high font-label-md text-label-md transition-colors active:scale-95">
+<span class="">Remote</span>
+</button><button class="snap-start shrink-0 flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container border border-outline-variant text-on-surface-variant hover:bg-surface-container-high font-label-md text-label-md transition-colors active:scale-95">
+<span class="">Salary Range</span>
+<span class="material-symbols-outlined text-[16px]">expand_more</span>
+</button>
+<button class="snap-start shrink-0 flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container border border-outline-variant text-on-surface-variant hover:bg-surface-container-high font-label-md text-label-md transition-colors active:scale-95">
+<span class="">Salary</span>
+<span class="material-symbols-outlined text-[16px]">expand_more</span>
+</button>
+</div>
+</section>
+<!-- Job Listings -->
+<section class="flex flex-col gap-4">
+<div class="flex items-center justify-between mb-2">
+<h2 class="font-title-lg text-title-lg text-text-primary">Recommended for you</h2>
+<span class="font-label-md text-label-md text-primary">24 new</span>
+</div>
+<!-- Job Card 1 -->
+<article class="bg-surface-container rounded-xl border border-outline-variant p-4 shadow-sm flex flex-col gap-4 hover:bg-surface-container-high transition-colors duration-300">
+<div class="flex items-start gap-4">
+<img class="w-12 h-12 rounded-lg object-cover border border-surface-variant shrink-0 bg-surface-container-lowest" data-alt="A clean, modern corporate logo featuring a stylized geometric 'T' in vibrant blue and teal gradient, set against a pristine white background with subtle depth, isolated." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjt7vIZCKTctYrNOBCMXawNXssao2BzCX2sEiS8CnY7CNlmbtSYCL9duu_6wJBmBWeuzNomSq-KqNYnBO8cwFpfAPVzNnicih2tsj9nRBexn9jPQ1sLBwvBvha0n4A1p1exSy5d5wsNeA4eA0qaVBp-OvA2unfKtIcZ3vHaE-elCUas1tuFEZwIIxB3jXJhp2EgEqIwpSJp38B2KZ26CgugAXQdjoMdq9xNRGDlaxx2QiMDhHoWnBA">
+<div class="flex-1 min-w-0">
+<h3 class="font-title-lg text-title-lg text-on-surface truncate">Software Engineer Intern</h3>
+<p class="font-body-md text-body-md text-text-secondary truncate mt-0.5">TechCorp Global</p>
+</div>
+<button class="text-outline hover:text-primary transition-colors p-1">
+<span class="material-symbols-outlined">bookmark_border</span>
+</button>
+</div>
+<div class="flex flex-wrap gap-2 mt-1">
+<span class="inline-flex items-center px-2 py-1 rounded-md bg-secondary-container text-on-secondary-container font-label-sm text-label-sm gap-1">
+<span class="material-symbols-outlined text-[14px]">location_on</span>
+                        San Francisco, CA (Hybrid)
+                    </span>
+<span class="inline-flex items-center px-2 py-1 rounded-md bg-success/20 text-success font-label-sm text-label-sm gap-1">
+<span class="material-symbols-outlined text-[14px]">payments</span>
+                        $45 - $60 / hr
+                    </span>
+</div>
+<div class="flex flex-wrap gap-2 mt-2">
+<span class="px-2.5 py-1 rounded-full bg-surface-container-low border border-surface-variant text-on-surface-variant font-label-sm text-label-sm">React</span>
+<span class="px-2.5 py-1 rounded-full bg-surface-container-low border border-surface-variant text-on-surface-variant font-label-sm text-label-sm">Node.js</span>
+<span class="px-2.5 py-1 rounded-full bg-surface-container-low border border-surface-variant text-on-surface-variant font-label-sm text-label-sm">TypeScript</span>
+</div>
+<div class="flex items-center gap-3 mt-2 pt-4 border-t border-surface-variant">
+<button class="flex-1 bg-primary text-on-primary font-label-md text-label-md py-2.5 rounded-lg shadow-sm hover:bg-primary/90 transition-colors active:scale-[0.98] duration-150 flex items-center justify-center gap-2">
+                        Apply Now
+                        <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+</button>
+</div>
+</article>
+<!-- Job Card 2 -->
+<article class="bg-surface-container rounded-xl border border-outline-variant p-4 shadow-sm flex flex-col gap-4 hover:bg-surface-container-high transition-colors duration-300">
+<div class="flex items-start gap-4">
+<img class="w-12 h-12 rounded-lg object-cover border border-surface-variant shrink-0 bg-surface-container-lowest" data-alt="A minimalist tech startup logo depicting a stylized data cloud in deep violet and indigo hues, rendered with a slight 3D glassmorphic effect on a clean white square, highly detailed." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB0GQ8vjhJwacd834ItTeq-hAXdZJABJKYf6GeaER0cBwEhVcQq3O14JHwGoc1I5nKtwp49diuHhqK2XIHheS8OFllXY7Z9CtmCsxRe0_pt3WkvHHICN3NU8mpfD4RcUz8CuBPnNaYYYtsubqsx3EbRYhcPDZYdlTUQrPpjFeKQ7U31uC0j_uhxv36qTiH4mRuxd_1endL5a3J6-TDa1tkDppQGBVNfs-J5Y7iIVHPvX3nMnUFFa0GP">
+<div class="flex-1 min-w-0">
+<h3 class="font-title-lg text-title-lg text-on-surface truncate">Mobile Developer</h3>
+<p class="font-body-md text-body-md text-text-secondary truncate mt-0.5">AppFlow Solutions</p>
+</div>
+<button class="text-outline hover:text-primary transition-colors p-1">
+<span class="material-symbols-outlined">bookmark_border</span>
+</button>
+</div>
+<div class="flex flex-wrap gap-2 mt-1">
+<span class="inline-flex items-center px-2 py-1 rounded-md bg-secondary-container text-on-secondary-container font-label-sm text-label-sm gap-1">
+<span class="material-symbols-outlined text-[14px]">public</span>
+                        Remote
+                    </span>
+<span class="inline-flex items-center px-2 py-1 rounded-md bg-success/20 text-success font-label-sm text-label-sm gap-1">
+<span class="material-symbols-outlined text-[14px]">payments</span>
+                        $90k - $120k / yr
+                    </span>
+</div>
+<div class="flex flex-wrap gap-2 mt-2">
+<span class="px-2.5 py-1 rounded-full bg-surface-container-low border border-surface-variant text-on-surface-variant font-label-sm text-label-sm">Flutter</span>
+<span class="px-2.5 py-1 rounded-full bg-surface-container-low border border-surface-variant text-on-surface-variant font-label-sm text-label-sm">Firebase</span>
+<span class="px-2.5 py-1 rounded-full bg-surface-container-low border border-surface-variant text-on-surface-variant font-label-sm text-label-sm">Dart</span>
+</div>
+<div class="flex items-center gap-3 mt-2 pt-4 border-t border-surface-variant">
+<button class="flex-1 bg-primary text-on-primary font-label-md text-label-md py-2.5 rounded-lg shadow-sm hover:bg-primary/90 transition-colors active:scale-[0.98] duration-150 flex items-center justify-center gap-2">
+                        Apply Now
+                        <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+</button>
+</div>
+</article>
+<!-- Job Card 3 -->
+<article class="bg-surface-container rounded-xl border border-outline-variant p-4 shadow-sm flex flex-col gap-4 hover:bg-surface-container-high transition-colors duration-300">
+<div class="flex items-start gap-4">
+<img class="w-12 h-12 rounded-lg object-cover border border-surface-variant shrink-0 bg-surface-container-lowest" data-alt="A sleek, modern finance company logo featuring interlocking geometric shapes in emerald green and dark slate, isolated on a bright white background, crisp vector style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCrUh63QQ6UdbCXOzsefzIaVIOvAT8kkEQzyeMRjNDaiz9i_F1Oe2ExO9sKNOHJZ-6Y33pNkklTQT3DUB7vIIqjJWkHzzmgd5FyQioU7vDXqku-lAYmdhBegPCa7PnH6ZFqDJQgp4y0gpwn1jZQxT1hZPXzZzbZggctt6fqmpk5tZ6knXRkqgAPw3--daQ5vllaDFPLQ6csyhVJ0OR579cmg6eQY1cCjs5z1WiBjK-fJyNMRRMAWeyi">
+<div class="flex-1 min-w-0">
+<h3 class="font-title-lg text-title-lg text-on-surface truncate">UX/UI Designer</h3>
+<p class="font-body-md text-body-md text-text-secondary truncate mt-0.5">FinTech Innovate</p>
+</div>
+<button class="text-outline hover:text-primary transition-colors p-1">
+<span class="material-symbols-outlined">bookmark_border</span>
+</button>
+</div>
+<div class="flex flex-wrap gap-2 mt-1">
+<span class="inline-flex items-center px-2 py-1 rounded-md bg-secondary-container text-on-secondary-container font-label-sm text-label-sm gap-1">
+<span class="material-symbols-outlined text-[14px]">location_on</span>
+                        New York, NY (On-site)
+                    </span>
+<span class="inline-flex items-center px-2 py-1 rounded-md bg-success/20 text-success font-label-sm text-label-sm gap-1">
+<span class="material-symbols-outlined text-[14px]">payments</span>
+                        $85k - $110k / yr
+                    </span>
+</div>
+<div class="flex flex-wrap gap-2 mt-2">
+<span class="px-2.5 py-1 rounded-full bg-surface-container-low border border-surface-variant text-on-surface-variant font-label-sm text-label-sm">Figma</span>
+<span class="px-2.5 py-1 rounded-full bg-surface-container-low border border-surface-variant text-on-surface-variant font-label-sm text-label-sm">Prototyping</span>
+<span class="px-2.5 py-1 rounded-full bg-surface-container-low border border-surface-variant text-on-surface-variant font-label-sm text-label-sm">User Research</span>
+</div>
+<div class="flex items-center gap-3 mt-2 pt-4 border-t border-surface-variant">
+<button class="flex-1 bg-primary text-on-primary font-label-md text-label-md py-2.5 rounded-lg shadow-sm hover:bg-primary/90 transition-colors active:scale-[0.98] duration-150 flex items-center justify-center gap-2">
+                        Apply Now
+                        <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+</button>
+</div>
+</article>
+</section>
+</main>
+<!-- Bottom Navigation Bar (Mobile Only via design intent, though hiding on desktop isn't strictly requested, standard pattern-->
+<nav class="md:hidden bg-surface-glass text-primary font-label-md text-label-md docked full-width bottom-0 fixed rounded-t-xl backdrop-blur-xl border-t border-outline-variant shadow-lg w-full z-50 flex justify-around items-center px-4 py-2 pb-safe">
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-90 duration-150 p-2 rounded-lg gap-1 min-w-[64px]">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="">Dashboard</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1 hover:bg-surface-container-low transition-all active:scale-90 duration-150 gap-1 min-w-[64px]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">work</span>
+<span class="">Jobs</span>
+</button>
+</nav></body></html>

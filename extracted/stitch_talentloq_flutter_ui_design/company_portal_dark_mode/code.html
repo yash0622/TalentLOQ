@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TalentLOQ - Company Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "surface-variant": "#35343e",
+                "on-secondary-fixed-variant": "#2f3aa3",
+                "error-container": "#93000a",
+                "surface-container-low": "#1b1b24",
+                "outline": "#918fa1",
+                "secondary-fixed": "#e0e0ff",
+                "surface-tint": "#c3c0ff",
+                "primary": "#c3c0ff",
+                "on-surface-variant": "#c7c4d8",
+                "tertiary-fixed": "#ffdbcc",
+                "on-primary-container": "#dad7ff",
+                "inverse-on-surface": "#302f39",
+                "secondary-container": "#2f3aa3",
+                "on-primary": "#1d00a5",
+                "tertiary": "#ffb695",
+                "on-secondary-container": "#a8afff",
+                "background": "#13121b",
+                "outline-variant": "#464555",
+                "surface-container-highest": "#35343e",
+                "on-tertiary-fixed-variant": "#7b2f00",
+                "surface-dim": "#13121b",
+                "on-surface": "#e4e1ee",
+                "on-tertiary-fixed": "#351000",
+                "secondary": "#bdc2ff",
+                "on-error": "#690005",
+                "surface-bright": "#393842",
+                "inverse-surface": "#e4e1ee",
+                "on-tertiary-container": "#ffd2be",
+                "on-primary-fixed": "#0f0069",
+                "on-primary-fixed-variant": "#3323cc",
+                "secondary-fixed-dim": "#bdc2ff",
+                "error": "#ffb4ab",
+                "inverse-primary": "#4d44e3",
+                "surface": "#13121b",
+                "tertiary-container": "#a44100",
+                "primary-fixed-dim": "#c3c0ff",
+                "on-error-container": "#ffdad6",
+                "primary-container": "#4f46e5",
+                "on-secondary-fixed": "#000767",
+                "tertiary-fixed-dim": "#ffb695",
+                "on-secondary": "#131e8c",
+                "surface-container-high": "#2a2933",
+                "primary-fixed": "#e2dfff",
+                "on-background": "#e4e1ee",
+                "on-tertiary": "#571f00",
+                "surface-container": "#1f1f28",
+                "surface-container-lowest": "#0e0d16"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "base": "4px",
+                "margin-mobile": "16px",
+                "2xl": "64px",
+                "lg": "24px",
+                "gutter": "24px",
+                "xs": "4px",
+                "md": "16px",
+                "margin-desktop": "48px",
+                "sm": "8px",
+                "xl": "40px"
+        },
+        "fontFamily": {
+                "title-md": [
+                        "Plus Jakarta Sans"
+                ],
+                "headline-xl": [
+                        "Plus Jakarta Sans"
+                ],
+                "headline-lg-mobile": [
+                        "Plus Jakarta Sans"
+                ],
+                "label-md": [
+                        "Plus Jakarta Sans"
+                ],
+                "headline-lg": [
+                        "Plus Jakarta Sans"
+                ],
+                "label-sm": [
+                        "Plus Jakarta Sans"
+                ],
+                "body-md": [
+                        "Plus Jakarta Sans"
+                ],
+                "body-lg": [
+                        "Plus Jakarta Sans"
+                ]
+        },
+        "fontSize": {
+                "title-md": [
+                        "20px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "headline-xl": [
+                        "48px",
+                        {
+                                "lineHeight": "56px",
+                                "letterSpacing": "-0.02em",
+                                "fontWeight": "800"
+                        }
+                ],
+                "headline-lg-mobile": [
+                        "28px",
+                        {
+                                "lineHeight": "36px",
+                                "fontWeight": "700"
+                        }
+                ],
+                "label-md": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "letterSpacing": "0.01em",
+                                "fontWeight": "600"
+                        }
+                ],
+                "headline-lg": [
+                        "32px",
+                        {
+                                "lineHeight": "40px",
+                                "letterSpacing": "-0.01em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "label-sm": [
+                        "12px",
+                        {
+                                "lineHeight": "16px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "body-md": [
+                        "16px",
+                        {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "body-lg": [
+                        "18px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "400"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface font-body-md min-h-screen flex flex-col md:flex-row dark">
+<!-- Mobile Top App Bar (Hidden on md+) -->
+<header class="md:hidden bg-surface-container/80 backdrop-blur-xl border-b border-outline-variant shadow-sm flex items-center justify-between px-margin-mobile h-16 w-full z-40 docked full-width top-0 sticky">
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:bg-surface-container-high transition-colors active:scale-95 duration-200 p-2 rounded-full">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<span class="font-title-md text-title-md font-bold text-primary">TalentLOQ</span>
+</div>
+<button class="text-on-surface-variant hover:bg-surface-container-high transition-colors active:scale-95 duration-200 p-2 rounded-full">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</header>
+<!-- Side Navigation Drawer (Hidden on mobile) -->
+<aside class="hidden md:flex flex-col h-screen w-80 sticky top-0 left-0 z-50 bg-surface shadow-2xl py-6 pr-4 border-r border-outline-variant/30">
+<div class="px-6 mb-8 flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-surface-container-high overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a corporate recruiter in a modern office setting. High-key lighting, bright and airy light-mode aesthetic. Soft focus background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAu-YbAaTl2YcXdcYUQu37hHjtRjh-6thw7sfnXtF3U_zg8Q8BGP2OTPxDCOnXCYPHMgudK9knjfIuIt0LcBEQ52aH4xPhJs6Yzgu1vUa_kwzGlTAPKtGxh5Xk47o8ACNwE0vWV_PVKL7DW74sKpn5Pcg0xEZOqNZ7jxLG8e_ya9UkITKYoLzT-1Aov-sORqZAzlWGxGTZNMSktHSVdXbHyFRGBbSnQ0IvXxWuzjzl7B_esAUHzsv5C"/>
+</div>
+<div>
+<h2 class="font-title-md text-title-md text-primary">TalentLOQ User</h2>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Campus Placement Cell</p>
+</div>
+</div>
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-4 px-6 py-3 bg-secondary-container text-on-secondary-container rounded-r-full font-bold active:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined">business</span>
+<span class="font-title-md text-title-md">Company Portal</span>
+</a>
+<a class="flex items-center gap-4 px-6 py-3 text-on-surface-variant hover:bg-surface-container-highest transition-colors rounded-r-full active:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined">school</span>
+<span class="font-title-md text-title-md">Faculty Dashboard</span>
+</a>
+<a class="flex items-center gap-4 px-6 py-3 text-on-surface-variant hover:bg-surface-container-highest transition-colors rounded-r-full active:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-title-md text-title-md">Reports</span>
+</a>
+<a class="flex items-center gap-4 px-6 py-3 text-on-surface-variant hover:bg-surface-container-highest transition-colors rounded-r-full active:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-title-md text-title-md">Settings</span>
+</a>
+</nav>
+<div class="mt-auto px-6">
+<span class="font-label-sm text-label-sm text-outline">v1.0.2</span>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 px-margin-mobile py-lg md:px-margin-desktop md:py-margin-desktop max-w-7xl mx-auto w-full pb-32 md:pb-12">
+<!-- Header -->
+<div class="mb-10 flex justify-between items-end">
+<div>
+<h1 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-2">Company Dashboard</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Welcome back, here is your recruitment overview.</p>
+</div>
+<button class="hidden md:flex items-center gap-2 bg-primary-container text-on-primary-container px-6 py-3 rounded-full hover:bg-primary-container/90 transition-all shadow-[0_4px_14px_0_rgba(79,70,229,0.39)]">
+<span class="material-symbols-outlined">add</span>
+<span class="font-label-md text-label-md font-bold">Post Job</span>
+</button>
+</div>
+<!-- Stats Bento Grid -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-xl">
+<!-- Stat Card 1 -->
+<div class="bg-surface-container rounded-xl p-6 border border-outline-variant/50 shadow-sm relative overflow-hidden group hover:scale-[0.99] transition-transform">
+<div class="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-on-surface" style="font-size: 80px;">work</span>
+</div>
+<div class="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container mb-4">
+<span class="material-symbols-outlined">work</span>
+</div>
+<h3 class="font-body-md text-body-md text-on-surface-variant mb-1">Total Active Jobs</h3>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-xl text-headline-xl text-on-surface">12</span>
+<span class="font-label-sm text-label-sm text-[#4ade80] bg-[#4ade80]/10 px-2 py-0.5 rounded-full">+2 this week</span>
+</div>
+</div>
+<!-- Stat Card 2 -->
+<div class="bg-surface-container rounded-xl p-6 border border-outline-variant/50 shadow-sm relative overflow-hidden group hover:scale-[0.99] transition-transform">
+<div class="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-on-surface" style="font-size: 80px;">group</span>
+</div>
+<div class="w-12 h-12 rounded-full bg-tertiary-container flex items-center justify-center text-on-tertiary-container mb-4">
+<span class="material-symbols-outlined">group</span>
+</div>
+<h3 class="font-body-md text-body-md text-on-surface-variant mb-1">New Applications</h3>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-xl text-headline-xl text-on-surface">148</span>
+<span class="font-label-sm text-label-sm text-[#4ade80] bg-[#4ade80]/10 px-2 py-0.5 rounded-full">+15 today</span>
+</div>
+</div>
+<!-- Stat Card 3 -->
+<div class="bg-surface-container rounded-xl p-6 border border-outline-variant/50 shadow-sm relative overflow-hidden group hover:scale-[0.99] transition-transform">
+<div class="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-on-surface" style="font-size: 80px;">event</span>
+</div>
+<div class="w-12 h-12 rounded-full bg-[#f59e0b]/20 flex items-center justify-center text-[#fbd38d] mb-4">
+<span class="material-symbols-outlined">event</span>
+</div>
+<h3 class="font-body-md text-body-md text-on-surface-variant mb-1">Scheduled Interviews</h3>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-xl text-headline-xl text-on-surface">8</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Next in 2h</span>
+</div>
+</div>
+</section>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+<!-- Active Jobs List (Col span 2) -->
+<section class="lg:col-span-2 bg-surface-container rounded-xl border border-outline-variant/50 shadow-sm overflow-hidden flex flex-col h-[600px]">
+<div class="p-6 border-b border-outline-variant flex justify-between items-center bg-surface-container/80 backdrop-blur-md sticky top-0 z-10">
+<h2 class="font-title-md text-title-md text-on-surface">Manage Jobs</h2>
+<button class="text-primary font-label-md text-label-md hover:underline">View All</button>
+</div>
+<div class="overflow-y-auto flex-1 p-4 flex flex-col gap-4">
+<!-- Job Item 1 -->
+<div class="p-4 rounded-xl border border-outline-variant hover:bg-surface-container-high transition-colors flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<h3 class="font-title-md text-title-md text-on-surface">Frontend Developer</h3>
+<span class="bg-[#4ade80]/20 text-[#4ade80] font-label-sm text-label-sm px-2 py-0.5 rounded-full border border-[#4ade80]/30">Active</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">location_on</span> Bangalore • Full-time
+                            </p>
+</div>
+<div class="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto">
+<div class="text-center">
+<span class="block font-title-md text-title-md text-primary">45</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Applicants</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-outline hover:text-primary transition-colors hover:bg-primary-container/20 rounded-full">
+<span class="material-symbols-outlined">edit</span>
+</button>
+<button class="p-2 text-outline hover:text-error transition-colors hover:bg-error-container/20 rounded-full">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Job Item 2 -->
+<div class="p-4 rounded-xl border border-outline-variant hover:bg-surface-container-high transition-colors flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<h3 class="font-title-md text-title-md text-on-surface">Product Designer</h3>
+<span class="bg-surface-variant text-on-surface-variant font-label-sm text-label-sm px-2 py-0.5 rounded-full border border-outline-variant/50">Draft</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">location_on</span> Remote • Contract
+                            </p>
+</div>
+<div class="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto">
+<div class="text-center opacity-50">
+<span class="block font-title-md text-title-md text-on-surface-variant">0</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Applicants</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-outline hover:text-primary transition-colors hover:bg-primary-container/20 rounded-full">
+<span class="material-symbols-outlined">edit</span>
+</button>
+<button class="p-2 text-outline hover:text-error transition-colors hover:bg-error-container/20 rounded-full">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Candidate Management (Col span 1) -->
+<section class="lg:col-span-1 bg-surface-container rounded-xl border border-outline-variant/50 shadow-sm overflow-hidden flex flex-col h-[600px]">
+<div class="p-6 border-b border-outline-variant flex justify-between items-center bg-surface-container/80 backdrop-blur-md sticky top-0 z-10">
+<h2 class="font-title-md text-title-md text-on-surface">Recent Candidates</h2>
+</div>
+<div class="overflow-y-auto flex-1 p-4 flex flex-col gap-4">
+<!-- Candidate Card 1 -->
+<div class="bg-surface-container-high rounded-xl p-4 border border-outline-variant hover:shadow-md transition-shadow">
+<div class="flex items-center gap-3 mb-3">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="A professional headshot of a young female college student, wearing smart casual attire. Bright, optimistic lighting, clean white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAWsd-pP0wdkapzU8Cn5bv86l8kuZG3LhSI6S0xtp4UpbZhut_0gJtoMNscQSDU-Gp-cHKky4nkSBVy_tOP46p3YCWEBJ8ds-tytaxP5NDWBlnXBo8QGnxPTKyHpP0i6GPBmmEz-MT4apjMZyMOiIq1XbJK4tE17dBklzaTBk2__JSHK-KP9nE4FBjpK2pcaoR9jxFWgQKAZKEeAS-80s6niXCBoGYUtAjn9rSfzv6cg1tSHNmeqeUw"/>
+<div>
+<h4 class="font-title-md text-title-md text-on-surface leading-tight">Sarah Jenkins</h4>
+<p class="font-label-sm text-label-sm text-on-surface-variant">NIT Surathkal</p>
+</div>
+<span class="ml-auto bg-[#f59e0b]/20 text-[#fbd38d] font-label-sm text-label-sm px-2 py-0.5 rounded-full border border-[#f59e0b]/30">Review</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mb-4 text-sm">Applied for: Frontend Developer</p>
+<div class="flex gap-2">
+<button class="flex-1 bg-primary-container text-on-primary-container py-2 rounded-lg font-label-md text-label-md hover:bg-primary-container/90 transition-colors">Approve</button>
+<button class="flex-1 bg-surface-variant text-on-surface-variant py-2 rounded-lg font-label-md text-label-md hover:bg-surface-variant/80 transition-colors">Reject</button>
+</div>
+</div>
+<!-- Candidate Card 2 -->
+<div class="bg-surface-container-high rounded-xl p-4 border border-outline-variant hover:shadow-md transition-shadow">
+<div class="flex items-center gap-3 mb-3">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="A professional headshot of a young male college student, wearing a neat shirt. Professional lighting, modern light-mode background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAFzMnRnw4LuqtDRdK1NKnv0K2Se6ilyeBt0gA3M0jGagCmUpdtp4m5cgfwUwWMw2CbYEi4XBkeZURctapWPPqk5ANiTEBIRqWCGCIlq3db1XAnW7jJzocAeUvSnLLchprnmE7Kjhbb0QGmDgRwVGwdhGRW8hJ0xQVDXV7m509-P-wpuopfu2UqNJ0Lr-KY3sIX4cYqZ4t9fj2qNfRuN5GMPwISnj-7M_RrCEsVC6uFwdulUVXYj1lI"/>
+<div>
+<h4 class="font-title-md text-title-md text-on-surface leading-tight">Raj Patel</h4>
+<p class="font-label-sm text-label-sm text-on-surface-variant">IIT Delhi</p>
+</div>
+<span class="ml-auto bg-[#4ade80]/20 text-[#4ade80] font-label-sm text-label-sm px-2 py-0.5 rounded-full border border-[#4ade80]/30">Shortlisted</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mb-4 text-sm">Applied for: Backend Eng.</p>
+<button class="w-full bg-secondary-container text-on-secondary-container py-2 rounded-lg font-label-md text-label-md hover:bg-secondary-container/80 transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">calendar_month</span> Schedule
+                        </button>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Mobile Bottom Nav Bar (Hidden on md+) -->
+<nav class="md:hidden bg-surface-container/80 backdrop-blur-xl border-t border-outline-variant shadow-lg fixed bottom-0 w-full z-50 flex justify-around items-center px-4 py-2 pb-safe docked full-width bottom-0 fixed rounded-t-xl">
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1 active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">business</span>
+<span class="font-label-md text-label-md mt-1">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-all active:scale-90 duration-150 p-2" href="#">
+<span class="material-symbols-outlined">work</span>
+<span class="font-label-md text-label-md mt-1">Jobs</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-all active:scale-90 duration-150 p-2" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-label-md text-label-md mt-1">Candidates</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-all active:scale-90 duration-150 p-2" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-md text-label-md mt-1">Profile</span>
+</a>
+</nav>
+<!-- Mobile FAB (Hidden on md+) -->
+<button class="md:hidden fixed bottom-24 right-4 bg-primary-container text-on-primary-container w-14 h-14 rounded-2xl flex items-center justify-center shadow-[0_8px_24px_-4px_rgba(79,70,229,0.5)] z-40 active:scale-95 transition-transform">
+<span class="material-symbols-outlined" style="font-size: 28px;">add</span>
+</button>
+</body></html>

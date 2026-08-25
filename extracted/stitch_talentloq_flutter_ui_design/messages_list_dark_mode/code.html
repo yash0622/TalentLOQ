@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TalentLOQ | Messages</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid #334155;
+        }
+        body {
+            background-color: #0f172a; /* Base Level 0 */
+            color: #e4e1ee;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow-x: hidden;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 10px;
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "on-secondary-container": "#a8afff",
+                "on-background": "#e4e1ee",
+                "error": "#ffb4ab",
+                "surface-tint": "#c3c0ff",
+                "surface-dim": "#13121b",
+                "on-primary-fixed-variant": "#3323cc",
+                "on-surface": "#e4e1ee",
+                "surface-variant": "#35343e",
+                "secondary-fixed": "#e0e0ff",
+                "outline": "#918fa1",
+                "on-tertiary": "#571f00",
+                "tertiary-container": "#a44100",
+                "surface-bright": "#393842",
+                "on-secondary-fixed": "#000767",
+                "secondary-container": "#2f3aa3",
+                "inverse-surface": "#e4e1ee",
+                "secondary": "#bdc2ff",
+                "on-primary": "#1d00a5",
+                "tertiary-fixed-dim": "#ffb695",
+                "tertiary-fixed": "#ffdbcc",
+                "secondary-fixed-dim": "#bdc2ff",
+                "on-tertiary-fixed": "#351000",
+                "on-error-container": "#ffdad6",
+                "on-error": "#690005",
+                "background": "#13121b",
+                "on-tertiary-fixed-variant": "#7b2f00",
+                "primary-fixed-dim": "#c3c0ff",
+                "on-surface-variant": "#c7c4d8",
+                "surface-container-highest": "#35343e",
+                "surface-container-high": "#2a2933",
+                "outline-variant": "#464555",
+                "surface-container-low": "#1b1b24",
+                "surface-container": "#1f1f28",
+                "on-tertiary-container": "#ffd2be",
+                "on-secondary-fixed-variant": "#2f3aa3",
+                "on-primary-fixed": "#000767",
+                "primary-fixed": "#e2dfff",
+                "primary": "#c3c0ff",
+                "surface": "#13121b",
+                "primary-container": "#4f46e5",
+                "tertiary": "#ffb695",
+                "on-secondary": "#131e8c",
+                "on-primary-container": "#dad7ff",
+                "inverse-on-surface": "#302f39",
+                "surface-container-lowest": "#0e0d16",
+                "inverse-primary": "#4d44e3",
+                "error-container": "#93000a"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "1.5rem",
+                "full": "9999px"
+            },
+            "spacing": {
+                "lg": "24px",
+                "md": "16px",
+                "xs": "4px",
+                "margin-mobile": "16px",
+                "sm": "8px",
+                "2xl": "64px",
+                "gutter": "24px",
+                "margin-desktop": "48px",
+                "base": "4px",
+                "xl": "40px"
+            },
+            "fontFamily": {
+                "title-md": ["Plus Jakarta Sans"],
+                "headline-lg-mobile": ["Plus Jakarta Sans"],
+                "headline-lg": ["Plus Jakarta Sans"],
+                "headline-xl": ["Plus Jakarta Sans"],
+                "label-sm": ["Plus Jakarta Sans"],
+                "body-md": ["Plus Jakarta Sans"],
+                "body-lg": ["Plus Jakarta Sans"],
+                "label-md": ["Plus Jakarta Sans"]
+            },
+            "fontSize": {
+                "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}],
+                "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                "headline-xl": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+</head>
+<body class="bg-surface select-none">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 w-full z-50 bg-surface-container-high/80 backdrop-blur-md shadow-sm flex justify-between items-center px-4 h-16">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full border border-outline-variant overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a corporate tech recruiter in a high-tech modern office setting. The person has a friendly expression and is wearing a sleek indigo blazer. The background is softly blurred with deep slate and indigo lighting, echoing a premium dark mode UI aesthetic with glassmorphic accents." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPvK4AefNYbQGbfjoLUdxfMbHnyzlS-3mlGqWPZewYkjOjjRKCAoLttEJ3JFwUP0xKuHu5-GaIp5IhjYGETZQqPCtYeaelr4OaLvEhTBAe3KhbG1PixOSH6Jig2dJ9jD-qkPIeiNhu1gGjjwEFGBVEs6qfwjNbBuUTWvl-lnxRRjIgdoRik3_YNQPV41kR2p6cHA6rASOmB_h3k6WXbtqUcjtw3Zdbgh3rcwqcspx-H9TQpkz-cM8Z"/>
+</div>
+<h1 class="font-headline-md text-headline-md text-primary tracking-tight">TalentLOQ</h1>
+</div>
+<div class="flex items-center gap-2">
+<button class="w-10 h-10 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container transition-colors active:scale-95">
+<span class="material-symbols-outlined">search</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container transition-colors active:scale-95">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-20 pb-24 px-4 max-w-md mx-auto">
+<!-- Section Header -->
+<div class="mb-6 flex justify-between items-end">
+<div>
+<p class="text-primary font-label-md uppercase tracking-widest text-[10px] mb-1">Priority Inbox</p>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-background">Messages</h2>
+</div>
+<div class="bg-primary-container text-on-primary-container font-label-md px-3 py-1 rounded-full text-xs">
+                12 New
+            </div>
+</div>
+<!-- Filter Chips -->
+<div class="flex gap-2 mb-6 overflow-x-auto pb-2 no-scrollbar">
+<button class="bg-primary text-on-primary px-4 py-1.5 rounded-full font-label-md text-sm whitespace-nowrap active:scale-95 transition-transform">All</button>
+<button class="bg-surface-container-high text-on-surface-variant border border-outline-variant px-4 py-1.5 rounded-full font-label-md text-sm whitespace-nowrap active:scale-95 transition-transform">Unread</button>
+<button class="bg-surface-container-high text-on-surface-variant border border-outline-variant px-4 py-1.5 rounded-full font-label-md text-sm whitespace-nowrap active:scale-95 transition-transform">Interviews</button>
+<button class="bg-surface-container-high text-on-surface-variant border border-outline-variant px-4 py-1.5 rounded-full font-label-md text-sm whitespace-nowrap active:scale-95 transition-transform">Shortlisted</button>
+</div>
+<!-- Conversation List -->
+<div class="space-y-3">
+<!-- Message Item 1: Active/Unread -->
+<div class="group relative bg-surface-container p-4 rounded-xl border border-outline-variant hover:border-primary/50 transition-all active:scale-[0.98] cursor-pointer shadow-sm">
+<div class="flex gap-4">
+<div class="relative flex-shrink-0">
+<div class="w-14 h-14 rounded-full overflow-hidden border-2 border-primary-container">
+<img class="w-full h-full object-cover" data-alt="Close up portrait of a young college student with a bright, motivated expression. He is wearing modern casual academic attire. The lighting is dramatic and moody, featuring indigo and deep blue backlighting that matches a sophisticated dark software theme. High quality photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2YNqaeqW_Zx0iGp132QelCghMn4LsKVOxzhkiwUAWgtmV7NStCBcgcXFFIIi1bI-SLtzC81-3r1O_e55ylAxAL3jGjY0LacqQk7f9RzcuYA_2MFwPl8CUv4kPvIGQIMMjplU5H0JElj8Pk5rnZcZyoVcyyzKOl5YJSOAYvH5kfWcogKDj99wcbcOB1bsBCCPJzihQk-LTeHBz6o-s_bT2GI-9bdNIiy_yryl5WFWfgREQk47e3Smo"/>
+</div>
+<div class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-surface-container rounded-full"></div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-title-md text-on-surface truncate">Ethan Richards</h3>
+<span class="font-label-sm text-primary">2m ago</span>
+</div>
+<p class="font-body-md text-on-surface font-semibold truncate">I've just uploaded my updated portfolio with the recent React projects we discussed.</p>
+<div class="mt-2 flex items-center gap-2">
+<span class="bg-secondary-container/30 text-on-secondary-container text-[10px] px-2 py-0.5 rounded font-label-md">UX Design Intern</span>
+</div>
+</div>
+<div class="flex flex-col justify-center">
+<div class="w-2.5 h-2.5 bg-primary rounded-full shadow-[0_0_8px_rgba(195,192,255,0.8)]"></div>
+</div>
+</div>
+</div>
+<!-- Message Item 2 -->
+<div class="group bg-surface-container-low p-4 rounded-xl border border-outline-variant/30 hover:border-outline-variant transition-all active:scale-[0.98] cursor-pointer">
+<div class="flex gap-4">
+<div class="relative flex-shrink-0">
+<div class="w-14 h-14 rounded-full overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a female engineering student, smiling confidently. She has glasses and is set against a dark, minimalist background with subtle indigo neon light traces. The image is crisp, modern, and perfectly suited for a high-end recruitment platform's dark mode UI." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCLwt7nWSXjQ2d-o8Jnzw2l_sLwAESa5T1AOhUvmrWDYFbg_wFQsCMXgkoa1aR0_2RsmgeeSlqUFJcprN4kOyFxAk8qtAJdOvN55kr5Bm0HS3flRkszMsCRO3_ewypvOavKY5gx40kwYu_AcHwHYxw46VBD8itZ-qn86ak5lnB6HKpXzH1NixccmTd1frLJ2iA0abNNtHI11dXQKj53D88F27zEZp8MB02n9bVL8Cj4KBVWrg_3dQD2"/>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-title-md text-on-surface truncate">Sarah Jenkins</h3>
+<span class="font-label-sm text-on-surface-variant">1h ago</span>
+</div>
+<p class="font-body-md text-on-surface-variant truncate">Thank you for the feedback on the technical assessment. I'll make those changes.</p>
+<div class="mt-2 flex items-center gap-2">
+<span class="bg-tertiary-container/20 text-tertiary text-[10px] px-2 py-0.5 rounded font-label-md">Backend Junior</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Message Item 3 -->
+<div class="group bg-surface-container p-4 rounded-xl border border-outline-variant hover:border-primary/50 transition-all active:scale-[0.98] cursor-pointer shadow-sm">
+<div class="flex gap-4">
+<div class="relative flex-shrink-0">
+<div class="w-14 h-14 rounded-full overflow-hidden border-2 border-primary-container">
+<img class="w-full h-full object-cover" data-alt="A portrait of a diverse male student in a modern workspace. He is looking thoughtfully towards the camera. The scene is illuminated by cool blue and indigo light from nearby computer monitors, creating a deep focus dark mode aesthetic. Clean professional look for a talent platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-F_KIefYUmE2SCkDMX8tuJaZ--dj2Mb8gIREzQ8KBw9lGYXeDbbdbhZkCkHD9hKJ1bOedYOb0iHXRSjK3nX0GOyDR8soZhr0TuYIzDMYHBO0pb7K3DWp2GQdb_GjCgH2muSpz0B51MA4T9Lv0cyWyHK8VMVXii6roMmBrvNdB0eKyr56aq_eiHIdhbAyxpbdCPJ9iLEs4cEVgKm63tnf1pZ8vc-5kZlprcYo2wechTRl_GzD0txC4"/>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-title-md text-on-surface truncate">Marcus Chen</h3>
+<span class="font-label-sm text-primary">4h ago</span>
+</div>
+<p class="font-body-md text-on-surface font-semibold truncate">Is the interview scheduled for 3 PM PST or EST? Just wanted to confirm.</p>
+<div class="mt-2 flex items-center gap-2">
+<span class="bg-secondary-container/30 text-on-secondary-container text-[10px] px-2 py-0.5 rounded font-label-md">Full Stack Dev</span>
+</div>
+</div>
+<div class="flex flex-col justify-center">
+<div class="w-5 h-5 bg-primary text-on-primary text-[10px] flex items-center justify-center rounded-full font-bold">2</div>
+</div>
+</div>
+</div>
+<!-- Message Item 4 -->
+<div class="group bg-surface-container-low p-4 rounded-xl border border-outline-variant/30 hover:border-outline-variant transition-all active:scale-[0.98] cursor-pointer">
+<div class="flex gap-4">
+<div class="relative flex-shrink-0">
+<div class="w-14 h-14 rounded-full overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="Headshot of a young professional woman with a friendly, approachable look. She is in a blurred modern library or creative studio. The color palette is dominated by slate and muted indigo tones with cinematic soft lighting. High resolution, high fashion corporate style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBWVO0i-dhCZk3v1KRkPc92SwCEzA8Sq7sFH_8f2NymtXJLk2D4Q8C7vBT2LE5KASJ6uO8mwFx_pQqZyqIYAwAWiRTi2VwTtFzB_WkaT15b3yF7oYKfu4gNK1SAJDOBt8SXWRgO48xyYJulRyHQ4DHFrDRsvfUwyzre65wMlRZPrSKzixWcXh9vK10AJo-I-TxduOS2MJCQVL30fYN8nyogXqY8CV0fCLrzp9ZiS6QiVjI9Xe64qux0"/>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-title-md text-on-surface truncate">Aaliyah Vance</h3>
+<span class="font-label-sm text-on-surface-variant">Yesterday</span>
+</div>
+<p class="font-body-md text-on-surface-variant truncate">Attached is my signed offer letter. Looking forward to starting!</p>
+<div class="mt-2 flex items-center gap-2">
+<span class="bg-green-500/20 text-green-400 text-[10px] px-2 py-0.5 rounded font-label-md">Hired</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Message Item 5 -->
+<div class="group bg-surface-container-low p-4 rounded-xl border border-outline-variant/30 hover:border-outline-variant transition-all active:scale-[0.98] cursor-pointer">
+<div class="flex gap-4">
+<div class="relative flex-shrink-0">
+<div class="w-14 h-14 rounded-full overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A portrait of a graduate student in a tech environment. He has a sharp, smart appearance. The background consists of dark glass and indigo light strips. The image captures a sense of innovation and readiness for the corporate world. Deep focus, sharp details." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBJsb_Uf6tItdvdi6bDBsGojhz44ZZ59e_MZy_r8vrStsGVT99hz5-JPN7-9KF_U84peVb-fpNyANO8ldHb10fSW78QtUaLQYerY7hRkWnRxDo31fZ_g_MRvAVu4DEijKLR_Rt10hp2IrV3AnkiFn30DPg-hmGX9ImFumfvxi9yv9TASBAGh3GRT7qpSiYmo9JuWOZka-FBUfN7TE4t20JwvWMTbs90klBDTUm-5e4WhEFPuhEssNmb"/>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-title-md text-on-surface truncate">Julian Rossi</h3>
+<span class="font-label-sm text-on-surface-variant">2 days ago</span>
+</div>
+<p class="font-body-md text-on-surface-variant truncate">Can we reschedule our call for Thursday morning instead?</p>
+<div class="mt-2 flex items-center gap-2">
+<span class="bg-secondary-container/30 text-on-secondary-container text-[10px] px-2 py-0.5 rounded font-label-md">Data Science</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Load More Indicator -->
+<div class="mt-8 flex flex-col items-center gap-2 py-4">
+<div class="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+<p class="font-label-sm text-on-surface-variant">Syncing earlier conversations...</p>
+</div>
+</main>
+<!-- FAB for New Message (Contextual) -->
+<button class="fixed right-6 bottom-24 w-14 h-14 bg-primary text-on-primary rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center active:scale-90 transition-transform z-40">
+<span class="material-symbols-outlined">edit_square</span>
+</button>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center h-20 px-2 pb-2 bg-surface-container-lowest shadow-[0_-4px_20px_-4px_rgba(79,70,229,0.08)] z-50 rounded-t-xl">
+<!-- Messages - Active -->
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-5 py-1 active:scale-90 duration-150 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">chat_bubble</span>
+<span class="font-label-sm text-label-sm mt-0.5">Messages</span>
+</a>
+<!-- Calendar -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:opacity-80 transition-opacity active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="font-label-sm text-label-sm mt-0.5">Calendar</span>
+</a>
+<!-- Placements -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:opacity-80 transition-opacity active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined">work</span>
+<span class="font-label-sm text-label-sm mt-0.5">Placements</span>
+</a>
+<!-- Profile -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:opacity-80 transition-opacity active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-sm text-label-sm mt-0.5">Profile</span>
+</a>
+</nav>
+<!-- Micro-interaction Script -->
+<script>
+        document.querySelectorAll('.group').forEach(item => {
+            item.addEventListener('click', function() {
+                // Remove existing highlight
+                document.querySelectorAll('.group').forEach(i => i.classList.remove('border-primary'));
+                // Add highlight to clicked
+                this.classList.add('border-primary');
+                
+                // Haptic feedback simulation
+                if (window.navigator && window.navigator.vibrate) {
+                    window.navigator.vibrate(5);
+                }
+            });
+        });
+    </script>
+</body></html>

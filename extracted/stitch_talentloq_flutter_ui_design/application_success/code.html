@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Application Submitted | TalentLOQ</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-fixed": "#e2dfff",
+                    "text-secondary": "#475569",
+                    "surface-glass": "rgba(255, 255, 255, 0.7)",
+                    "error-container": "#ffdad6",
+                    "tertiary": "#400091",
+                    "on-tertiary-container": "#c5a9ff",
+                    "on-tertiary-fixed-variant": "#5a00c6",
+                    "on-primary-container": "#b1afff",
+                    "primary": "#1e00a9",
+                    "secondary-fixed": "#e1e0ff",
+                    "surface-container-lowest": "#ffffff",
+                    "surface": "#f7f9fb",
+                    "on-primary": "#ffffff",
+                    "text-primary": "#111827",
+                    "tertiary-fixed": "#eaddff",
+                    "surface-tint": "#4d44e3",
+                    "on-primary-fixed": "#0f0069",
+                    "inverse-primary": "#c3c0ff",
+                    "surface-container-highest": "#e0e3e5",
+                    "surface-bright": "#f7f9fb",
+                    "on-secondary-fixed": "#06006c",
+                    "tertiary-fixed-dim": "#d2bbff",
+                    "surface-dim": "#d8dadc",
+                    "primary-container": "#3525cd",
+                    "on-tertiary-fixed": "#25005a",
+                    "on-secondary-container": "#fffbff",
+                    "surface-variant": "#e0e3e5",
+                    "background": "#f7f9fb",
+                    "on-background": "#191c1e",
+                    "on-surface-variant": "#464555",
+                    "surface-container-low": "#f2f4f6",
+                    "warning": "#F59E0B",
+                    "on-primary-fixed-variant": "#3323cc",
+                    "on-secondary": "#ffffff",
+                    "outline-variant": "#c7c4d8",
+                    "on-error-container": "#93000a",
+                    "primary-fixed-dim": "#c3c0ff",
+                    "tertiary-container": "#5c00c9",
+                    "success": "#22C55E",
+                    "error": "#EF4444",
+                    "secondary": "#4648d4",
+                    "on-error": "#ffffff",
+                    "inverse-surface": "#2d3133",
+                    "on-secondary-fixed-variant": "#2e2ebe",
+                    "surface-container-high": "#e6e8ea",
+                    "on-surface": "#191c1e",
+                    "secondary-fixed-dim": "#c0c1ff",
+                    "inverse-on-surface": "#eff1f3",
+                    "surface-container": "#eceef0",
+                    "outline": "#777587",
+                    "secondary-container": "#6063ee",
+                    "on-tertiary": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "section-margin": "32px",
+                    "gutter": "16px",
+                    "container-padding": "20px",
+                    "card-gap": "12px",
+                    "base": "8px"
+            },
+            "fontFamily": {
+                    "title-lg": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "headline-sm": ["Plus Jakarta Sans"],
+                    "body-md": ["Inter"],
+                    "display-lg": ["Plus Jakarta Sans"],
+                    "headline-md": ["Plus Jakarta Sans"],
+                    "body-lg": ["Inter"],
+                    "label-md": ["Inter"]
+            },
+            "fontSize": {
+                    "title-lg": ["18px", {"lineHeight": "26px", "fontWeight": "600"}],
+                    "label-sm": ["11px", {"lineHeight": "14px", "fontWeight": "600"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #f7f9fb;
+            -webkit-font-smoothing: antialiased;
+        }
+        .success-glow {
+            box-shadow: 0 0 50px -10px rgba(34, 197, 94, 0.2);
+        }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .animate-float {
+            animation: float 4s ease-in-out infinite;
+        }
+        .confetti-piece {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #4d44e3;
+            opacity: 0;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="min-h-screen flex flex-col font-body-md text-on-surface overflow-x-hidden">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 backdrop-blur-md bg-surface-glass shadow-[0_4px_20px_-4px_rgba(79,70,229,0.08)]">
+<div class="flex items-center justify-between px-container-padding h-16 max-w-4xl mx-auto">
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-full hover:bg-primary/5 transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined text-primary" data-icon="menu">menu</span>
+</button>
+<h1 class="font-display-lg text-headline-sm font-bold text-primary">TalentLOQ</h1>
+</div>
+<div class="flex items-center">
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-fixed shadow-sm">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a confident tech researcher in a brightly lit, modern office environment. The lighting is soft and flattering, emphasizing a clean-cut and approachable look. The background is slightly blurred, showing hints of minimalist corporate interior with glass walls and indoor greenery, aligning with a premium light-mode UI aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5_rIeCO8MNEOSQ-UsRdQNUjj6FD6m3UFuaQwkwjO1hJiMwhD9Wu9fzn9eRgDdR4bw67GhziIkLYjL1OKYKjGis6kSWtkAnOUqryjMOfafy0J1Nkw-2nXVc0KRdDU7ZESrtyPl94zwdQ9u_cHDUxi-GB9jpddDBL5xccksOTh4zTeNN0Ii4k2NSqsaO-gu8vMC5lu9QxIU1rAQP2mD_OjTBwwFfTkpZbkOq1BdfOB5aWax4zN5A6mu"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow flex items-center justify-center px-container-padding pt-24 pb-12 overflow-hidden relative">
+<!-- Decorative Background Elements -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
+<div class="absolute -top-24 -right-24 w-96 h-96 bg-secondary/5 rounded-full blur-[100px] pointer-events-none"></div>
+<div class="w-full max-w-lg relative z-10 flex flex-col items-center text-center">
+<!-- Success Icon & Celebration Logic -->
+<div class="relative mb-8">
+<!-- Outer Ring Glow -->
+<div class="absolute inset-0 bg-success/20 rounded-full scale-150 blur-3xl opacity-30 animate-pulse"></div>
+<!-- Main Icon Circle -->
+<div class="w-32 h-32 bg-surface-container-lowest rounded-full flex items-center justify-center border-4 border-white shadow-[0_12px_40px_-12px_rgba(79,70,229,0.15)] success-glow animate-float">
+<div class="w-24 h-24 bg-success/10 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-success !text-[64px] font-bold" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</div>
+<!-- Animated Particles -->
+<div class="absolute inset-0 pointer-events-none" id="confetti-container"></div>
+</div>
+<!-- Headlines -->
+<h2 class="font-display-lg text-display-lg text-text-primary mb-4 tracking-tight">Application Submitted!</h2>
+<p class="font-body-lg text-text-secondary max-w-sm mb-12">
+                Your application for <span class="text-primary font-semibold">Senior AI Researcher</span> has been sent to CloudScale AI.
+            </p>
+<!-- Status Card -->
+<div class="w-full bg-surface-container-lowest rounded-xl p-6 border border-outline-variant shadow-[0_4px_20px_-4px_rgba(79,70,229,0.08)] mb-12 flex flex-col items-start gap-4 text-left">
+<div class="flex items-center gap-3 w-full">
+<div class="w-12 h-12 rounded-lg bg-surface-container-low flex items-center justify-center">
+<img class="w-8 h-8 rounded-sm" data-alt="A minimalist tech company logo featuring abstract geometric shapes in shades of deep indigo and soft violet. The icon is clean and professional, designed for a modern finance or technology firm. It is presented on a crisp white background with sharp edges, conveying reliability and high-end corporate identity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuClcCErXdg09LLLU_sGfjNfq46_6IcvJC0yzk74ktyrGVCpHIa9ASc9yRkmgjXdCp9WPMEp-yEzAVvc3SnLITdqmuemnNR0NaYVIdDIwVWkmEAweDjGC4Juo1fHx6JRS41eORXGFW6cS8xV-LFbbSgWyskeKhUP-L_6dfM5qTp_X5QHKVg6suyUujJQobkuaMD6qcVX7IaTI2_cuj8MMcWPK22n4iLUTC-hSydrR6AQPPcLH1SKp5Du"/>
+</div>
+<div>
+<div class="font-title-lg text-primary">CloudScale AI</div>
+<div class="font-label-md text-text-secondary uppercase tracking-widest">Global Headquaters</div>
+</div>
+<div class="ml-auto bg-success/10 text-success font-label-md px-3 py-1 rounded-full flex items-center gap-1">
+<span class="material-symbols-outlined !text-sm" data-icon="verified">verified</span>
+                        Sent
+                    </div>
+</div>
+<div class="w-full h-px bg-surface-variant"></div>
+<div class="flex items-center gap-4 w-full">
+<div class="flex -space-x-2">
+<div class="w-8 h-8 rounded-full border-2 border-white bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Close up portrait of a professional female HR manager with a warm, welcoming expression. Minimalist studio lighting, high resolution photography with a clean neutral background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBfHRUcljL9ywi_N5nkeLekVKNRqG_wnHcr1W2Z1KjeyICjeDGdCFFeSKD_WlbtiNA3o_u8eNjs1KZWYDOt8zzILTMBMLXicgBPbXJXEvR2_-dCRofniuK9esPnTjsidsH3OaNjVEKSBFEaMqYNQPo7QUjDi0qblCdfxnAvHrAIUSqxYzzyuxT0eMQSJPo0GEdkgqz3nEEBlb63omDYRJ4jdnn571d17wm08UbTshKPRTiMKiTZpqWn"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-white bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Close up portrait of a professional male lead researcher with a thoughtful, expert expression. Modern office setting with soft depth of field." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCKJFo2J_CzArOiD-vq6GNlLhOnDrbjGQWboPU2OQzLBNc9JQ2YbMMngRgzlWTqxZeWe1cbr-PWMeXxQ0Tc2rPE53J8vMfKyR8rXqvGh-SzQr59fMwyKFQHxq6THVevEqgOI5sHeEX_TtoqM-eBw0MgpVMpj6sCNOV0mcOq6UkhdZeLjzoL1r2lApUnNL-1rGaIXXAR_A7KHAsXoOSobCfMQLO7b8w7NAa4Y9gHLWKkGcB4DKFuyRxp"/>
+</div>
+</div>
+<span class="font-label-md text-text-secondary">2 team members are reviewing your profile</span>
+</div>
+</div>
+<!-- Action Cluster -->
+<div class="w-full flex flex-col sm:flex-row gap-4 items-center justify-center">
+<button class="w-full sm:w-auto min-w-[200px] bg-primary text-on-primary font-title-lg py-3.5 px-8 rounded-xl shadow-lg active:scale-95 transition-all hover:bg-primary-container">
+                    Track Application
+                </button>
+<button class="w-full sm:w-auto min-w-[200px] bg-surface-container-low text-primary font-title-lg py-3.5 px-8 rounded-xl border border-outline-variant hover:bg-surface-container transition-all active:scale-95">
+                    Back to Jobs
+                </button>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Filtered as Success Screen is Top-Level Success State) -->
+<nav class="fixed bottom-0 w-full z-50 rounded-t-xl bg-surface-container-lowest shadow-[0_-4px_20px_-4px_rgba(79,70,229,0.08)] md:hidden">
+<div class="flex justify-around items-center h-20 px-4 pb-2">
+<div class="flex flex-col items-center justify-center text-text-secondary hover:text-primary transition-all active:scale-90 duration-200">
+<span class="material-symbols-outlined" data-icon="work">work</span>
+<span class="font-label-md text-label-md">Marketplace</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-primary-fixed text-on-primary-fixed rounded-full px-4 py-1 active:scale-90 duration-200">
+<span class="material-symbols-outlined" data-icon="assignment_turned_in" style="font-variation-settings: 'FILL' 1;">assignment_turned_in</span>
+<span class="font-label-md text-label-md">Applications</span>
+</div>
+<div class="flex flex-col items-center justify-center text-text-secondary hover:text-primary transition-all active:scale-90 duration-200">
+<span class="material-symbols-outlined" data-icon="chat_bubble">chat_bubble</span>
+<span class="font-label-md text-label-md">Messages</span>
+</div>
+<div class="flex flex-col items-center justify-center text-text-secondary hover:text-primary transition-all active:scale-90 duration-200">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+<span class="font-label-md text-label-md">Profile</span>
+</div>
+</div>
+</nav>
+<script>
+        // Confetti micro-interaction
+        function createConfetti() {
+            const container = document.getElementById('confetti-container');
+            const colors = ['#1e00a9', '#4648d4', '#22C55E', '#e2dfff'];
+            
+            for (let i = 0; i < 40; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'confetti-piece';
+                
+                const startX = 64; // center
+                const startY = 64; // center
+                
+                const angle = Math.random() * Math.PI * 2;
+                const velocity = 2 + Math.random() * 4;
+                const distance = 80 + Math.random() * 120;
+                
+                piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                piece.style.left = startX + 'px';
+                piece.style.top = startY + 'px';
+                piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+                
+                container.appendChild(piece);
+                
+                const destX = startX + Math.cos(angle) * distance;
+                const destY = startY + Math.sin(angle) * distance;
+                
+                piece.animate([
+                    { opacity: 1, transform: 'translate(0, 0) rotate(0deg) scale(1)' },
+                    { opacity: 0, transform: `translate(${destX - startX}px, ${destY - startY}px) rotate(${Math.random() * 360}deg) scale(0.5)` }
+                ], {
+                    duration: 1000 + Math.random() * 1000,
+                    easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                    fill: 'forwards'
+                });
+            }
+        }
+
+        // Trigger confetti on load
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(createConfetti, 300);
+        });
+    </script>
+</body></html>

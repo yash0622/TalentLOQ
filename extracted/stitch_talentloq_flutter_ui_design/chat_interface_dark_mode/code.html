@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TalentLOQ | Chat</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #13121b;
+            color: #e4e1ee;
+            overflow-x: hidden;
+        }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid #334155;
+        }
+        .chat-container {
+            height: calc(100vh - 64px - 80px);
+        }
+        .message-bubble-sent {
+            background: #4f46e5;
+            color: #ffffff;
+            border-radius: 1.25rem 1.25rem 0.25rem 1.25rem;
+        }
+        .message-bubble-received {
+            background: #1e293b;
+            color: #e4e1ee;
+            border: 1px solid #334155;
+            border-radius: 1.25rem 1.25rem 1.25rem 0.25rem;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 10px;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary-container": "#a8afff",
+                    "on-background": "#e4e1ee",
+                    "error": "#ffb4ab",
+                    "surface-tint": "#c3c0ff",
+                    "surface-dim": "#13121b",
+                    "on-primary-fixed-variant": "#3323cc",
+                    "on-surface": "#e4e1ee",
+                    "surface-variant": "#35343e",
+                    "secondary-fixed": "#e0e0ff",
+                    "outline": "#918fa1",
+                    "on-tertiary": "#571f00",
+                    "tertiary-container": "#a44100",
+                    "surface-bright": "#393842",
+                    "on-secondary-fixed": "#000767",
+                    "secondary-container": "#2f3aa3",
+                    "inverse-surface": "#e4e1ee",
+                    "secondary": "#bdc2ff",
+                    "on-primary": "#1d00a5",
+                    "tertiary-fixed-dim": "#ffb695",
+                    "tertiary-fixed": "#ffdbcc",
+                    "secondary-fixed-dim": "#bdc2ff",
+                    "on-tertiary-fixed": "#351000",
+                    "on-error-container": "#ffdad6",
+                    "on-error": "#690005",
+                    "background": "#13121b",
+                    "on-tertiary-fixed-variant": "#7b2f00",
+                    "primary-fixed-dim": "#c3c0ff",
+                    "on-surface-variant": "#c7c4d8",
+                    "surface-container-highest": "#35343e",
+                    "surface-container-high": "#2a2933",
+                    "outline-variant": "#464555",
+                    "surface-container-low": "#1b1b24",
+                    "surface-container": "#1f1f28",
+                    "on-tertiary-container": "#ffd2be",
+                    "on-secondary-fixed-variant": "#2f3aa3",
+                    "on-primary-fixed": "#0f0069",
+                    "primary-fixed": "#e2dfff",
+                    "primary": "#c3c0ff",
+                    "surface": "#13121b",
+                    "primary-container": "#4f46e5",
+                    "tertiary": "#ffb695",
+                    "on-secondary": "#131e8c",
+                    "on-primary-container": "#dad7ff",
+                    "inverse-on-surface": "#302f39",
+                    "surface-container-lowest": "#0e0d16",
+                    "inverse-primary": "#4d44e3",
+                    "error-container": "#93000a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "lg": "24px",
+                    "md": "16px",
+                    "xs": "4px",
+                    "margin-mobile": "16px",
+                    "sm": "8px",
+                    "2xl": "64px",
+                    "gutter": "24px",
+                    "margin-desktop": "48px",
+                    "base": "4px",
+                    "xl": "40px",
+                    "container-padding": "24px"
+            },
+            "fontFamily": {
+                    "title-md": ["Plus Jakarta Sans"],
+                    "headline-lg-mobile": ["Plus Jakarta Sans"],
+                    "headline-lg": ["Plus Jakarta Sans"],
+                    "headline-xl": ["Plus Jakarta Sans"],
+                    "label-sm": ["Plus Jakarta Sans"],
+                    "body-md": ["Plus Jakarta Sans"],
+                    "body-lg": ["Plus Jakarta Sans"],
+                    "label-md": ["Plus Jakarta Sans"],
+                    "headline-md": ["Plus Jakarta Sans"],
+                    "headline-sm": ["Plus Jakarta Sans"]
+            },
+            "fontSize": {
+                    "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "headline-sm": ["20px", {"lineHeight": "24px", "fontWeight": "700"}],
+                    "headline-xl": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+</head>
+<body class="bg-surface dark:bg-surface text-on-surface selection:bg-primary/30">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 w-full z-50 bg-surface-glass dark:bg-surface-container-high backdrop-blur-md shadow-sm dark:shadow-none flex justify-between items-center px-container-padding h-16 w-full">
+<div class="flex items-center gap-md">
+<button class="md:hidden p-2 active:scale-95 transition-transform hover:bg-surface-container-low dark:hover:bg-surface-container rounded-full">
+<span class="material-symbols-outlined text-on-surface-variant">arrow_back</span>
+</button>
+<div class="relative">
+<img class="w-10 h-10 rounded-full object-cover border-2 border-primary-container" data-alt="A portrait of a young professional student with a warm smile, wearing a modern smart-casual outfit. The lighting is crisp and soft, set against a blurred creative studio background. The color palette features deep indigo and soft purples, maintaining a professional yet energetic SaaS aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCF0lSbXbHmxGysL4gCWX4L__-m8Q0vhZ10NP0clMJVcXCLzqsAgZBbsUzOZciGdDS1fH8xg-J6wsZncY5lGhXRei2i-eZBJc_hIjytUoecVWcKSc31p9XVzhGZnkHrveE4kLM8ZU-3GuL_ItBf4CjJE3QQFTxSOyK-r1qZOrYEfYQH_bz2OkcWbjOwBBv1GDKVWDF2XYbG8yXXYrLNzxej2EbprbXbDiedmwqp5EPPfqR6uKbzHDiA"/>
+<div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-surface-container-high rounded-full"></div>
+</div>
+<div>
+<h1 class="font-title-md text-title-md leading-tight text-on-surface">Alex Rivera</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Online • UX Design Candidate</p>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<button class="p-2 rounded-full hover:bg-surface-container-low dark:hover:bg-surface-container transition-colors active:scale-95">
+<span class="material-symbols-outlined text-primary" data-icon="videocam">videocam</span>
+</button>
+<button class="p-2 rounded-full hover:bg-surface-container-low dark:hover:bg-surface-container transition-colors active:scale-95">
+<span class="material-symbols-outlined text-primary" data-icon="call">call</span>
+</button>
+<button class="p-2 rounded-full hover:bg-surface-container-low dark:hover:bg-surface-container transition-colors active:scale-95">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="settings">settings</span>
+</button>
+</div>
+</header>
+<main class="pt-16 pb-24 md:pb-20 max-w-4xl mx-auto px-4 min-h-screen flex flex-col">
+<!-- Chat Area -->
+<div class="flex-grow flex flex-col gap-lg py-lg chat-container overflow-y-auto custom-scrollbar" id="chat-messages">
+<!-- Date Separator -->
+<div class="flex justify-center my-4">
+<span class="px-4 py-1 rounded-full bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">Yesterday</span>
+</div>
+<!-- Received Message -->
+<div class="flex items-end gap-md max-w-[85%] md:max-w-[70%]">
+<img class="w-8 h-8 rounded-full mb-1 flex-shrink-0" data-alt="Close-up portrait of Alex, a student candidate, looking focused and approachable. Soft studio lighting highlights professional features, with a background consisting of deep slate and indigo hues. High contrast and modern professional vibe." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCacemahsWKwvRmY0ZSJn5NKQh_CukVj6S7E_LKTkG6DKg2u1RWUIWvDojuhSTQA8woqbgy8jAWj3wJQAIDKbP0FifwUzkxioV4b-JCcu6xiHfq2VmVTQy4duiN8FtAp8gB6GplM8JjWIO-1tbelQJmHR9HnwSmkaQ8fMBiO8kByiAV4W2vDn9izSWjoqgpqTSviU904LXx7VI4Unt8K5E3mLyFGPZP_yLIwc8efuiw7zumADpryaeM"/>
+<div class="flex flex-col gap-1">
+<div class="message-bubble-received p-4 shadow-sm">
+<p class="font-body-md text-body-md">Hi Sarah! I've just finished the design challenge for the Senior UX position. Should I send the Figma link here or upload a PDF?</p>
+</div>
+<span class="font-label-sm text-label-sm text-outline-variant px-2">14:32 PM</span>
+</div>
+</div>
+<!-- Sent Message -->
+<div class="flex items-end gap-md self-end max-w-[85%] md:max-w-[70%] flex-row-reverse">
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-white mb-1 flex-shrink-0 font-bold">S</div>
+<div class="flex flex-col gap-1 items-end">
+<div class="message-bubble-sent p-4 shadow-md">
+<p class="font-body-md text-body-md">Great to hear, Alex! Both are fine, but a Figma link is usually preferred so the team can see your process and component structure.</p>
+</div>
+<div class="flex items-center gap-1 px-2">
+<span class="font-label-sm text-label-sm text-outline-variant">14:35 PM</span>
+<span class="material-symbols-outlined text-[14px] text-primary" style="font-variation-settings: 'FILL' 1;">done_all</span>
+</div>
+</div>
+</div>
+<!-- Received Message with Attachment -->
+<div class="flex items-end gap-md max-w-[85%] md:max-w-[70%]">
+<img class="w-8 h-8 rounded-full mb-1 flex-shrink-0" data-alt="Portrait of Alex, candidate, with a slight smile, positioned in a dark workspace with purple accent lighting. Professional aura with a clean, high-tech background. High definition digital photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAtcX_Er69MVQ3O_nYNs75cq2QQBk2D_mU9NcZ4lPHZfEiUKe5kCrtajxbTJGkvaK31-8g7LNnSk8UhDvdHDbC8oA0MmSeamUxDJVSOSeHDUi2YaLwcl97_8bzgsvuPC0s_W3_PeYBNhBoe-FhOhw3kDoRKU8WcQCip7cl8NB5tLRHlwqbx4FGKvkahGgp1Wxvv-aPkCksLIBRRJ6awTSLJGYGP_rMl59jjiKrrUbOy5cFjtvcJARln"/>
+<div class="flex flex-col gap-1">
+<div class="message-bubble-received p-4 shadow-sm">
+<p class="font-body-md text-body-md">Understood! Here is the link to the case study and the final prototype.</p>
+<div class="mt-3 p-3 bg-surface-container-highest rounded-lg border border-outline-variant flex items-center gap-3 hover:bg-surface-container transition-colors cursor-pointer">
+<div class="w-10 h-10 rounded bg-indigo-500/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">link</span>
+</div>
+<div class="overflow-hidden">
+<p class="font-label-md text-label-md truncate text-on-surface">Alex_Rivera_UX_Challenge.fig</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Figma Project • 12.4 MB</p>
+</div>
+</div>
+</div>
+<span class="font-label-sm text-label-sm text-outline-variant px-2">14:38 PM</span>
+</div>
+</div>
+<!-- Sent Message -->
+<div class="flex items-end gap-md self-end max-w-[85%] md:max-w-[70%] flex-row-reverse">
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-white mb-1 flex-shrink-0 font-bold">S</div>
+<div class="flex flex-col gap-1 items-end">
+<div class="message-bubble-sent p-4 shadow-md">
+<p class="font-body-md text-body-md">Got it! I'll pass this along to the hiring manager right away. Would you be available for a quick sync on Thursday morning?</p>
+</div>
+<div class="flex items-center gap-1 px-2">
+<span class="font-label-sm text-label-sm text-outline-variant">14:40 PM</span>
+<span class="material-symbols-outlined text-[14px] text-primary" style="font-variation-settings: 'FILL' 1;">done_all</span>
+</div>
+</div>
+</div>
+<!-- Typing Indicator -->
+<div class="flex items-center gap-2 px-10 animate-pulse">
+<div class="w-1.5 h-1.5 bg-outline-variant rounded-full"></div>
+<div class="w-1.5 h-1.5 bg-outline-variant rounded-full"></div>
+<div class="w-1.5 h-1.5 bg-outline-variant rounded-full"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant ml-1">Alex is typing...</span>
+</div>
+</div>
+</main>
+<!-- Message Input Bar -->
+<div class="fixed bottom-0 left-0 w-full bg-surface-container-lowest dark:bg-surface-dim px-4 pb-6 pt-2 z-50">
+<div class="max-w-4xl mx-auto flex items-center gap-sm bg-surface-container-high rounded-full px-4 py-2 border border-outline-variant focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all shadow-lg">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors active:scale-90">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors active:scale-90 hidden sm:block">
+<span class="material-symbols-outlined" data-icon="image">image</span>
+</button>
+<input class="flex-grow bg-transparent border-none focus:ring-0 text-on-surface font-body-md placeholder:text-outline-variant" placeholder="Type a message..." type="text"/>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors active:scale-90">
+<span class="material-symbols-outlined" data-icon="mood">mood</span>
+</button>
+<button class="w-10 h-10 bg-primary-container text-on-primary-container rounded-full flex items-center justify-center hover:opacity-90 active:scale-95 transition-all shadow-md">
+<span class="material-symbols-outlined" data-icon="send" style="font-variation-settings: 'FILL' 1;">send</span>
+</button>
+</div>
+</div>
+<!-- Hidden Bottom Nav for top-level context (as per hierarchy) -->
+<nav class="hidden md:flex fixed bottom-0 left-0 w-full justify-around items-center h-20 px-2 pb-2 bg-surface-container-lowest dark:bg-surface-dim shadow-[0_-4px_20px_-4px_rgba(79,70,229,0.08)] pointer-events-none opacity-0">
+<!-- These are generated but kept hidden to focus on the chat task -->
+</nav>
+<script>
+        // Micro-interaction: Auto-scroll to bottom of chat
+        const chatArea = document.getElementById('chat-messages');
+        chatArea.scrollTop = chatArea.scrollHeight;
+
+        // Micro-interaction: Message input focus glow
+        const inputField = document.querySelector('input');
+        const inputContainer = inputField.parentElement;
+        
+        inputField.addEventListener('focus', () => {
+            inputContainer.classList.add('shadow-indigo-500/10');
+        });
+        
+        inputField.addEventListener('blur', () => {
+            inputContainer.classList.remove('shadow-indigo-500/10');
+        });
+
+        // Simple send animation simulation
+        const sendBtn = document.querySelector('button .material-symbols-outlined[data-icon="send"]').parentElement;
+        sendBtn.addEventListener('click', () => {
+            if (inputField.value.trim() !== '') {
+                const text = inputField.value;
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'flex items-end gap-md self-end max-w-[85%] md:max-w-[70%] flex-row-reverse opacity-0 translate-y-4 transition-all duration-300';
+                msgDiv.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-white mb-1 flex-shrink-0 font-bold">S</div>
+                    <div class="flex flex-col gap-1 items-end">
+                        <div class="message-bubble-sent p-4 shadow-md">
+                            <p class="font-body-md text-body-md">${text}</p>
+                        </div>
+                        <div class="flex items-center gap-1 px-2">
+                            <span class="font-label-sm text-label-sm text-outline-variant">Just now</span>
+                            <span class="material-symbols-outlined text-[14px] text-primary">done</span>
+                        </div>
+                    </div>
+                `;
+                chatArea.appendChild(msgDiv);
+                setTimeout(() => {
+                    msgDiv.classList.remove('opacity-0', 'translate-y-4');
+                    chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: 'smooth' });
+                }, 50);
+                inputField.value = '';
+            }
+        });
+
+        // Enter key support
+        inputField.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendBtn.click();
+        });
+    </script>
+</body></html>

@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Senior AI Researcher | TalentLOQ</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-fixed": "#e2dfff",
+                    "text-secondary": "#475569",
+                    "surface-glass": "rgba(255, 255, 255, 0.7)",
+                    "error-container": "#ffdad6",
+                    "tertiary": "#400091",
+                    "on-tertiary-container": "#c5a9ff",
+                    "on-tertiary-fixed-variant": "#5a00c6",
+                    "on-primary-container": "#b1afff",
+                    "primary": "#1e00a9",
+                    "secondary-fixed": "#e1e0ff",
+                    "surface-container-lowest": "#ffffff",
+                    "surface": "#f7f9fb",
+                    "on-primary": "#ffffff",
+                    "text-primary": "#111827",
+                    "tertiary-fixed": "#eaddff",
+                    "surface-tint": "#4d44e3",
+                    "on-primary-fixed": "#0f0069",
+                    "inverse-primary": "#c3c0ff",
+                    "surface-container-highest": "#e0e3e5",
+                    "surface-bright": "#f7f9fb",
+                    "on-secondary-fixed": "#06006c",
+                    "tertiary-fixed-dim": "#d2bbff",
+                    "surface-dim": "#d8dadc",
+                    "primary-container": "#3525cd",
+                    "on-tertiary-fixed": "#25005a",
+                    "on-secondary-container": "#fffbff",
+                    "surface-variant": "#e0e3e5",
+                    "background": "#f7f9fb",
+                    "on-background": "#191c1e",
+                    "on-surface-variant": "#464555",
+                    "surface-container-low": "#f2f4f6",
+                    "warning": "#F59E0B",
+                    "on-primary-fixed-variant": "#3323cc",
+                    "on-secondary": "#ffffff",
+                    "outline-variant": "#c7c4d8",
+                    "on-error-container": "#93000a",
+                    "primary-fixed-dim": "#c3c0ff",
+                    "tertiary-container": "#5c00c9",
+                    "success": "#22C55E",
+                    "error": "#EF4444",
+                    "secondary": "#4648d4",
+                    "on-error": "#ffffff",
+                    "inverse-surface": "#2d3133",
+                    "on-secondary-fixed-variant": "#2e2ebe",
+                    "surface-container-high": "#e6e8ea",
+                    "on-surface": "#191c1e",
+                    "secondary-fixed-dim": "#c0c1ff",
+                    "inverse-on-surface": "#eff1f3",
+                    "surface-container": "#eceef0",
+                    "outline": "#777587",
+                    "secondary-container": "#6063ee",
+                    "on-tertiary": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "section-margin": "32px",
+                    "gutter": "16px",
+                    "container-padding": "20px",
+                    "card-gap": "12px",
+                    "base": "8px"
+            },
+            "fontFamily": {
+                    "title-lg": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "headline-sm": ["Plus Jakarta Sans"],
+                    "body-md": ["Inter"],
+                    "display-lg": ["Plus Jakarta Sans"],
+                    "headline-md": ["Plus Jakarta Sans"],
+                    "body-lg": ["Inter"],
+                    "label-md": ["Inter"]
+            },
+            "fontSize": {
+                    "title-lg": ["18px", {"lineHeight": "26px", "fontWeight": "600"}],
+                    "label-sm": ["11px", {"lineHeight": "14px", "fontWeight": "600"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        body {
+            background-color: #f7f9fb;
+            font-family: 'Inter', sans-serif;
+            color: #111827;
+        }
+        .glass-header {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 16px;
+        }
+        .floating-cta {
+            box-shadow: 0 -8px 32px rgba(79,70,229,0.12);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 backdrop-blur-md bg-surface-glass shadow-[0_4px_20px_-4px_rgba(79,70,229,0.08)]">
+<div class="flex items-center justify-between px-container-padding h-16 max-w-4xl mx-auto">
+<div class="flex items-center gap-4">
+<button class="text-primary hover:bg-primary/5 transition-colors p-2 rounded-full active:scale-95 duration-150">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-display-lg text-display-lg font-bold text-primary">TalentLOQ</h1>
+</div>
+<div class="h-10 w-10 rounded-full overflow-hidden border-2 border-primary-fixed">
+<img class="h-full w-full object-cover" data-alt="A professional headshot of a corporate executive in a modern, bright office setting. The lighting is soft and high-key, emphasizing a clean and high-end professional aesthetic. The subject is smiling warmly, wearing smart-casual tech attire. The background features blurred glass partitions and minimalist indigo decor elements consistent with a modern corporate brand." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpaqPebXsmD1Ki8FTxUaYFyb1XjyJBP5q5xkdC7N_hLeb8Ns0dOlIv7oVNJYFK20z3dD5plWQgvh_hIQzE9g0gyRSPv9cy-b1TkJ7EjvfkeMYJ3p8D2uva1-5Wz_wp18EzL40ANT16KqbudEA3FabktXOGQGm2e64rUhrGBobFxWrFIsNXJeKm_tu6yzNY5bOddur6-zb6hmz1fqq8u6kCfo1tK41hYYlLmySKb93G-vN4QcVGniDU"/>
+</div>
+</div>
+</header>
+<main class="pt-24 pb-32 max-w-4xl mx-auto px-container-padding">
+<!-- Hero Section -->
+<section class="mb-section-margin animate-in fade-in slide-in-from-bottom-4 duration-700">
+<div class="bg-surface-container-lowest rounded-xl p-8 shadow-[0_4px_20px_-4px_rgba(79,70,229,0.08)] border border-outline-variant relative overflow-hidden">
+<!-- Background Accent Blur -->
+<div class="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32"></div>
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+<div class="flex items-start gap-6">
+<div class="w-20 h-20 rounded-xl bg-white shadow-md border border-outline-variant flex items-center justify-center p-2 shrink-0">
+<img class="w-full h-full object-contain" data-alt="A minimalist and sleek corporate logo for an AI company named CloudScale AI. The logo features abstract geometric shapes forming a cloud and upward-pointing arrow, colored in deep indigo and vibrant electric blue. The design is clean, vector-style, and placed on a pristine white background to maintain high professional standards." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAcNs9EXj-7zhXRqol_ps_xNNWF2AtYqYDnCKovi2d4-fjZ5lrEkBamQQ3i_h-t2mVribIIeqnw9lGRZYRducAn7ESQcW3FI7Ed3X57vu3O3Gjyb3cwLhLS-5rhGC-n1Y11ewn6lou88Sdw6KLGnU4caPXHVu0Qw4-fZIsT259P8jVgVhpfQG6_6QtpJQRIAnGakDeSO3vvWGGAQUdUshu8x2Gs9UvR6M247Lci3rxCkgzrBcQZimpH"/>
+</div>
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="text-primary font-title-lg text-title-lg">CloudScale AI</span>
+<span class="material-symbols-outlined text-success text-[18px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<h2 class="font-headline-md text-headline-md text-text-primary mb-2">Senior AI Researcher</h2>
+<div class="flex flex-wrap gap-4 text-text-secondary">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[20px]">location_on</span>
+<span class="font-label-md text-label-md">Remote</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[20px]">payments</span>
+<span class="font-label-md text-label-md">$120k - $180k</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[20px]">schedule</span>
+<span class="font-label-md text-label-md">Full-time</span>
+</div>
+</div>
+</div>
+</div>
+<div class="hidden md:block">
+<button class="bg-primary text-on-primary px-8 py-3 rounded-xl font-title-lg text-title-lg shadow-lg hover:shadow-indigo-500/20 active:scale-95 transition-all">
+                            Apply Now
+                        </button>
+</div>
+</div>
+<div class="mt-8 flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+<span class="px-4 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-label-md text-label-md whitespace-nowrap">PyTorch</span>
+<span class="px-4 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-label-md text-label-md whitespace-nowrap">Transformers</span>
+<span class="px-4 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-label-md text-label-md whitespace-nowrap">LLMs</span>
+<span class="px-4 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-label-md text-label-md whitespace-nowrap">Research</span>
+</div>
+</div>
+</section>
+<!-- Bento Layout Details -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Main Content (Left Col) -->
+<div class="md:col-span-2 space-y-6">
+<!-- About the Role -->
+<div class="bg-surface-container-lowest rounded-xl p-8 border border-outline-variant shadow-[0_4px_20px_-4px_rgba(79,70,229,0.08)]">
+<h3 class="font-headline-sm text-headline-sm text-text-primary mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">description</span>
+                        About the Role
+                    </h3>
+<p class="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
+                        As a Senior AI Researcher at CloudScale AI, you will be at the forefront of developing next-generation foundation models. We are looking for individuals who thrive in high-ambiguity environments and are passionate about bridging the gap between theoretical research and scalable, real-world deployment. You will collaborate with our engineering teams to optimize massive-scale training pipelines and innovate on transformer architectures.
+                    </p>
+</div>
+<!-- Requirements -->
+<div class="bg-surface-container-lowest rounded-xl p-8 border border-outline-variant shadow-[0_4px_20px_-4px_rgba(79,70,229,0.08)]">
+<h3 class="font-headline-sm text-headline-sm text-text-primary mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">checklist</span>
+                        Requirements
+                    </h3>
+<ul class="space-y-4">
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary mt-1">check_circle</span>
+<span class="font-body-md text-body-md text-on-surface-variant">Ph.D. in Computer Science, AI, or related field with a focus on Deep Learning.</span>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary mt-1">check_circle</span>
+<span class="font-body-md text-body-md text-on-surface-variant">Proven track record of publications at top-tier venues (NeurIPS, ICML, ICLR, etc.).</span>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary mt-1">check_circle</span>
+<span class="font-body-md text-body-md text-on-surface-variant">4+ years of experience with distributed training of large-scale models.</span>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary mt-1">check_circle</span>
+<span class="font-body-md text-body-md text-on-surface-variant">Expertise in Python, PyTorch, and CUDA kernel optimization.</span>
+</li>
+</ul>
+</div>
+</div>
+<!-- Sidebar (Right Col) -->
+<div class="space-y-6">
+<!-- Benefits -->
+<div class="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant shadow-[0_4px_20px_-4px_rgba(79,70,229,0.08)]">
+<h3 class="font-title-lg text-title-lg text-text-primary mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">card_giftcard</span>
+                        Benefits
+                    </h3>
+<div class="space-y-4">
+<div class="flex items-center gap-3 p-3 rounded-lg bg-surface-container-low">
+<span class="material-symbols-outlined text-primary">monitor_heart</span>
+<span class="font-label-md text-label-md font-bold text-text-primary">Premium Health</span>
+</div>
+<div class="flex items-center gap-3 p-3 rounded-lg bg-surface-container-low">
+<span class="material-symbols-outlined text-primary">flight_takeoff</span>
+<span class="font-label-md text-label-md font-bold text-text-primary">Unlimited PTO</span>
+</div>
+<div class="flex items-center gap-3 p-3 rounded-lg bg-surface-container-low">
+<span class="material-symbols-outlined text-primary">fitness_center</span>
+<span class="font-label-md text-label-md font-bold text-text-primary">Wellness Stipend</span>
+</div>
+<div class="flex items-center gap-3 p-3 rounded-lg bg-surface-container-low">
+<span class="material-symbols-outlined text-primary">home_work</span>
+<span class="font-label-md text-label-md font-bold text-text-primary">Remote Setup</span>
+</div>
+</div>
+</div>
+<!-- Team Preview -->
+<div class="bg-primary/5 rounded-xl p-6 border border-primary/10">
+<h4 class="font-label-md text-label-md uppercase tracking-wider text-primary mb-4">Meet the Team</h4>
+<div class="flex -space-x-3 mb-4">
+<div class="w-10 h-10 rounded-full border-2 border-white overflow-hidden shadow-sm">
+<img class="w-full h-full object-cover" data-alt="A close-up portrait of a female AI researcher with glasses, smiling confidently in a modern tech lab. The visual style is crisp and professional, featuring a palette of cool blues and white. The lighting is bright and directional, highlighting the texture of her skin and the high-tech surroundings." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_BnYyW9SO2zguikUROq0fS_Mx5c5jwSVKsXH7z_u3NLBRmmeBZzK7akODe4N6unBMf3PcSZRU9P5aYgfggdGp-RpmRqQ1qZZyCvG_luGOuBuozUjIgMwoktCdCsgkOMvswZbDtazBtPiwvOKlA-yuTxoIFu5RQao5ybBcufF7_MBtrFbhETIHopSvvum58BjPCa_Ar7rI4yU9xeFwJQWnuHSVi1L1q2uAgQlZEpfr8Dtn1sNxQKx0"/>
+</div>
+<div class="w-10 h-10 rounded-full border-2 border-white overflow-hidden shadow-sm">
+<img class="w-full h-full object-cover" data-alt="A portrait of a male data scientist working at a multi-monitor desk setup in a sleek office. High-key lighting fills the frame, creating a sense of openness and productivity. He is focused and professional, wearing a stylish dark grey knit sweater. The overall mood is modern and corporate." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAlM0e5gQ7QCkEVbcq0HS4cfWO2ajZl34ym1Rgx3tOKVPAeA-jr366MdoRrvK5ovIs6N_sFnbRQFiYTjyz2hQm4rBdYzScZL--CsF8m1puO2jUZn6J6HINxm2pwqwB2Om5tMJ9O7xn-6WQTWjGwcJ-OVWrxjSsIYzK7O8YAgo19A2MbxlvAMwovJScQ6Ol-1gUNLgTU4dYq3RfX7c2u_8yq1kKsaZP6bsXADdxmeoRX_M4zhCm9O-FR"/>
+</div>
+<div class="w-10 h-10 rounded-full border-2 border-white overflow-hidden shadow-sm">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a diverse tech lead in a bright, modern corporate environment. The aesthetic is clean and high-end, utilizing a minimalist white and indigo color scheme. The subject's expression is approachable yet authoritative, representing a leader in the tech industry." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCj-iPU2tCegjZPz4MTesdbCfMSD83g2zYRno7vtIWWV3uMPQduvB9MTqUFvAZ448_lyXsaHY3umCdm2c3e7kyutfgRFn-eyuMx8o_40OiTiZkZzcolWrdJpQabVEeWPFK0x9hito9I8TLxnDMNQP3T6e7c4M1NG3mfEweR-ttLu-32UZmFGkDK5i6LxYVBguW6xtYvnqdH9Njp-yG_YxypQkRzXtDduJCBTxGVPdQVGg9hAYHb4VTX"/>
+</div>
+<div class="w-10 h-10 rounded-full bg-primary-fixed border-2 border-white flex items-center justify-center text-[10px] font-bold text-on-primary-fixed shadow-sm">
+                            +12
+                        </div>
+</div>
+<p class="font-label-md text-label-md text-on-surface-variant">Work alongside 15+ world-class AI experts and engineers.</p>
+</div>
+</div>
+</div>
+<!-- Similar Jobs Preview (Horizontal Bleed Pattern) -->
+<section class="mt-section-margin">
+<h3 class="font-headline-sm text-headline-sm text-text-primary mb-6">Similar Opportunities</h3>
+<div class="flex gap-4 overflow-x-auto pb-4 -mx-container-padding px-container-padding snap-x">
+<!-- Job Card 1 -->
+<div class="min-w-[280px] bg-surface-container-lowest p-5 rounded-xl border border-outline-variant shadow-sm snap-start">
+<div class="flex justify-between items-start mb-4">
+<div class="w-10 h-10 rounded bg-background flex items-center justify-center p-1 border border-outline-variant">
+<img class="w-full h-full object-contain" data-alt="A minimalist tech logo for a company called NeuroLink Solutions, featuring a brain and circuit pattern in deep indigo and electric purple on a white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQMEqPjAmWj1-RLJqjDVOt6cpcTqlechvFAp23u-54a59N-_vo5CWO2_aSOv2JI9UN291NeeZ2zVXqE-iBrP9LreZj406MtcCSzAnUAZelmBrQDPcNgGTfbPxWGko97PhpJ-yoE540OmzUbRZ5-qjJxyHlUDrDaVwIgDa8Tj_ekQPi32UfnofsvugmZgC0w9XU_dBwmwjqgFRyejpb5Rz_D2GYUcLUQnXvd8v9M3RrXsue2OwZfNrE"/>
+</div>
+<span class="material-symbols-outlined text-text-secondary cursor-pointer hover:text-primary transition-colors">bookmark</span>
+</div>
+<h4 class="font-title-lg text-title-lg text-text-primary mb-1">ML Engineer</h4>
+<p class="font-body-md text-body-md text-text-secondary mb-4">NeuroLink • Remote</p>
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md font-bold text-primary">$110k - $160k</span>
+<span class="material-symbols-outlined text-primary">arrow_forward</span>
+</div>
+</div>
+<!-- Job Card 2 -->
+<div class="min-w-[280px] bg-surface-container-lowest p-5 rounded-xl border border-outline-variant shadow-sm snap-start">
+<div class="flex justify-between items-start mb-4">
+<div class="w-10 h-10 rounded bg-background flex items-center justify-center p-1 border border-outline-variant">
+<img class="w-full h-full object-contain" data-alt="A corporate logo for a startup called DataStream Hub, featuring a series of flowing dots and lines in shades of indigo and teal on a white square background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC1o5CBAvqEhgRRalIzrFr-kXzsMscy9j8MhFzO6UsNs1VESEMbZkk45KCNCGutqeRGYozvdQv7P_8onlptVC1a6PQ4UMt8zXHOvGUy0W6uQcwHj5otqI0-UXFb5k2kS0bXtYB-nXDIYBd4BaM3CgC65JQzuBI2ygRljKX2jF6I7nte1z_J5rRQu0633OZvEeDtbpRhE3beG6aNR2UGowLPYJrKh27AGwfLOlbUxmweszZBOa0krnj1"/>
+</div>
+<span class="material-symbols-outlined text-text-secondary cursor-pointer hover:text-primary transition-colors">bookmark</span>
+</div>
+<h4 class="font-title-lg text-title-lg text-text-primary mb-1">Data Scientist</h4>
+<p class="font-body-md text-body-md text-text-secondary mb-4">DataStream • NY</p>
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md font-bold text-primary">$130k - $190k</span>
+<span class="material-symbols-outlined text-primary">arrow_forward</span>
+</div>
+</div>
+<!-- Job Card 3 -->
+<div class="min-w-[280px] bg-surface-container-lowest p-5 rounded-xl border border-outline-variant shadow-sm snap-start">
+<div class="flex justify-between items-start mb-4">
+<div class="w-10 h-10 rounded bg-background flex items-center justify-center p-1 border border-outline-variant">
+<img class="w-full h-full object-contain" data-alt="A modern tech brand logo for Quantum Labs, utilizing a stylized Q and atomic structure in vibrant indigo and metallic silver on a white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3SniEDWeYSGUJbHMktoT-l3VJWyP5HxRBeqggU4ZSMM-R6m3_TGG4o0J4zfoh4xYA3ErGbdjLTOUMPjQYNlGKzEHu15VONz_ubXhikYb15QrFSVCZZ-atE9M0FSelNsP-UIY1fPnOjxa2i_WugflwtOEnqHRjgqEU194bureklO7QpJoqPUCvyZ6MttY0BIlKVR-rCEQA5OB5wPp7bUBNp75LdDfhL2QVzohHj7mZig9z3NC2Qq24"/>
+</div>
+<span class="material-symbols-outlined text-text-secondary cursor-pointer hover:text-primary transition-colors">bookmark</span>
+</div>
+<h4 class="font-title-lg text-title-lg text-text-primary mb-1">Quantum AI Dev</h4>
+<p class="font-body-md text-body-md text-text-secondary mb-4">Quantum Labs • Hybrid</p>
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md font-bold text-primary">$150k - $210k</span>
+<span class="material-symbols-outlined text-primary">arrow_forward</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Mobile CTA Bar (Sticky) -->
+<div class="md:hidden fixed bottom-20 left-0 w-full bg-surface-container-lowest/80 backdrop-blur-lg px-container-padding py-4 floating-cta z-40">
+<button class="w-full bg-primary text-on-primary py-4 rounded-xl font-headline-sm text-headline-sm shadow-lg active:scale-95 duration-200 transition-transform">
+            Apply Now
+        </button>
+</div>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 rounded-t-xl bg-surface-container-lowest shadow-[0_-4px_20px_-4px_rgba(79,70,229,0.08)]">
+<div class="flex justify-around items-center h-20 px-4 pb-2">
+<a class="flex flex-col items-center justify-center text-text-secondary hover:text-primary transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">work</span>
+<span class="font-label-md text-label-md">Marketplace</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-fixed text-on-primary-fixed rounded-full px-4 py-1 active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">assignment_turned_in</span>
+<span class="font-label-md text-label-md">Applications</span>
+</a>
+<a class="flex flex-col items-center justify-center text-text-secondary hover:text-primary transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="font-label-md text-label-md">Messages</span>
+</a>
+<a class="flex flex-col items-center justify-center text-text-secondary hover:text-primary transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">account_circle</span>
+<span class="font-label-md text-label-md">Profile</span>
+</a>
+</div>
+</nav>
+<script>
+        // Simple micro-interaction for the bookmark toggle
+        document.querySelectorAll('.material-symbols-outlined').forEach(icon => {
+            if(icon.textContent === 'bookmark') {
+                icon.addEventListener('click', function() {
+                    const isFilled = this.style.fontVariationSettings.includes("'FILL' 1");
+                    this.style.fontVariationSettings = isFilled ? "'FILL' 0" : "'FILL' 1";
+                    this.classList.toggle('text-primary');
+                });
+            }
+        });
+
+        // Application active logic mapping
+        // This specific page shows 'Applications' as active based on the semantic journey
+        // of viewing a detailed job listing.
+    </script>
+</body></html>

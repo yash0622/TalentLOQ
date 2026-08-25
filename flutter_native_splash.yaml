@@ -1,0 +1,11 @@
+flutter_native_splash:
+  color: "#F5F7FA"
+  color_dark: "#0F2537"
+  image: assets/logo/talentloq_wordmark_full.png
+  image_dark: assets/logo/talentloq_wordmark_full.png
+  android_12:
+    image: assets/logo/talentloq_icon_only.png
+    icon_background_color: "#F5F7FA"
+    image_dark: assets/logo/talentloq_icon_only.png
+    icon_background_color_dark: "#0F2537"
+  web: false

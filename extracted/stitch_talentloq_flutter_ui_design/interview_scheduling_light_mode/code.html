@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Schedule Interview | TalentLOQ</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-fixed-dim": "#c3c0ff",
+                    "on-tertiary-fixed": "#25005a",
+                    "text-secondary": "#475569",
+                    "on-error-container": "#93000a",
+                    "on-error": "#ffffff",
+                    "background": "#f7f9fb",
+                    "surface-container": "#eceef0",
+                    "primary-fixed": "#e2dfff",
+                    "surface-container-highest": "#e0e3e5",
+                    "surface-container-high": "#e6e8ea",
+                    "outline-variant": "#c7c4d8",
+                    "surface-container-low": "#f2f4f6",
+                    "warning": "#F59E0B",
+                    "inverse-on-surface": "#eff1f3",
+                    "primary-container": "#3525cd",
+                    "on-secondary": "#ffffff",
+                    "on-secondary-container": "#fffbff",
+                    "success": "#22C55E",
+                    "surface-tint": "#4d44e3",
+                    "on-primary-fixed-variant": "#3323cc",
+                    "outline": "#777587",
+                    "tertiary-fixed": "#eaddff",
+                    "on-primary": "#ffffff",
+                    "tertiary-fixed-dim": "#d2bbff",
+                    "on-surface-variant": "#464555",
+                    "text-primary": "#111827",
+                    "on-tertiary-fixed-variant": "#5a00c6",
+                    "on-tertiary-container": "#c5a9ff",
+                    "on-secondary-fixed-variant": "#2e2ebe",
+                    "on-primary-fixed": "#0f0069",
+                    "primary": "#1e00a9",
+                    "surface": "#f7f9fb",
+                    "surface-container-lowest": "#ffffff",
+                    "inverse-primary": "#c3c0ff",
+                    "error-container": "#ffdad6",
+                    "tertiary": "#400091",
+                    "surface-glass": "rgba(255, 255, 255, 0.7)",
+                    "on-primary-container": "#b1afff",
+                    "on-background": "#191c1e",
+                    "error": "#EF4444",
+                    "on-surface": "#191c1e",
+                    "surface-variant": "#e0e3e5",
+                    "secondary-fixed": "#e1e0ff",
+                    "surface-dim": "#d8dadc",
+                    "surface-bright": "#f7f9fb",
+                    "on-secondary-fixed": "#06006c",
+                    "secondary-container": "#6063ee",
+                    "inverse-surface": "#2d3133",
+                    "on-tertiary": "#ffffff",
+                    "tertiary-container": "#5c00c9",
+                    "secondary-fixed-dim": "#c0c1ff",
+                    "secondary": "#4648d4"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "card-gap": "12px",
+                    "container-padding": "20px",
+                    "section-margin": "32px",
+                    "gutter": "16px",
+                    "base": "8px"
+            },
+            "fontFamily": {
+                    "headline-md": ["Plus Jakarta Sans"],
+                    "headline-sm": ["Plus Jakarta Sans"],
+                    "display-lg": ["Plus Jakarta Sans"],
+                    "label-md": ["Inter"],
+                    "title-lg": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "body-md": ["Inter"],
+                    "body-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "title-lg": ["18px", {"lineHeight": "26px", "fontWeight": "600"}],
+                    "label-sm": ["11px", {"lineHeight": "14px", "fontWeight": "600"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            vertical-align: middle;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        body {
+            background-color: #f7f9fb;
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface">
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 bg-surface-glass backdrop-blur-md shadow-sm flex justify-between items-center px-container-padding h-16">
+<div class="flex items-center gap-3">
+<button class="material-symbols-outlined text-on-surface-variant hover:bg-surface-container-low transition-colors p-2 rounded-full active:scale-95">arrow_back</button>
+<h1 class="font-headline-md text-headline-md text-primary tracking-tight">TalentLOQ</h1>
+</div>
+<div class="flex items-center gap-2">
+<button class="material-symbols-outlined text-on-surface-variant p-2 hover:bg-surface-container-low transition-colors rounded-full">settings</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A professional studio headshot of a diverse university student for a career profile. The student is smiling warmly, wearing business casual attire, against a soft, out-of-focus modern office background with indigo and white light tones. High-end editorial photography style with soft key lighting and a clean, corporate aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC18Viqf_2IPoB24WFYzbuKBzmjS4vxfPlLTC44WXFBRwPc-VV_TYDBJTym2olvHWTlSFrFlTiUze3EiUvChEQPuaE-OisqQ-kOpMfF4SVA0hJjvgxM8yUUIeD-G7PZpQEP0F0yJKKmhJS3lvWy1YfZBAtvUCXqMzFNoSHb5LTGKCDX1-nl1uoUbRg6_m0x4sdKBUPmEE-K5H0If8Y5cPO84b38VVnNSgC3UmKXgfcLk2zEMs7biXI1"/>
+</div>
+</div>
+</header>
+<main class="max-w-4xl mx-auto px-container-padding pt-24 pb-32">
+<!-- Interview Details Card -->
+<section class="mb-section-margin">
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 shadow-[0_4px_20px_-4px_rgba(79,70,229,0.08)]">
+<div class="flex items-start justify-between mb-4">
+<div>
+<span class="font-label-md text-label-md bg-secondary-fixed text-on-secondary-fixed px-3 py-1 rounded-full mb-2 inline-block">Final Round</span>
+<h2 class="font-display-lg text-display-lg text-text-primary">Quantitative Research Intern</h2>
+<p class="font-body-lg text-body-lg text-text-secondary mt-1">Vanguard Systems • Hybrid</p>
+</div>
+<div class="w-16 h-16 bg-surface-container rounded-lg flex items-center justify-center border border-outline-variant">
+<span class="material-symbols-outlined text-primary text-4xl">corporate_fare</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-4 pt-4 border-t border-surface-variant">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">timer</span>
+<span class="font-label-md text-label-md">45 Minutes</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">video_call</span>
+<span class="font-label-md text-label-md">Google Meet</span>
+</div>
+</div>
+</div>
+</section>
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-card-gap">
+<!-- Calendar Section -->
+<section class="lg:col-span-3">
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 shadow-[0_4px_20px_-4px_rgba(79,70,229,0.08)]">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-headline-sm text-headline-sm text-text-primary">Select Date</h3>
+<div class="flex gap-1">
+<button class="material-symbols-outlined p-2 hover:bg-surface-container transition-colors rounded-full text-on-surface-variant active:scale-90">chevron_left</button>
+<span class="font-title-lg text-title-lg px-2 flex items-center">October 2024</span>
+<button class="material-symbols-outlined p-2 hover:bg-surface-container transition-colors rounded-full text-on-surface-variant active:scale-90">chevron_right</button>
+</div>
+</div>
+<div class="calendar-grid text-center mb-2">
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider py-2">S</span>
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider py-2">M</span>
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider py-2">T</span>
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider py-2">W</span>
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider py-2">T</span>
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider py-2">F</span>
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider py-2">S</span>
+</div>
+<div class="calendar-grid text-center gap-y-1">
+<!-- Empty states for alignment -->
+<div class="h-12"></div>
+<div class="h-12"></div>
+<span class="h-12 flex items-center justify-center font-body-md text-body-md text-outline-variant">1</span>
+<span class="h-12 flex items-center justify-center font-body-md text-body-md text-outline-variant">2</span>
+<span class="h-12 flex items-center justify-center font-body-md text-body-md text-outline-variant">3</span>
+<span class="h-12 flex items-center justify-center font-body-md text-body-md text-outline-variant">4</span>
+<span class="h-12 flex items-center justify-center font-body-md text-body-md text-outline-variant">5</span>
+<!-- Real Days -->
+<button class="h-12 w-full flex items-center justify-center font-body-md text-body-md text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors">6</button>
+<button class="h-12 w-full flex items-center justify-center font-body-md text-body-md text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors">7</button>
+<button class="h-12 w-full flex items-center justify-center font-body-md text-body-md text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors relative">
+                            8
+                            <span class="absolute bottom-2 w-1 h-1 bg-primary rounded-full"></span>
+</button>
+<button class="h-12 w-full flex items-center justify-center font-body-md text-body-md text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors">9</button>
+<button class="h-12 w-full flex items-center justify-center font-body-md text-body-md bg-primary text-on-primary rounded-lg shadow-md transform scale-110 z-10 font-bold">10</button>
+<button class="h-12 w-full flex items-center justify-center font-body-md text-body-md text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors relative">
+                            11
+                            <span class="absolute bottom-2 w-1 h-1 bg-primary rounded-full"></span>
+</button>
+<button class="h-12 w-full flex items-center justify-center font-body-md text-body-md text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors">12</button>
+<button class="h-12 w-full flex items-center justify-center font-body-md text-body-md text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors">13</button>
+<button class="h-12 w-full flex items-center justify-center font-body-md text-body-md text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors">14</button>
+<button class="h-12 w-full flex items-center justify-center font-body-md text-body-md text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors">15</button>
+<button class="h-12 w-full flex items-center justify-center font-body-md text-body-md text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors">16</button>
+<button class="h-12 w-full flex items-center justify-center font-body-md text-body-md text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors">17</button>
+<button class="h-12 w-full flex items-center justify-center font-body-md text-body-md text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors">18</button>
+<button class="h-12 w-full flex items-center justify-center font-body-md text-body-md text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors">19</button>
+</div>
+</div>
+</section>
+<!-- Time Slots Section -->
+<section class="lg:col-span-2">
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 h-full shadow-[0_4px_20px_-4px_rgba(79,70,229,0.08)] flex flex-col">
+<h3 class="font-headline-sm text-headline-sm text-text-primary mb-2">Available Times</h3>
+<p class="font-label-md text-label-md text-on-surface-variant mb-6">Thursday, Oct 10</p>
+<div class="flex-grow space-y-3 overflow-y-auto pr-2 hide-scrollbar">
+<button class="w-full text-left p-4 rounded-xl border border-outline-variant hover:border-primary hover:bg-primary-fixed/30 transition-all group active:scale-[0.98]" onclick="selectTime(this)">
+<div class="flex items-center justify-between">
+<span class="font-title-lg text-title-lg text-text-primary">10:00 AM</span>
+<span class="material-symbols-outlined text-primary opacity-0 group-hover:opacity-100 transition-opacity">check_circle</span>
+</div>
+</button>
+<button class="w-full text-left p-4 rounded-xl border border-primary bg-primary-container/10 transition-all group active:scale-[0.98]" onclick="selectTime(this)">
+<div class="flex items-center justify-between">
+<span class="font-title-lg text-title-lg text-primary font-bold">11:30 AM</span>
+<span class="material-symbols-outlined text-primary font-variation-settings-fill">check_circle</span>
+</div>
+</button>
+<button class="w-full text-left p-4 rounded-xl border border-outline-variant hover:border-primary hover:bg-primary-fixed/30 transition-all group active:scale-[0.98]" onclick="selectTime(this)">
+<div class="flex items-center justify-between">
+<span class="font-title-lg text-title-lg text-text-primary">02:00 PM</span>
+<span class="material-symbols-outlined text-primary opacity-0 group-hover:opacity-100 transition-opacity">check_circle</span>
+</div>
+</button>
+<button class="w-full text-left p-4 rounded-xl border border-outline-variant hover:border-primary hover:bg-primary-fixed/30 transition-all group active:scale-[0.98]" onclick="selectTime(this)">
+<div class="flex items-center justify-between">
+<span class="font-title-lg text-title-lg text-text-primary">03:30 PM</span>
+<span class="material-symbols-outlined text-primary opacity-0 group-hover:opacity-100 transition-opacity">check_circle</span>
+</div>
+</button>
+<button class="w-full text-left p-4 rounded-xl border border-outline-variant hover:border-primary hover:bg-primary-fixed/30 transition-all group active:scale-[0.98]" onclick="selectTime(this)">
+<div class="flex items-center justify-between">
+<span class="font-title-lg text-title-lg text-text-primary">04:45 PM</span>
+<span class="material-symbols-outlined text-primary opacity-0 group-hover:opacity-100 transition-opacity">check_circle</span>
+</div>
+</button>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Bottom Action Bar -->
+<div class="fixed bottom-0 left-0 w-full bg-surface-container-lowest border-t border-outline-variant/30 px-container-padding py-6 z-50 shadow-[0_-4px_20px_-4px_rgba(79,70,229,0.08)]">
+<div class="max-w-4xl mx-auto flex items-center justify-between">
+<div class="hidden md:block">
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Selected Session</p>
+<p class="font-title-lg text-title-lg text-text-primary">Oct 10 at 11:30 AM</p>
+</div>
+<button class="w-full md:w-auto px-10 py-4 bg-primary text-on-primary rounded-full font-headline-sm text-headline-sm hover:opacity-90 transition-opacity active:scale-95 shadow-lg shadow-primary/20">
+                Confirm Selection
+            </button>
+</div>
+</div>
+<!-- Background Elements -->
+<div class="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+<div class="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-primary-fixed-dim/20 blur-[120px] rounded-full"></div>
+<div class="absolute bottom-[-5%] left-[-5%] w-[40%] h-[40%] bg-secondary-fixed-dim/20 blur-[100px] rounded-full"></div>
+</div>
+<script>
+        function selectTime(element) {
+            // Remove selection from all buttons
+            const buttons = element.parentElement.querySelectorAll('button');
+            buttons.forEach(btn => {
+                btn.classList.remove('border-primary', 'bg-primary-container/10');
+                btn.classList.add('border-outline-variant');
+                const text = btn.querySelector('span:first-child');
+                text.classList.remove('text-primary', 'font-bold');
+                text.classList.add('text-text-primary');
+                const icon = btn.querySelector('.material-symbols-outlined');
+                icon.classList.add('opacity-0');
+                icon.style.fontVariationSettings = "'FILL' 0";
+            });
+
+            // Add selection to clicked button
+            element.classList.add('border-primary', 'bg-primary-container/10');
+            element.classList.remove('border-outline-variant');
+            const text = element.querySelector('span:first-child');
+            text.classList.add('text-primary', 'font-bold');
+            const icon = element.querySelector('.material-symbols-outlined');
+            icon.classList.remove('opacity-0');
+            icon.style.fontVariationSettings = "'FILL' 1";
+            
+            // Update bottom bar (simulation)
+            const timeVal = text.innerText;
+            const bottomTime = document.querySelector('.max-w-4xl p.font-title-lg');
+            if(bottomTime) bottomTime.innerText = `Oct 10 at ${timeVal}`;
+        }
+    </script>
+</body></html>

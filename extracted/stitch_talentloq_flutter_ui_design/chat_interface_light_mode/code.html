@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TalentLOQ | Chat</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-fixed-dim": "#c3c0ff",
+                    "on-tertiary-fixed": "#25005a",
+                    "text-secondary": "#475569",
+                    "on-error-container": "#93000a",
+                    "on-error": "#ffffff",
+                    "background": "#f7f9fb",
+                    "surface-container": "#eceef0",
+                    "primary-fixed": "#e2dfff",
+                    "surface-container-highest": "#e0e3e5",
+                    "surface-container-high": "#e6e8ea",
+                    "outline-variant": "#c7c4d8",
+                    "surface-container-low": "#f2f4f6",
+                    "warning": "#F59E0B",
+                    "inverse-on-surface": "#eff1f3",
+                    "primary-container": "#3525cd",
+                    "on-secondary": "#ffffff",
+                    "on-secondary-container": "#fffbff",
+                    "success": "#22C55E",
+                    "surface-tint": "#4d44e3",
+                    "on-primary-fixed-variant": "#3323cc",
+                    "outline": "#777587",
+                    "tertiary-fixed": "#eaddff",
+                    "on-primary": "#ffffff",
+                    "tertiary-fixed-dim": "#d2bbff",
+                    "on-surface-variant": "#464555",
+                    "text-primary": "#111827",
+                    "on-tertiary-fixed-variant": "#5a00c6",
+                    "on-tertiary-container": "#c5a9ff",
+                    "on-secondary-fixed-variant": "#2e2ebe",
+                    "on-primary-fixed": "#0f0069",
+                    "primary": "#1e00a9",
+                    "surface": "#f7f9fb",
+                    "surface-container-lowest": "#ffffff",
+                    "inverse-primary": "#c3c0ff",
+                    "error-container": "#ffdad6",
+                    "tertiary": "#400091",
+                    "surface-glass": "rgba(255, 255, 255, 0.7)",
+                    "on-primary-container": "#b1afff",
+                    "on-background": "#191c1e",
+                    "error": "#EF4444",
+                    "on-surface": "#191c1e",
+                    "surface-variant": "#e0e3e5",
+                    "secondary-fixed": "#e1e0ff",
+                    "surface-dim": "#d8dadc",
+                    "surface-bright": "#f7f9fb",
+                    "on-secondary-fixed": "#06006c",
+                    "secondary-container": "#6063ee",
+                    "inverse-surface": "#2d3133",
+                    "on-tertiary": "#ffffff",
+                    "tertiary-container": "#5c00c9",
+                    "secondary-fixed-dim": "#c0c1ff",
+                    "secondary": "#4648d4"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "card-gap": "12px",
+                    "container-padding": "20px",
+                    "section-margin": "32px",
+                    "gutter": "16px",
+                    "base": "8px"
+            },
+            "fontFamily": {
+                    "headline-md": ["Plus Jakarta Sans"],
+                    "headline-sm": ["Plus Jakarta Sans"],
+                    "display-lg": ["Plus Jakarta Sans"],
+                    "label-md": ["Inter"],
+                    "title-lg": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "body-md": ["Inter"],
+                    "body-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "title-lg": ["18px", {"lineHeight": "26px", "fontWeight": "600"}],
+                    "label-sm": ["11px", {"lineHeight": "14px", "fontWeight": "600"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .message-bubble-received {
+            border-bottom-left-radius: 4px;
+        }
+        .message-bubble-sent {
+            border-bottom-right-radius: 4px;
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c7c4d8;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md overflow-hidden h-screen flex flex-col items-center">
+<!-- Header / TopAppBar -->
+<header class="fixed top-0 w-full z-50 glass-panel shadow-sm bg-surface-glass h-16 flex justify-between items-center px-container-padding max-w-4xl border-b border-outline-variant/30">
+<div class="flex items-center gap-3">
+<button class="md:hidden p-2 -ml-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors active:scale-95">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<div class="relative">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a friendly corporate recruiter in her 30s with a warm smile, wearing a modern indigo-colored blazer. She is set against a clean, softly blurred office background with high-key lighting. The overall style is professional, high-quality, and follows a modern tech-industry aesthetic with bright, clean tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAYz7fzzyUkS5prfcVbvwkOevaTRZd33qSdiDi3tK-aHr1DNT_SF4oY6rgEOLzLnSWNVGuMH011hMh1Vc5kyb2e24R7MaS4WcNP9P1YuZRHnpCRrft5IsXHW6v7vbmff4AFqkA0CjcspyDfODiCDY3hox8tmrM3lKG3NH2bzHhy8Ew8GhF63fgeCukcvvJitAA4Xr5CCYjx3ITGlnz0xyRhxSL1z0SfCLXI5c2nKTMjil_TwH0qq5wF"/>
+</div>
+<span class="absolute bottom-0 right-0 w-3 h-3 bg-success border-2 border-surface rounded-full"></span>
+</div>
+<div class="flex flex-col">
+<h1 class="font-headline-sm text-[16px] md:text-headline-sm text-text-primary leading-tight">Sarah Mitchell</h1>
+<span class="text-label-sm text-success flex items-center gap-1">
+<span class="w-1.5 h-1.5 bg-success rounded-full animate-pulse"></span>
+                    Online
+                </span>
+</div>
+</div>
+<div class="flex items-center gap-1">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors active:scale-95">
+<span class="material-symbols-outlined" data-icon="videocam">videocam</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors active:scale-95">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+</header>
+<!-- Chat Canvas -->
+<main class="flex-1 w-full max-w-4xl pt-16 pb-24 overflow-y-auto px-container-padding space-y-gutter scroll-smooth" id="chat-container">
+<!-- Date Divider -->
+<div class="flex justify-center my-6">
+<span class="bg-surface-container-low text-on-surface-variant px-3 py-1 rounded-full font-label-md text-[10px] uppercase tracking-wider">Today</span>
+</div>
+<!-- Received Message -->
+<div class="flex items-end gap-3 max-w-[85%] animate-in fade-in slide-in-from-left-4 duration-300">
+<div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-outline-variant/50">
+<img class="w-full h-full object-cover" data-alt="A small thumbnail profile picture of a female HR professional with shoulder-length dark hair, wearing professional attire. The image is bright and crisp, matching a corporate light-mode design system with clean background colors." src="https://lh3.googleusercontent.com/aida-public/AB6AXuArRG95SbAiQAcpoH-5_1P1iKsLtNxOQz_18AkZvv4YimJ42FTts9aiXO31Aw52r6Vf2tMsrNvDZTx9RlSZNDfe21rFx3QWNCUXVHR0lfV4Pke8W8fgDJNpQHpzNMfLa4UbEwJmtQ6qN_VsOSEfO6wdNxNoGyFc6r14-GVW7_s5wHR05WRoE_rgUH2INuCLue_qwIhA-i1x2L_1ZCDOzLSDT_XZPvlxJmkc3ntGUtnmotUAX7o2Puw0"/>
+</div>
+<div class="flex flex-col gap-1">
+<div class="bg-surface-container-lowest border border-outline-variant/30 shadow-sm px-4 py-3 rounded-2xl message-bubble-received">
+<p class="text-body-md text-on-surface">Hello Alex! I've reviewed your application for the Senior Fintech Analyst role. Your background at J.P. Morgan looks very relevant to what we're looking for.</p>
+</div>
+<span class="text-[10px] text-on-surface-variant ml-1">10:32 AM</span>
+</div>
+</div>
+<!-- Sent Message -->
+<div class="flex items-end gap-3 flex-row-reverse max-w-[85%] ml-auto animate-in fade-in slide-in-from-right-4 duration-300">
+<div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 bg-primary-container text-white flex items-center justify-center font-semibold text-xs">
+                AU
+            </div>
+<div class="flex flex-col items-end gap-1">
+<div class="bg-primary text-white px-4 py-3 rounded-2xl message-bubble-sent shadow-md shadow-primary/10">
+<p class="text-body-md">Hi Sarah! Thank you for the update. I'm really excited about the opportunity at TalentLOQ. I've been following your recent expansion in the EU market.</p>
+</div>
+<div class="flex items-center gap-1 mr-1">
+<span class="text-[10px] text-on-surface-variant">10:35 AM</span>
+<span class="material-symbols-outlined text-[12px] text-primary" style="font-variation-settings: 'FILL' 1;">done_all</span>
+</div>
+</div>
+</div>
+<!-- Received Message with Attachment -->
+<div class="flex items-end gap-3 max-w-[85%] animate-in fade-in slide-in-from-left-4 duration-500">
+<div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-outline-variant/50">
+<img class="w-full h-full object-cover" data-alt="Corporate headshot of a recruitment manager in an office setting. The photo is well-lit, professional, and has a contemporary feel, fitting perfectly into a clean white and indigo UI layout." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA4AWMsxQ3-hEAOJ0Yz5LEtKJi_pfBZZRN_f5kmbPaZz5Ryy-GxEYaew_4dar--u02ED9N8Lz10cOhcR0Wus7oY2dSb43nhvcspkMGPjYLQsNdcfidSXHE1SPKUl3xpeet9QXiz_GOHtReGhJMkWYVhtgcAEzD3WfbfgaA8axATFw3LuObyKjLm5ylcfJL0tWLBuf81kpeBGi_qlH29CQBhjno0QQmqSWRBlgoqbfpE_xhdSI3ZQOoR"/>
+</div>
+<div class="flex flex-col gap-1">
+<div class="bg-surface-container-lowest border border-outline-variant/30 shadow-sm px-4 py-3 rounded-2xl message-bubble-received space-y-3">
+<p class="text-body-md text-on-surface">That's great to hear! Would you be available for a brief introductory call tomorrow? I've attached the full job description and our benefits guide for your reference.</p>
+<div class="bg-surface-container-low rounded-xl p-3 flex items-center gap-3 border border-outline-variant/20 hover:bg-surface-container transition-colors cursor-pointer group">
+<div class="w-10 h-10 bg-primary-container/10 rounded-lg flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div class="flex-1 overflow-hidden">
+<p class="text-body-md font-semibold text-on-surface truncate">Benefits_Guide_2024.pdf</p>
+<p class="text-[11px] text-on-surface-variant">2.4 MB • PDF Document</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">download</span>
+</div>
+</div>
+<span class="text-[10px] text-on-surface-variant ml-1">10:38 AM</span>
+</div>
+</div>
+<!-- Status indicator (Typing) -->
+<div class="flex items-center gap-2 px-11 opacity-0 transition-opacity duration-300" id="typing-indicator">
+<div class="flex gap-1">
+<div class="w-1.5 h-1.5 bg-outline-variant rounded-full animate-bounce" style="animation-delay: 0ms"></div>
+<div class="w-1.5 h-1.5 bg-outline-variant rounded-full animate-bounce" style="animation-delay: 150ms"></div>
+<div class="w-1.5 h-1.5 bg-outline-variant rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+</div>
+<span class="text-[10px] text-on-surface-variant italic">Sarah is typing...</span>
+</div>
+</main>
+<!-- Message Input Field -->
+<footer class="fixed bottom-0 w-full glass-panel h-20 flex items-center px-container-padding max-w-4xl border-t border-outline-variant/20 z-50">
+<div class="flex items-center gap-2 w-full bg-surface-container-lowest border border-outline-variant/50 rounded-full h-12 px-2 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+<input class="flex-1 bg-transparent border-none focus:ring-0 text-body-md text-on-surface px-2 placeholder:text-on-surface-variant/60" id="message-input" placeholder="Type a message..." type="text"/>
+<div class="flex items-center">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="mood">mood</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors mr-1">
+<span class="material-symbols-outlined" data-icon="attach_file">attach_file</span>
+</button>
+<button class="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center transition-all active:scale-90 shadow-md shadow-primary/20 hover:bg-primary-container" id="send-button">
+<span class="material-symbols-outlined" data-icon="send" style="font-variation-settings: 'FILL' 1;">send</span>
+</button>
+</div>
+</div>
+</footer>
+<!-- Bottom Nav Bar (Hidden for Focus Mode, as per instructions for Transactional/Focused screens, but kept placeholder structure if needed for general navigation) -->
+<!-- Suppressed for focused chat journey as per "Shell Visibility & Relevance" mandate -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const input = document.getElementById('message-input');
+            const sendBtn = document.getElementById('send-button');
+            const container = document.getElementById('chat-container');
+            const typingIndicator = document.getElementById('typing-indicator');
+
+            // Scroll to bottom on load
+            container.scrollTop = container.scrollHeight;
+
+            const sendMessage = () => {
+                const text = input.value.trim();
+                if (text === '') return;
+
+                const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                const messageHtml = `
+                    <div class="flex items-end gap-3 flex-row-reverse max-w-[85%] ml-auto animate-in fade-in slide-in-from-right-2 duration-200">
+                        <div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 bg-primary-container text-white flex items-center justify-center font-semibold text-xs">
+                            AU
+                        </div>
+                        <div class="flex flex-col items-end gap-1">
+                            <div class="bg-primary text-white px-4 py-3 rounded-2xl message-bubble-sent shadow-md shadow-primary/10">
+                                <p class="text-body-md">${text}</p>
+                            </div>
+                            <div class="flex items-center gap-1 mr-1">
+                                <span class="text-[10px] text-on-surface-variant">${time}</span>
+                                <span class="material-symbols-outlined text-[12px] text-outline-variant">done</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Add message to DOM before the indicator
+                typingIndicator.insertAdjacentHTML('beforebegin', messageHtml);
+                input.value = '';
+                
+                // Scroll to bottom
+                container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+
+                // Simulate reply
+                setTimeout(() => {
+                    typingIndicator.style.opacity = '1';
+                    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+                    
+                    setTimeout(() => {
+                        typingIndicator.style.opacity = '0';
+                        const replyHtml = `
+                            <div class="flex items-end gap-3 max-w-[85%] animate-in fade-in slide-in-from-left-2 duration-200">
+                                <div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-outline-variant/50">
+                                    <img src="placeholder" data-alt="A friendly corporate recruiter" class="w-full h-full object-cover">
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <div class="bg-surface-container-lowest border border-outline-variant/30 shadow-sm px-4 py-3 rounded-2xl message-bubble-received">
+                                        <p class="text-body-md text-on-surface">Sounds perfect! I'll send over a calendar invite in a moment. Let's aim for 2:00 PM tomorrow.</p>
+                                    </div>
+                                    <span class="text-[10px] text-on-surface-variant ml-1">${time}</span>
+                                </div>
+                            </div>
+                        `;
+                        typingIndicator.insertAdjacentHTML('beforebegin', replyHtml);
+                        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+                    }, 2000);
+                }, 1000);
+            };
+
+            sendBtn.addEventListener('click', sendMessage);
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendMessage();
+            });
+
+            // Subtle parallax effect on scroll for header
+            container.addEventListener('scroll', () => {
+                const header = document.querySelector('header');
+                if (container.scrollTop > 10) {
+                    header.classList.add('shadow-lg');
+                } else {
+                    header.classList.remove('shadow-lg');
+                }
+            });
+        });
+    </script>
+</body></html>

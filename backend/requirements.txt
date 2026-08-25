@@ -1,0 +1,19 @@
+# Talentloq Backend Pinned Dependencies
+fastapi==0.109.2
+uvicorn==0.27.1
+pydantic==2.6.1
+pydantic-settings==2.1.0
+email-validator==2.1.0.post1
+motor==3.3.2
+pymongo==4.6.1
+python-dotenv==1.0.1
+passlib==1.7.4
+bcrypt==4.1.2
+pyjwt==2.8.0
+slowapi==0.1.9
+cryptography==42.0.2
+python-multipart==0.0.9
+pytest==8.0.0
+pytest-asyncio==0.23.5
+httpx==0.26.0
+pip-audit==2.7.1
