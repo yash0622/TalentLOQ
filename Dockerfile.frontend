@@ -1,0 +1,26 @@
+# Multi-stage Dockerfile for TalentLOQ Flutter Web Frontend
+# Stage 1: Build Flutter Web App
+FROM ghcr.io/cirrusci/flutter:3.22.0 AS builder
+
+WORKDIR /app
+
+# Copy dependency configs
+COPY pubspec.yaml pubspec.lock ./
+RUN flutter pub get
+
+# Copy source code and build web assets
+COPY . .
+RUN flutter build web --release
+
+# Stage 2: Serve Web Assets with Nginx
+FROM nginx:alpine
+
+# Copy custom Nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy built web assets from Stage 1
+COPY --from=builder /app/build/web /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
