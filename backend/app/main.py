@@ -1,6 +1,26 @@
+import sys
 import asyncio
 import logging
 import traceback
+
+# Windows Python 3.12 asyncio hot-reload safeguard
+if sys.platform == "win32":
+    try:
+        import asyncio.selector_events
+        _orig_close_self_pipe = asyncio.selector_events._BaseSelectorEventLoop._close_self_pipe
+
+        def _safe_close_self_pipe(self):
+            if getattr(self, "_ssock", None) is not None:
+                try:
+                    _orig_close_self_pipe(self)
+                except Exception:
+                    pass
+
+        asyncio.selector_events._BaseSelectorEventLoop._close_self_pipe = _safe_close_self_pipe
+        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+    except Exception:
+        pass
+
 from fastapi import FastAPI, Request, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,6 +53,12 @@ async def lifespan(app: FastAPI):
         yield
     except (asyncio.CancelledError, KeyboardInterrupt):
         pass
+    finally:
+        try:
+            from app.database import async_client
+            async_client.close()
+        except Exception:
+            pass
 
 app = FastAPI(
     title="Talentloq API",
