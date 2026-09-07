@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'navigation/main_navigation_wrapper.dart';
 import 'theme/app_theme.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   runApp(const TalentLOQApp());
 }
 
@@ -32,11 +34,14 @@ class _TalentLOQAppState extends State<TalentLOQApp> {
     });
   }
 
-  /// Non-critical initialization deferred until after the first frame.
-  /// Add analytics SDKs, notification permission prompts, etc. here.
+  /// Non-critical initialization deferred until after the first frame renders.
   void _deferredInit() {
-    // Placeholder: analytics, push notification setup, etc.
-    debugPrint('[STARTUP] Deferred initialization complete');
+    // Pre-cache primary brand assets so they are decoded in GPU memory before navigation
+    if (mounted) {
+      precacheImage(const AssetImage('assets/logo/talentloq_horizontal_logo_transparent.png'), context);
+      precacheImage(const AssetImage('assets/logo/talentloq_horizontal_logo.png'), context);
+      precacheImage(const AssetImage('assets/logo/talentloq_icon_only.png'), context);
+    }
   }
 
   @override

@@ -85,7 +85,7 @@ class AppTheme {
       ),
       appBarTheme: AppBarTheme(
         toolbarHeight: 44,
-        titleSpacing: 8,
+        titleSpacing: 20,
         backgroundColor: AppColors.lightSurface,
         elevation: 0,
         scrolledUnderElevation: 1,
@@ -253,7 +253,7 @@ class AppTheme {
       ),
       appBarTheme: AppBarTheme(
         toolbarHeight: 44,
-        titleSpacing: 8,
+        titleSpacing: 20,
         backgroundColor: AppColors.darkSurface,
         elevation: 0,
         scrolledUnderElevation: 1,

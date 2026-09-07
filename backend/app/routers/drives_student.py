@@ -13,10 +13,14 @@ from app.database import (
     students_collection,
     users_collection,
     audit_logs_collection,
+    notifications_collection,
 )
+from pydantic import BaseModel
 from app.dependencies import get_optional_current_user, require_role
 from app.eligibility import compute_eligibility
-from app.models import AuditLogModel, PaginatedResponse, DriveLeanResponse
+from app.models import AuditLogModel, PaginatedResponse, DriveLeanResponse, RecommendedDriveItem
+from app.services.skill_matcher import skill_matcher_engine
+from app.services.groq_matcher import GroqMatcherService, SmartAIMatchResponse
 from app.routers.auth import limiter
 
 logger = logging.getLogger("talentloq.drives_student")
@@ -32,52 +36,81 @@ async def list_published_placement_drives(
     """
     GET /drives?page=1&limit=20 — list status="published" placement drives visible to students.
     Returns lean drive objects with pagination.
+    Excludes drives/companies the student has already applied to.
     Computes 'is_eligible' flag per requesting student.
     """
-    seen_ids = set()
-    drives = []
-
-    cursor_drives = drives_collection.find({"status": {"$ne": "closed"}}).sort("created_at", -1)
-    d_list = await cursor_drives.to_list(length=500)
-    if not d_list:
-        cursor_all = drives_collection.find({}).sort("created_at", -1)
-        d_list = await cursor_all.to_list(length=500)
-    for d in d_list:
-        d_id = str(d.get("drive_id") or d.get("listing_id") or "")
-        if d_id and d_id not in seen_ids:
-            seen_ids.add(d_id)
-            drives.append(d)
-
-    cursor_comp = company_listings_collection.find({"status": {"$ne": "closed"}}).sort("created_at", -1)
-    comp_list = await cursor_comp.to_list(length=500)
-    if not comp_list:
-        cursor_all_c = company_listings_collection.find({}).sort("created_at", -1)
-        comp_list = await cursor_all_c.to_list(length=500)
-    for c in comp_list:
-        c_id = str(c.get("listing_id") or c.get("drive_id") or "")
-        if c_id and c_id not in seen_ids:
-            seen_ids.add(c_id)
-            c["drive_id"] = c.get("listing_id", c.get("drive_id"))
-            c["drive_title"] = c.get("interview_job", c.get("drive_title", "Placement Drive"))
-            c["min_cgpa"] = c.get("cgpa_criteria", c.get("min_cgpa", 6.0))
-            drives.append(c)
-
+    applied_ids = set()
     student_doc = None
     if user_payload and user_payload.get("sub"):
-        sid = user_payload["sub"]
-        student_doc = await students_collection.find_one({"student_id": sid}) or await students_collection.find_one({"user_id": sid}) or await users_collection.find_one({"user_id": sid})
+        sid = str(user_payload["sub"])
+        student_doc = (
+            await students_collection.find_one({"student_id": sid})
+            or await students_collection.find_one({"user_id": sid})
+            or await users_collection.find_one({"user_id": sid})
+        )
+        student_identifiers = [sid]
+        if student_doc:
+            if student_doc.get("student_id"):
+                student_identifiers.append(str(student_doc["student_id"]))
+            if student_doc.get("user_id"):
+                student_identifiers.append(str(student_doc["user_id"]))
+            if student_doc.get("email"):
+                student_identifiers.append(str(student_doc["email"]))
 
-    if not student_doc:
-        student_doc = {"course": "BTECH_CSE", "CGPA": 8.0, "has_placement_access": True}
+        cursor_apps = applications_collection.find(
+            {
+                "$or": [
+                    {"student_id": {"$in": student_identifiers}},
+                    {"student_email": student_doc.get("email", "") if student_doc else ""}
+                ]
+            }
+        )
+        app_list = await cursor_apps.to_list(length=2000)
+        for a in app_list:
+            if a.get("drive_id"):
+                applied_ids.add(str(a["drive_id"]))
+            if a.get("listing_id"):
+                applied_ids.add(str(a["listing_id"]))
 
-    total_count = len(drives)
-    start_idx = (page - 1) * limit
-    end_idx = start_idx + limit
-    paged_drives = drives[start_idx:end_idx]
+    # If unauthenticated, student_doc remains None and is_eligible will evaluate to False
+
+    skip = (page - 1) * limit
+    filter_query: Dict[str, Any] = {"status": {"$ne": "closed"}}
+    if applied_ids:
+        filter_query["$and"] = [
+            {"drive_id": {"$nin": list(applied_ids)}},
+            {"listing_id": {"$nin": list(applied_ids)}},
+        ]
+
+    try:
+        total_count = await drives_collection.count_documents(filter_query)
+        if total_count == 0:
+            filter_query = {}
+            total_count = await drives_collection.count_documents(filter_query)
+    except Exception:
+        total_count = None
+
+    cursor = drives_collection.find(filter_query).sort("created_at", -1).skip(skip).limit(limit)
+    paged_drives = await cursor.to_list(length=limit)
+
+    # Fallback to company_listings_collection if drives_collection has 0 records
+    if not paged_drives and (total_count == 0 or total_count is None):
+        c_filter: Dict[str, Any] = {"status": {"$ne": "closed"}}
+        if applied_ids:
+            c_filter["listing_id"] = {"$nin": list(applied_ids)}
+        try:
+            total_count = await company_listings_collection.count_documents(c_filter)
+        except Exception:
+            total_count = None
+        cursor = company_listings_collection.find(c_filter).sort("created_at", -1).skip(skip).limit(limit)
+        paged_drives = await cursor.to_list(length=limit)
+
+    if total_count is None:
+        total_count = len(paged_drives)
 
     items = []
     for d in paged_drives:
-        is_eligible = compute_eligibility(student_doc, d)
+        is_eligible = compute_eligibility(student_doc, d) if student_doc else False
         items.append(DriveLeanResponse(
             drive_id=str(d.get("drive_id") or d.get("listing_id") or ""),
             company_name=str(d.get("company_name", "")),
@@ -89,7 +122,7 @@ async def list_published_placement_drives(
             is_eligible=is_eligible,
         ))
 
-    has_more = end_idx < total_count
+    has_more = (skip + len(items)) < total_count
 
     return PaginatedResponse[DriveLeanResponse](
         items=items,
@@ -118,14 +151,26 @@ async def list_my_applications(
     cursor = applications_collection.find({"student_id": student_id}).sort("applied_at", -1).skip(skip).limit(limit)
     app_docs = await cursor.to_list(length=limit)
 
+    drive_ids = [str(a.get("drive_id", "")) for a in app_docs if a.get("drive_id")]
+    drives_map: Dict[str, Any] = {}
+    if drive_ids:
+        d_cursor = drives_collection.find({"drive_id": {"$in": drive_ids}})
+        for d in await d_cursor.to_list(length=len(drive_ids)):
+            d_id = str(d.get("drive_id", ""))
+            if d_id:
+                drives_map[d_id] = d
+        missing_ids = [did for did in drive_ids if did not in drives_map]
+        if missing_ids:
+            c_cursor = company_listings_collection.find({"listing_id": {"$in": missing_ids}})
+            for c in await c_cursor.to_list(length=len(missing_ids)):
+                c_id = str(c.get("listing_id", ""))
+                if c_id:
+                    drives_map[c_id] = c
+
     items = []
     for app_doc in app_docs:
-        drive_id = app_doc.get("drive_id", "")
-        drive = await drives_collection.find_one({"drive_id": drive_id})
-        if not drive:
-            drive = await company_listings_collection.find_one({"listing_id": drive_id})
-        if not drive:
-            drive = {}
+        drive_id = str(app_doc.get("drive_id", ""))
+        drive = drives_map.get(drive_id, {})
 
         if "_id" in app_doc:
             del app_doc["_id"]
@@ -149,6 +194,9 @@ async def list_my_applications(
                 "final_outcome": app_doc.get("final_outcome", "in_progress"),
                 "applied_at": app_doc.get("applied_at", ""),
             },
+            "offer_details": app_doc.get("offer_details", {}),
+            "app_id": str(app_doc.get("app_id") or app_doc.get("_id", "")),
+            "student_id": student_id,
         })
 
     has_more = (skip + limit) < total_count
@@ -159,6 +207,94 @@ async def list_my_applications(
         "total_count": total_count,
         "has_more": has_more,
     }
+
+@router.get("/recommended", status_code=status.HTTP_200_OK, response_model=PaginatedResponse[RecommendedDriveItem])
+async def get_recommended_drives_for_student(
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(20, ge=1, le=100, description="Items per page"),
+    token_payload: dict = Depends(require_role("student")),
+):
+    """
+    GET /drives/recommended
+    Returns published drives matching the student's verified skills,
+    annotated with exact matched skills, missing skills, and match summary.
+    Sorted descending by (match_count DESC, min_cgpa DESC).
+    """
+    sid = str(token_payload.get("sub", ""))
+    student = (
+        await students_collection.find_one({"student_id": sid})
+        or await students_collection.find_one({"user_id": sid})
+    )
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student profile not found."
+        )
+
+    student_skills = student.get("skills", [])
+    if not student_skills:
+        return PaginatedResponse(items=[], page=page, limit=limit, total_count=0, has_more=False)
+
+    # Fetch active drives
+    cursor = drives_collection.find({"status": {"$ne": "closed"}}).sort("created_at", -1)
+    all_drives = await cursor.to_list(length=500)
+
+    recommended_items: List[RecommendedDriveItem] = []
+    for drive in all_drives:
+        req_skills = drive.get("extracted_required_skills") or []
+        if not req_skills:
+            manual_req = drive.get("required_skills") or []
+            extracted = skill_matcher_engine.extract_skills_from_text(drive.get("description", ""))
+            req_skills = sorted(list(set(manual_req + extracted)))
+
+        if not req_skills:
+            continue
+
+        overlap = skill_matcher_engine.compute_skill_overlap(student_skills, req_skills)
+        if overlap["match_count"] > 0:
+            matched_str = ", ".join(overlap["matched_skills"][:3])
+            if len(overlap["matched_skills"]) > 3:
+                matched_str += f" +{len(overlap['matched_skills']) - 3} more"
+            summary = f"Matches {overlap['match_count']} of {overlap['total_required']} skills ({matched_str})"
+
+            is_eligible = compute_eligibility(student, drive)
+
+            recommended_items.append(
+                RecommendedDriveItem(
+                    drive_id=str(drive.get("drive_id", "")),
+                    company_name=drive.get("company_name", "Company"),
+                    drive_title=drive.get("drive_title", "Placement Drive"),
+                    employment_type=drive.get("employment_type", "full_time"),
+                    location=drive.get("location", "Campus"),
+                    ctc_min=float(drive.get("ctc_min") or 0.0),
+                    ctc_max=float(drive.get("ctc_max") or 0.0),
+                    min_cgpa=float(drive.get("min_cgpa") or 0.0),
+                    eligible_courses=drive.get("eligible_courses") or ["ALL"],
+                    is_eligible=is_eligible,
+                    extracted_required_skills=req_skills,
+                    matched_skills=overlap["matched_skills"],
+                    missing_skills=overlap["missing_skills"],
+                    match_count=overlap["match_count"],
+                    total_required=overlap["total_required"],
+                    match_summary=summary,
+                )
+            )
+
+    # Sort descending by match_count, then min_cgpa
+    recommended_items.sort(key=lambda x: (x.match_count, x.min_cgpa), reverse=True)
+
+    total_count = len(recommended_items)
+    start_idx = (page - 1) * limit
+    paged_items = recommended_items[start_idx : start_idx + limit]
+    has_more = (start_idx + limit) < total_count
+
+    return PaginatedResponse(
+        items=paged_items,
+        page=page,
+        limit=limit,
+        total_count=total_count,
+        has_more=has_more,
+    )
 
 @router.get("/{drive_id}", status_code=status.HTTP_200_OK)
 async def get_placement_drive_detail(
@@ -186,10 +322,7 @@ async def get_placement_drive_detail(
         sid = user_payload["sub"]
         student_doc = await students_collection.find_one({"student_id": sid}) or await students_collection.find_one({"user_id": sid}) or await users_collection.find_one({"user_id": sid})
 
-    if not student_doc:
-        student_doc = {"course": "BTECH_CSE", "CGPA": 8.0, "has_placement_access": True}
-
-    drive["is_eligible"] = compute_eligibility(student_doc, drive)
+    drive["is_eligible"] = compute_eligibility(student_doc, drive) if student_doc else False
 
     # Applied state is intentionally scoped to the requesting student's JWT.
     # Never infer this from a drive-level counter or another student's record.
@@ -277,10 +410,17 @@ async def apply_to_placement_drive(
     has_resume = False
     resume_id = None
     if student_doc:
-        has_resume = student_doc.get("has_resume", False) or bool(student_doc.get("resume_url")) or bool(student_doc.get("resume_id"))
-        resume_id = student_doc.get("resume_id") or student_doc.get("resume_url") or "/static/uploads/resume.pdf"
+        r_url = student_doc.get("resume_url")
+        r_id = student_doc.get("resume_id")
+        r_file = student_doc.get("resume_filename")
+        if r_url == "/static/uploads/resume.pdf" or r_file == "resume.pdf" or (r_file and "jane_smith" in str(r_file).lower()):
+            has_resume = False
+            resume_id = None
+        else:
+            has_resume = bool(student_doc.get("has_resume", False))
+            resume_id = r_id or r_url or ("resume_uploaded" if has_resume else None)
 
-    if not has_resume:
+    if not has_resume or not resume_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You must upload a resume in your profile before applying to placement drives."
@@ -299,11 +439,11 @@ async def apply_to_placement_drive(
         "job_id": drive_id,
         "company_id": drive.get("company_id") or drive.get("recruiter_id") or drive_id,
         "company_name": drive.get("company_name", ""),
-        "name": student_doc.get("full_name") or student_doc.get("name") if student_doc else "Student Candidate",
-        "email": student_doc.get("email") if student_doc else "student@university.edu",
-        "phone_number": student_doc.get("phone_number") or student_doc.get("phone") if student_doc else "+91 98765 43210",
-        "cgpa": float(student_doc.get("CGPA") or student_doc.get("cgpa") or 8.0) if student_doc else 8.0,
-        "course": student_doc.get("course") or student_doc.get("education") if student_doc else "BTECH_CSE",
+        "name": (student_doc.get("full_name") or student_doc.get("name") or "") if student_doc else "",
+        "email": (student_doc.get("email") or "") if student_doc else "",
+        "phone_number": (student_doc.get("phone_number") or student_doc.get("phone") or "") if student_doc else "",
+        "cgpa": float(student_doc.get("CGPA") or student_doc.get("cgpa") or 0.0) if student_doc else 0.0,
+        "course": (student_doc.get("course") or student_doc.get("education") or "") if student_doc else "",
         "resume_link": resume_id,
         "resume_id_used": resume_id,
         "status": "applied",
@@ -473,4 +613,164 @@ async def mark_email_client_opened(
         "message": "Email client interaction recorded successfully.",
         "email_client_opened_at": now_iso,
     }
+
+
+@router.get("/{drive_id}/ai-match", status_code=status.HTTP_200_OK, response_model=SmartAIMatchResponse)
+async def get_student_drive_ai_match(
+    drive_id: str,
+    bypass_cache: bool = Query(False, description="Force re-computation with Groq"),
+    token_payload: dict = Depends(require_role("student")),
+):
+    """
+    GET /drives/{drive_id}/ai-match
+    Computes a smart, 4-pillar recruitment intelligence match using Groq AI.
+    Includes semantic equivalences, project evidence mining, skill gaps,
+    and 3 predicted technical interview questions with 48h prep checklist.
+    """
+    student_id = token_payload["sub"]
+    student_doc = (
+        await students_collection.find_one({"student_id": student_id})
+        or await students_collection.find_one({"user_id": student_id})
+        or await students_collection.find_one({"email": student_id})
+        or await users_collection.find_one({"user_id": student_id})
+        or await users_collection.find_one({"email": student_id})
+    )
+    if student_doc and "skills" not in student_doc:
+        linked_student = await students_collection.find_one({
+            "$or": [
+                {"user_id": student_doc.get("user_id")},
+                {"email": student_doc.get("email")},
+            ]
+        })
+        if linked_student:
+            student_doc = linked_student
+
+    if not student_doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student profile not found.")
+
+    drive = await drives_collection.find_one({"drive_id": drive_id})
+    if not drive:
+        drive = await drives_collection.find_one({"listing_id": drive_id})
+    if not drive:
+        drive = await company_listings_collection.find_one({"listing_id": drive_id})
+    if not drive:
+        drive = await company_listings_collection.find_one({"drive_id": drive_id})
+    if not drive:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Placement drive not found.")
+
+    # Retrieve application context for multi-round progression
+    student_id = str(student_doc.get("student_id") or student_doc.get("user_id") or "")
+    app = await applications_collection.find_one({
+        "$or": [
+            {"drive_id": drive_id, "student_id": student_id},
+            {"listing_id": drive_id, "student_id": student_id},
+            {"drive_id": drive_id, "user_id": student_id},
+            {"listing_id": drive_id, "user_id": student_id},
+        ]
+    })
+    current_round = int(app.get("current_round", 1)) if app else 1
+    round_history = app.get("round_history", []) if app else []
+
+    return await GroqMatcherService.analyze_match(
+        student_doc=student_doc,
+        drive_doc=drive,
+        current_round=current_round,
+        round_history=round_history,
+        bypass_cache=bypass_cache,
+    )
+
+
+class OfferActionRequest(BaseModel):
+    reason: Optional[str] = None
+
+
+@router.post("/{drive_id}/accept-offer", status_code=status.HTTP_200_OK)
+async def accept_placement_offer(
+    drive_id: str,
+    token_payload: dict = Depends(require_role("student")),
+):
+    """
+    Student formally accepts the extended placement offer.
+    """
+    student_id = token_payload["sub"]
+    app_doc = await applications_collection.find_one({"drive_id": drive_id, "student_id": student_id})
+    if not app_doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application or offer not found.")
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    offer_details = app_doc.get("offer_details") or {}
+    offer_details["status"] = "accepted"
+    offer_details["accepted_at"] = now_iso
+
+    await applications_collection.update_one(
+        {"_id": app_doc["_id"]},
+        {
+            "$set": {
+                "final_outcome": "accepted",
+                "offer_details": offer_details,
+                "offer_accepted_at": now_iso,
+            }
+        }
+    )
+
+    drive = await drives_collection.find_one({"drive_id": drive_id})
+    company_name = drive.get("company_name", "Company") if drive else "Company"
+    recruiter_id = app_doc.get("recruiter_id") or (drive.get("recruiter_id") if drive else None)
+
+    if recruiter_id:
+        notif_doc = {
+            "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+            "recipient_id": recruiter_id,
+            "user_id": recruiter_id,
+            "title": "🎉 Placement Offer Accepted!",
+            "message": f"Candidate {student_id} has officially ACCEPTED the placement offer for {company_name}.",
+            "type": "offer_accepted",
+            "is_read": False,
+            "created_at": datetime.now(timezone.utc),
+        }
+        await notifications_collection.insert_one(notif_doc)
+
+    return {
+        "message": f"Congratulations! You have successfully accepted the placement offer from {company_name}.",
+        "status": "accepted",
+        "offer_details": offer_details,
+    }
+
+
+@router.post("/{drive_id}/decline-offer", status_code=status.HTTP_200_OK)
+async def decline_placement_offer(
+    drive_id: str,
+    data: Optional[OfferActionRequest] = None,
+    token_payload: dict = Depends(require_role("student")),
+):
+    """
+    Student declines the extended placement offer.
+    """
+    student_id = token_payload["sub"]
+    app_doc = await applications_collection.find_one({"drive_id": drive_id, "student_id": student_id})
+    if not app_doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application or offer not found.")
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    offer_details = app_doc.get("offer_details") or {}
+    offer_details["status"] = "declined"
+    offer_details["declined_at"] = now_iso
+    offer_details["decline_reason"] = data.reason if data else None
+
+    await applications_collection.update_one(
+        {"_id": app_doc["_id"]},
+        {
+            "$set": {
+                "final_outcome": "declined",
+                "offer_details": offer_details,
+            }
+        }
+    )
+
+    return {
+        "message": "Offer declined.",
+        "status": "declined",
+        "offer_details": offer_details,
+    }
+
 

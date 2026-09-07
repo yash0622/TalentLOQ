@@ -66,6 +66,9 @@ class CachedAppImage extends StatelessWidget {
   }
 
   Widget _buildFallback(bool isDark) {
+    final text = fallbackText?.trim();
+    final hasText = text != null && text.isNotEmpty;
+
     return Container(
       width: width,
       height: height,
@@ -74,9 +77,9 @@ class CachedAppImage extends StatelessWidget {
         borderRadius: BorderRadius.circular(borderRadius),
       ),
       child: Center(
-        child: fallbackText != null && fallbackText!.isNotEmpty
+        child: hasText
             ? Text(
-                fallbackText![0].toUpperCase(),
+                text[0].toUpperCase(),
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: (height ?? 40) * 0.4,

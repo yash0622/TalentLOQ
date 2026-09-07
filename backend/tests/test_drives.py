@@ -82,6 +82,7 @@ async def test_placement_drives_full_lifecycle(monkeypatch):
     monkeypatch.setattr(rec_router.students_collection, "count_documents", AsyncMock(return_value=142))
     monkeypatch.setattr("app.routers.recruiter.company_listings_collection.count_documents", AsyncMock(return_value=5))
     monkeypatch.setattr("app.routers.drives_recruiter.notify_on_publish", AsyncMock())
+    monkeypatch.setattr("app.routers.drives_recruiter.notify_on_round_advance", AsyncMock())
 
     monkeypatch.setattr(st_router.drives_collection, "find", lambda query: MockDriveCursor())
     monkeypatch.setattr(st_router.drives_collection, "find_one", mock_find_one_drive)
@@ -112,7 +113,7 @@ async def test_placement_drives_full_lifecycle(monkeypatch):
             "eligibility_criteria_summary": "Min CGPA 7.0",
             "min_cgpa": "7.0",
             "schedule_datetime": "Aug 28, 2026 • 09:00 AM",
-            "registration_deadline": "Aug 25, 2026",
+            "registration_deadline": "Dec 25, 2028",
             "status_field": "published",
         }
         res = await client.post("/recruiter/drives", data=drive_data, headers={"Authorization": f"Bearer {recruiter_token}"})

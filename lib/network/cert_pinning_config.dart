@@ -1,10 +1,11 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:crypto/crypto.dart';
 
 class CertPinningConfig {
   /// Expected SHA-256 Public Key / Certificate Fingerprint for API Server
   static const String expectedCertFingerprint =
-      'SHA256:479A91487295FDB912E3B1C56AA449B890F0C0513926830501869E4C9D23B6B9';
+      '479A91487295FDB912E3B1C56AA449B890F0C0513926830501869E4C9D23B6B9';
 
   /// Custom SecurityContext for TLS Certificate Pinning on Dio / HttpClient
   static SecurityContext createPinnedSecurityContext(List<int> pemCertificateBytes) {
@@ -23,8 +24,20 @@ class CertPinningConfig {
       // Allow local development connection
       return true;
     }
-    
-    // In production: verify certificate subject / issuer
-    return cert.subject.contains('talentloq.app') || cert.issuer.contains('Let\'s Encrypt');
+
+    // Compare SHA-256 fingerprint of the certificate DER bytes
+    try {
+      final certDer = cert.der;
+      final sha256Digest = sha256.convert(certDer).toString().toUpperCase();
+      final cleanExpected = expectedCertFingerprint.replaceAll(':', '').replaceAll(' ', '').toUpperCase();
+      if (sha256Digest == cleanExpected) {
+        return true;
+      }
+    } catch (e) {
+      debugPrint('[CERT PINNING ERROR] $e');
+    }
+
+    // In production: verify subject matches verified domain
+    return cert.subject.contains('talentloq.app');
   }
 }

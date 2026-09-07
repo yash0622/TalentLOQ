@@ -6,7 +6,8 @@ import 'add_company_form.dart';
 import 'my_listings_screen.dart';
 
 class RecruiterDashboardScreen extends StatefulWidget {
-  const RecruiterDashboardScreen({super.key});
+  final VoidCallback? onOpenDrawer;
+  const RecruiterDashboardScreen({super.key, this.onOpenDrawer});
 
   @override
   State<RecruiterDashboardScreen> createState() => _RecruiterDashboardScreenState();
@@ -299,9 +300,16 @@ class _RecruiterDashboardScreenState extends State<RecruiterDashboardScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final cardBorder = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+      side: BorderSide(
+        color: isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant,
+      ),
+    );
 
     return Scaffold(
       appBar: AppBar(
+        titleSpacing: 20,
         title: const Row(
           children: [
             Icon(Icons.space_dashboard_rounded, color: AppColors.lightPrimary, size: 22),
@@ -309,6 +317,7 @@ class _RecruiterDashboardScreenState extends State<RecruiterDashboardScreen> {
             Expanded(
               child: Text(
                 'Recruiter Dashboard',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -320,34 +329,41 @@ class _RecruiterDashboardScreenState extends State<RecruiterDashboardScreen> {
             onPressed: _fetchStats,
             tooltip: 'Refresh Analytics',
           ),
+          if (widget.onOpenDrawer != null)
+            IconButton(
+              tooltip: 'Settings & Menu',
+              icon: const Icon(Icons.menu_rounded, size: 24),
+              onPressed: widget.onOpenDrawer,
+            ),
+          const SizedBox(width: 4),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _fetchStats,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 130),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header Card
               Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
+                elevation: 0,
+                shape: cardBorder,
                 child: Padding(
-                  padding: const EdgeInsets.all(18),
+                  padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(12),
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           color: AppColors.primaryLightBg,
-                          shape: BoxShape.circle,
+                          borderRadius: BorderRadius.circular(14),
                         ),
                         child: const Icon(
                           Icons.verified_user_rounded,
                           color: AppColors.lightPrimary,
-                          size: 28,
+                          size: 26,
                         ),
                       ),
                       const SizedBox(width: 14),
@@ -359,13 +375,16 @@ class _RecruiterDashboardScreenState extends State<RecruiterDashboardScreen> {
                               'Placement Officer Control Center',
                               style: theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
+                                fontSize: 15,
                               ),
                             ),
-                            const SizedBox(height: 2),
+                            const SizedBox(height: 3),
                             Text(
                               'Post company listings, evaluate multi-round candidates, and record placement offers.',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: AppColors.lightTextSecondary,
+                                fontSize: 11.5,
+                                height: 1.35,
                               ),
                             ),
                           ],
@@ -380,130 +399,141 @@ class _RecruiterDashboardScreenState extends State<RecruiterDashboardScreen> {
               // Stat Cards Section Title
               Text(
                 'Campus Analytics Summary',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
               const SizedBox(height: 12),
 
-              // 3 Stat Cards Row
+              // 3 Stat Cards (2 Equal Height Top Cards + 1 Bottom Banner)
               _isLoading
                   ? const StatCardSkeleton()
                   : Column(
                       children: [
-                        Row(
-                          children: [
-                            // Total Registered Students Card (Interactive -> Opens Registered Students Modal)
-                            Expanded(
-                              child: Card(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  side: BorderSide(
-                                    color: isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant,
-                                  ),
-                                ),
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(16),
-                                  onTap: _showStudentsModal,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.all(8),
-                                              decoration: BoxDecoration(
-                                                color: AppColors.primaryLightBg,
-                                                borderRadius: BorderRadius.circular(10),
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // Total Registered Students Card
+                              Expanded(
+                                child: Card(
+                                  elevation: 0,
+                                  shape: cardBorder,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(16),
+                                    onTap: _showStudentsModal,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.all(8),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.primaryLightBg,
+                                                  borderRadius: BorderRadius.circular(10),
+                                                ),
+                                                child: const Icon(Icons.school_rounded, color: AppColors.lightPrimary, size: 20),
                                               ),
-                                              child: const Icon(Icons.school_rounded, color: AppColors.lightPrimary, size: 20),
-                                            ),
-                                            const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.lightPrimary),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 10),
-                                        Text(
-                                          '$_registeredStudents',
-                                          style: theme.textTheme.headlineMedium?.copyWith(
-                                            fontWeight: FontWeight.bold,
+                                              const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.lightPrimary),
+                                            ],
                                           ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        const Text(
-                                          'Total Registered Students',
-                                          style: TextStyle(fontSize: 11, color: AppColors.lightTextSecondary, fontWeight: FontWeight.w500),
-                                        ),
-                                      ],
+                                          const Spacer(),
+                                          Text(
+                                            '$_registeredStudents',
+                                            style: const TextStyle(
+                                              fontSize: 26,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.lightPrimary,
+                                              height: 1.2,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          const Text(
+                                            'Registered\nStudents',
+                                            style: TextStyle(
+                                              fontSize: 11.5,
+                                              color: AppColors.lightTextSecondary,
+                                              fontWeight: FontWeight.w600,
+                                              height: 1.25,
+                                            ),
+                                            maxLines: 2,
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 10),
+                              const SizedBox(width: 10),
 
-                            // Total Active Listings Card (Interactive -> Opens My Listings Screen)
-                            Expanded(
-                              child: Card(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  side: BorderSide(
-                                    color: isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant,
-                                  ),
-                                ),
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(16),
-                                  onTap: _openMyListings,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.all(8),
-                                              decoration: BoxDecoration(
-                                                color: AppColors.successLightBg,
-                                                borderRadius: BorderRadius.circular(10),
+                              // Total Active Listings Card
+                              Expanded(
+                                child: Card(
+                                  elevation: 0,
+                                  shape: cardBorder,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(16),
+                                    onTap: _openMyListings,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.all(8),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.successLightBg,
+                                                  borderRadius: BorderRadius.circular(10),
+                                                ),
+                                                child: const Icon(Icons.campaign_rounded, color: AppColors.success, size: 20),
                                               ),
-                                              child: const Icon(Icons.campaign_rounded, color: AppColors.success, size: 20),
-                                            ),
-                                            const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.success),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 10),
-                                        Text(
-                                          '$_activeListings',
-                                          style: theme.textTheme.headlineMedium?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: AppColors.success,
+                                              const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.success),
+                                            ],
                                           ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        const Text(
-                                          'Company Listings',
-                                          style: TextStyle(fontSize: 11, color: AppColors.lightTextSecondary, fontWeight: FontWeight.w500),
-                                        ),
-                                      ],
+                                          const Spacer(),
+                                          Text(
+                                            '$_activeListings',
+                                            style: const TextStyle(
+                                              fontSize: 26,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.success,
+                                              height: 1.2,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          const Text(
+                                            'Active Placement\nDrives',
+                                            style: TextStyle(
+                                              fontSize: 11.5,
+                                              color: AppColors.lightTextSecondary,
+                                              fontWeight: FontWeight.w600,
+                                              height: 1.25,
+                                            ),
+                                            maxLines: 2,
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 10),
 
-                        // Total Placement Offers Card (Interactive -> Opens My Listings Screen)
+                        // Total Placement Offers Card
                         Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            side: BorderSide(
-                              color: isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant,
-                            ),
-                          ),
+                          elevation: 0,
+                          shape: cardBorder,
                           child: InkWell(
                             borderRadius: BorderRadius.circular(16),
                             onTap: _showPlacementOffersModal,
@@ -512,28 +542,43 @@ class _RecruiterDashboardScreenState extends State<RecruiterDashboardScreen> {
                               child: Row(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.all(12),
+                                    padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      color: AppColors.warning.withValues(alpha: 0.15),
+                                      color: isDark ? const Color(0x35F59E0B) : AppColors.warningLightBg,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    child: const Icon(Icons.emoji_events_rounded, color: AppColors.warning, size: 26),
+                                    child: const Icon(Icons.emoji_events_rounded, color: AppColors.warning, size: 24),
                                   ),
                                   const SizedBox(width: 14),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Text(
-                                          '$_offersMade',
-                                          style: theme.textTheme.headlineSmall?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: AppColors.warning,
-                                          ),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              '$_offersMade',
+                                              style: const TextStyle(
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.warning,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            const Text(
+                                              'Placement Offers',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
                                         ),
+                                        const SizedBox(height: 2),
                                         const Text(
-                                          'Total Placement Offers Recorded',
-                                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                          'Total verified offers recorded across drives',
+                                          style: TextStyle(fontSize: 11.5, color: AppColors.lightTextSecondary, fontWeight: FontWeight.w500),
                                         ),
                                       ],
                                     ),
@@ -551,27 +596,99 @@ class _RecruiterDashboardScreenState extends State<RecruiterDashboardScreen> {
               // Operations Section Title
               Text(
                 'Quick Operations & Actions',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
               const SizedBox(height: 12),
 
-
+              // Operation 1: Post New Drive
               Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(12),
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.successLightBg,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.add_business_rounded, color: AppColors.success),
-                  ),
-                  title: const Text('Post New Company Drive / Listing', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                  subtitle: const Text('Create draft or publish new job listing with PDF attachment & CGPA cutoff', style: TextStyle(fontSize: 12)),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                elevation: 0,
+                shape: cardBorder,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
                   onTap: _openAddForm,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryLightBg,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.add_business_rounded, color: AppColors.lightPrimary, size: 22),
+                        ),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Post New Company Drive',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'Create draft or publish new job listing with PDF attachment & CGPA cutoff',
+                                style: TextStyle(fontSize: 11.5, color: AppColors.lightTextSecondary, height: 1.3),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.lightTextSecondary),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // Operation 2: Manage All Drives & Applicants
+              Card(
+                elevation: 0,
+                shape: cardBorder,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: _openMyListings,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.successLightBg,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.folder_shared_rounded, color: AppColors.success, size: 22),
+                        ),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Manage All Drives & Applicants',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'View active listings, evaluate applicants, and progress round outcomes',
+                                style: TextStyle(fontSize: 11.5, color: AppColors.lightTextSecondary, height: 1.3),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.lightTextSecondary),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ],

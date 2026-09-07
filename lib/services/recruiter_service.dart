@@ -1,9 +1,13 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import '../network/api_client.dart';
 import '../controllers/paging_controller.dart';
+import 'token_storage_service.dart';
+import '../utils/jwt_decoder_util.dart';
 
 class RecruiterService {
   final ApiClient _apiClient = ApiClient.instance;
+  final TokenStorageService _tokenStorage = TokenStorageService();
 
   // 1. Create Job / Drive Listing (Multipart FormData)
   Future<bool> createCompanyListing(Map<String, dynamic> data, String? pdfFilePath) async {
@@ -76,6 +80,26 @@ class RecruiterService {
       return [];
     }
 
+    final token = await _tokenStorage.getAccessToken();
+    final role = (token != null ? JwtDecoderUtil.getRoleFromToken(token) : null) ??
+        await _tokenStorage.getUserRole();
+    if (role != null && role != 'recruiter' && role != 'admin') {
+      try {
+        final res = await _apiClient.dio.get('/drives');
+        if (res.statusCode == 200) {
+          final list = extractList(res.data);
+          for (var item in list) {
+            final id = (item['drive_id'] ?? item['listing_id'] ?? '').toString();
+            if (id.isNotEmpty && !seenIds.contains(id)) {
+              seenIds.add(id);
+              combined.add(item);
+            }
+          }
+        }
+      } catch (_) {}
+      return combined;
+    }
+
     try {
       final res = await _apiClient.dio.get('/recruiter/drives');
       if (res.statusCode == 200) {
@@ -105,6 +129,17 @@ class RecruiterService {
     } catch (_) {}
 
     return combined;
+  }
+
+  // 4b. Fetch Drive Detail
+  Future<Map<String, dynamic>?> getDriveDetail(String driveId) async {
+    try {
+      final res = await _apiClient.dio.get('/recruiter/drives/$driveId');
+      if (res.statusCode == 200 && res.data is Map) {
+        return Map<String, dynamic>.from(res.data as Map);
+      }
+    } catch (_) {}
+    return null;
   }
 
   // 5. Fetch Applicants for a Listing
@@ -217,6 +252,52 @@ class RecruiterService {
     );
   }
 
+  // 6. Fetch Candidates matching a Drive's skills
+  Future<PaginatedResponse<Map<String, dynamic>>> getMatchingStudentsPaginated(
+    String driveId, {
+    String matchType = 'any',
+    double? minCgpa,
+    int page = 1,
+    int limit = 20,
+  }) async {
+    Map<String, dynamic>? safeMap(dynamic item) {
+      if (item is Map) {
+        return Map<String, dynamic>.from(item);
+      }
+      return null;
+    }
+
+    try {
+      var url = '/recruiter/drives/$driveId/matching-students?match_type=$matchType&page=$page&limit=$limit';
+      if (minCgpa != null && minCgpa > 0) {
+        url += '&min_cgpa=$minCgpa';
+      }
+      final response = await _apiClient.dio.get(url);
+      if (response.statusCode == 200 && response.data != null && response.data is Map) {
+        final map = Map<String, dynamic>.from(response.data as Map);
+        final rawItems = map['items'] as List<dynamic>? ?? [];
+        final itemsList = rawItems.map(safeMap).whereType<Map<String, dynamic>>().toList();
+        final total = map['total_count'] is int ? (map['total_count'] as int) : itemsList.length;
+
+        return PaginatedResponse<Map<String, dynamic>>(
+          items: itemsList,
+          page: map['page'] is int ? (map['page'] as int) : page,
+          limit: map['limit'] is int ? (map['limit'] as int) : limit,
+          totalCount: total,
+          hasMore: map['has_more'] is bool ? (map['has_more'] as bool) : false,
+        );
+      }
+    } catch (_) {}
+
+    return PaginatedResponse<Map<String, dynamic>>(
+      items: [],
+      page: page,
+      limit: limit,
+      totalCount: 0,
+      hasMore: false,
+    );
+  }
+
   // 6. Record Candidate Round Result
   Future<Map<String, dynamic>?> updateApplicantRound(String listingId, String studentId, String result) async {
     try {
@@ -252,24 +333,53 @@ class RecruiterService {
     try {
       final response = await _apiClient.dio.post(
         '/recruiter/announcements',
-        data: {'title': title, 'message': message, 'target_audience': target},
+        data: {'title': title, 'content': message, 'message': message, 'target_audience': target},
       );
       return response.statusCode == 200 || response.statusCode == 201;
-    } catch (_) {
-      return true;
+    } catch (e) {
+      debugPrint('[POST ANNOUNCEMENT ERROR] $e');
+      return false;
     }
   }
 
-  // 9. Log Interview Outcome
-  Future<bool> logInterviewOutcome(String studentId, String outcome, [String? notes]) async {
+  // 8b. Fetch Recruiter Announcements
+  Future<List<Map<String, dynamic>>> getAnnouncements() async {
     try {
+      final response = await _apiClient.dio.get('/recruiter/announcements');
+      if (response.statusCode == 200 && response.data is Map) {
+        final list = (response.data['announcements'] as List?) ?? [];
+        return list.cast<Map<String, dynamic>>();
+      }
+    } catch (e) {
+      debugPrint('[GET ANNOUNCEMENTS ERROR] $e');
+    }
+    return [];
+  }
+
+  // 9. Log Interview Outcome
+  Future<bool> logInterviewOutcome(String interviewId, String outcome, [String? notes]) async {
+    try {
+      String normalizedOutcome = outcome.toLowerCase().trim();
+      if (normalizedOutcome == 'pass' || normalizedOutcome == 'selected') {
+        normalizedOutcome = 'passed';
+      } else if (normalizedOutcome == 'fail' || normalizedOutcome == 'rejected') {
+        normalizedOutcome = 'failed';
+      } else if (!['passed', 'failed', 'next_round'].contains(normalizedOutcome)) {
+        normalizedOutcome = 'next_round';
+      }
+
       final response = await _apiClient.dio.post(
-        '/recruiter/interviews/outcome',
-        data: {'student_id': studentId, 'outcome': outcome, 'notes': notes},
+        '/recruiter/interviews/$interviewId/outcome',
+        data: {
+          'status': normalizedOutcome,
+          'outcome': normalizedOutcome,
+          'feedback': notes ?? '',
+          'notes': notes ?? '',
+        },
       );
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (_) {
-      return true;
+      return false;
     }
   }
 
@@ -286,5 +396,71 @@ class RecruiterService {
       }
     } catch (_) {}
     return [];
+  }
+
+  // 11. Fetch Drive Talent Comparison & Rankings
+  Future<Map<String, dynamic>?> getTalentComparison(String driveId) async {
+    try {
+      final response = await _apiClient.dio.get('/recruiter/drives/$driveId/talent-comparison');
+      if (response.statusCode == 200 && response.data is Map) {
+        return Map<String, dynamic>.from(response.data as Map);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // 12. Fetch Applicant AI Screening Insight & Interview Cheat Sheet
+  Future<Map<String, dynamic>?> getApplicantAIInsight(String driveId, String studentId, {bool bypassCache = false}) async {
+    try {
+      final response = await _apiClient.dio.get(
+        '/recruiter/drives/$driveId/applicants/$studentId/ai-insight${bypassCache ? "?bypass_cache=true" : ""}',
+      );
+      if (response.statusCode == 200 && response.data is Map) {
+        return Map<String, dynamic>.from(response.data as Map);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // 13. Fetch Student Academic Record & Documents for Recruiter
+  Future<Map<String, dynamic>?> getStudentAcademicRecord(String studentId) async {
+    try {
+      final response = await _apiClient.dio.get('/recruiter/students/$studentId/academic-record');
+      if (response.statusCode == 200 && response.data is Map) {
+        return Map<String, dynamic>.from(response.data as Map);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // 14. Fetch Validation Applicants across all drives
+  Future<List<Map<String, dynamic>>> getValidationApplicants({String? validationStatus}) async {
+    try {
+      final query = (validationStatus != null && validationStatus.isNotEmpty && validationStatus.toLowerCase() != 'all')
+          ? '?validation_status=${validationStatus.toLowerCase()}'
+          : '';
+      final response = await _apiClient.dio.get('/recruiter/validation/applicants$query');
+      if (response.statusCode == 200 && response.data is Map) {
+        final list = (response.data['applicants'] as List?) ?? [];
+        return list.cast<Map<String, dynamic>>();
+      }
+    } catch (e) {
+      debugPrint('[GET VALIDATION APPLICANTS ERROR] $e');
+    }
+    return [];
+  }
+
+  // 15. Update Candidate Validation Status (valid / not_valid)
+  Future<bool> updateApplicationValidation(String appId, String validationStatus) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/recruiter/applications/$appId/validate',
+        data: {'validation_status': validationStatus},
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('[UPDATE VALIDATION ERROR] $e');
+      return false;
+    }
   }
 }

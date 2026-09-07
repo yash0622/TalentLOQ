@@ -3,7 +3,7 @@ import '../../mock_data/mock_data.dart';
 import '../../models/models.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_avatar.dart';
-
+import '../../services/chat_service.dart';
 import '../../services/token_storage_service.dart';
 
 class ChatInterfaceScreen extends StatefulWidget {
@@ -24,16 +24,17 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> {
   late List<ChatMessage> _messages;
   final TextEditingController _inputController = TextEditingController();
   final TokenStorageService _tokenStorage = TokenStorageService();
+  final ChatService _chatService = ChatService();
   String _myName = 'Me';
 
   @override
   void initState() {
     super.initState();
     _messages = MockData.conversationMessages[widget.conversation.id] ?? [];
-    _loadMyName();
+    _loadData();
   }
 
-  Future<void> _loadMyName() async {
+  Future<void> _loadData() async {
     final profile = await _tokenStorage.getStudentProfile();
     final name = profile['full_name'] as String? ?? '';
     if (mounted && name.isNotEmpty) {
@@ -41,13 +42,23 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> {
         _myName = name;
       });
     }
+
+    // Fetch backend messages
+    if (widget.conversation.id.isNotEmpty) {
+      final backendMsgs = await _chatService.getMessages(widget.conversation.id);
+      if (mounted && backendMsgs.isNotEmpty) {
+        setState(() {
+          _messages = backendMsgs;
+        });
+      }
+    }
   }
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     final text = _inputController.text.trim();
     if (text.isEmpty) return;
 
-    final newMsg = ChatMessage(
+    final tempMsg = ChatMessage(
       id: 'msg-${DateTime.now().millisecondsSinceEpoch}',
       senderId: 'me',
       senderName: _myName,
@@ -57,12 +68,20 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> {
     );
 
     setState(() {
-      _messages.add(newMsg);
+      _messages.add(tempMsg);
       MockData.conversationMessages[widget.conversation.id] = _messages;
       widget.conversation.lastMessage = text;
       widget.conversation.time = 'Just now';
     });
     _inputController.clear();
+
+    // Send to backend
+    await _chatService.sendMessage(
+      recipientId: widget.conversation.id,
+      text: text,
+      conversationId: widget.conversation.id,
+      recipientName: widget.conversation.partnerName,
+    );
   }
 
   @override
@@ -89,22 +108,23 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> {
               imageUrl: widget.conversation.avatarUrl,
               fallbackText: widget.conversation.partnerName,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     widget.conversation.partnerName,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    maxLines: 1,
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                     overflow: TextOverflow.ellipsis,
                   ),
-                  Text(
-                    widget.conversation.partnerRole,
-                    style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  const Text(
+                    'Online',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.success,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
@@ -114,110 +134,44 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> {
       ),
       body: Column(
         children: [
-          // Chat Messages Body
           Expanded(
-            child: _messages.isNotEmpty
-                ? ListView.builder(
-                    padding: const EdgeInsets.all(16),
+            child: _messages.isEmpty
+                ? Center(
+                    child: Text(
+                      'No messages yet. Say hello!',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.hintColor,
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
                       final msg = _messages[index];
-                      return _buildMessageBubble(msg, theme, isDark);
+                      return _buildMessageBubble(msg, isDark);
                     },
-                  )
-                : Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.forum_outlined, size: 48, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Conversation Started',
-                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Send a message below to start chatting with ${widget.conversation.partnerName}.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
                   ),
           ),
-
-          // Quick Suggestions
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            child: Row(
-              children: [
-                _buildQuickReply('Hello! Could we connect?'),
-                const SizedBox(width: 8),
-                _buildQuickReply('Thank you for reaching out!'),
-                const SizedBox(width: 8),
-                _buildQuickReply('When is a good time to talk?'),
-              ],
-            ),
-          ),
-
-          // Message Input Field
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-              border: Border(
-                top: BorderSide(
-                  color: isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant,
-                ),
-              ),
-            ),
-            child: SafeArea(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _inputController,
-                      onSubmitted: (_) => _sendMessage(),
-                      decoration: const InputDecoration(
-                        hintText: 'Type a message...',
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(
-                    onPressed: _sendMessage,
-                    style: IconButton.styleFrom(
-                      backgroundColor: isDark
-                          ? AppColors.darkPrimaryContainer
-                          : AppColors.lightPrimary,
-                    ),
-                    icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          _buildInputBar(theme, isDark),
         ],
       ),
     );
   }
 
-  Widget _buildMessageBubble(ChatMessage msg, ThemeData theme, bool isDark) {
+  Widget _buildMessageBubble(ChatMessage msg, bool isDark) {
     return Align(
       alignment: msg.isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        constraints: const BoxConstraints(maxWidth: 300),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        margin: const EdgeInsets.only(bottom: 10),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: msg.isMe
-              ? (isDark ? AppColors.darkPrimaryContainer : AppColors.lightPrimary)
-              : (isDark ? AppColors.darkSurfaceContainerLow : AppColors.lightSurfaceContainer),
+              ? (isDark ? AppColors.darkPrimary : AppColors.lightPrimary)
+              : (isDark ? AppColors.darkSurfaceContainer : AppColors.lightSurfaceContainer),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
@@ -235,14 +189,15 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> {
                     ? Colors.white
                     : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
                 fontSize: 14,
-                height: 1.4,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               msg.time,
               style: TextStyle(
-                color: msg.isMe ? Colors.white70 : theme.textTheme.bodySmall?.color,
+                color: msg.isMe
+                    ? Colors.white70
+                    : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
                 fontSize: 10,
               ),
             ),
@@ -252,19 +207,47 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> {
     );
   }
 
-  Widget _buildQuickReply(String text) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return ActionChip(
-      label: Text(text),
-      onPressed: () {
-        _inputController.text = text;
-      },
-      backgroundColor: isDark ? AppColors.darkSurfaceContainerLow : AppColors.lightSurfaceContainerLow,
-      labelStyle: TextStyle(
-        fontSize: 12,
-        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+  Widget _buildInputBar(ThemeData theme, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+        border: Border(
+          top: BorderSide(
+            color: isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant,
+          ),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _inputController,
+                decoration: InputDecoration(
+                  hintText: 'Type a message...',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                  fillColor: isDark
+                      ? AppColors.darkSurfaceContainer
+                      : AppColors.lightSurfaceContainer,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+                onSubmitted: (_) => _sendMessage(),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.send_rounded),
+              color: isDark ? AppColors.darkPrimary : AppColors.lightPrimary,
+              onPressed: _sendMessage,
+            ),
+          ],
+        ),
       ),
     );
   }

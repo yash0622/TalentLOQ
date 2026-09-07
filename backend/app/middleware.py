@@ -27,9 +27,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         
         return response
 
-def check_ip_in_cidrs(client_ip: str, allowed_cidrs: str) -> bool:
+from typing import Union, List
+
+def check_ip_in_cidrs(client_ip: str, allowed_cidrs: Union[str, List[str]]) -> bool:
     """
     Checks if client_ip belongs to any allowed CIDR ranges or specific IP strings.
+    Supports either comma-separated string or list of CIDR/IP strings.
     """
     if not allowed_cidrs:
         return True
@@ -39,8 +42,9 @@ def check_ip_in_cidrs(client_ip: str, allowed_cidrs: str) -> bool:
     except ValueError:
         return False
 
-    for cidr_str in allowed_cidrs.split(","):
-        cidr_str = cidr_str.strip()
+    raw_list = allowed_cidrs if isinstance(allowed_cidrs, list) else allowed_cidrs.split(",")
+    for cidr_str in raw_list:
+        cidr_str = str(cidr_str).strip()
         if not cidr_str:
             continue
         try:

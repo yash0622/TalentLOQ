@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/recruiter_service.dart';
 import '../../theme/app_colors.dart';
 
@@ -176,14 +178,14 @@ class _AddCompanyFormState extends State<AddCompanyForm> {
 
   Future<void> _pickPdf() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
       );
-      if (result != null && result.files.single.path != null) {
+      if (result.isNotEmpty && result.single.path != null) {
         setState(() {
-          _pickedPdfPath = result.files.single.path;
-          _pickedPdfName = result.files.single.name;
+          _pickedPdfPath = result.single.path;
+          _pickedPdfName = result.single.name;
         });
       }
     } catch (e) {
@@ -191,6 +193,36 @@ class _AddCompanyFormState extends State<AddCompanyForm> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('File picker error: $e')),
         );
+      }
+    }
+  }
+
+  Future<void> _openPickedPdf() async {
+    if (_pickedPdfPath != null && _pickedPdfPath!.isNotEmpty) {
+      try {
+        final res = await OpenFilex.open(_pickedPdfPath!);
+        if (res.type != ResultType.done && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not open PDF: ${res.message}')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error opening PDF: $e')),
+          );
+        }
+      }
+    } else if (widget.initialListing?['attachment_pdf_url'] != null) {
+      final url = widget.initialListing!['attachment_pdf_url'].toString();
+      try {
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not open PDF URL: $url')),
+          );
+        }
       }
     }
   }
@@ -331,9 +363,10 @@ class _AddCompanyFormState extends State<AddCompanyForm> {
         'location': _venueController.text.trim(),
         'cgpa_criteria': cgpaVal.toString(),
         'min_cgpa': cgpaVal.toString(),
-        'ctc_min': _ctcMinController.text,
-        'ctc_max': _ctcMaxController.text,
-        'stipend': _stipendController.text,
+        'ctc_min': (double.tryParse(_ctcMinController.text.trim()) ?? 6.0).toString(),
+        'ctc_max': (double.tryParse(_ctcMaxController.text.trim()) ?? 12.0).toString(),
+        if (_stipendController.text.trim().isNotEmpty && double.tryParse(_stipendController.text.trim()) != null)
+          'stipend': double.parse(_stipendController.text.trim()).toString(),
         'mode': _mode,
         'employment_type': _employmentType,
         'school_tag': _schoolTagController.text.trim(),
@@ -341,6 +374,7 @@ class _AddCompanyFormState extends State<AddCompanyForm> {
         'eligible_courses_json': jsonEncode(_selectedCourses),
         'selection_process_json': jsonEncode(_selectionRounds),
         'policy_flags_json': jsonEncode(policyFlagsMap),
+        'required_skills_json': jsonEncode(reqSkills),
       };
 
       success = await _recruiterService.createCompanyListing(mapData, _pickedPdfPath);
@@ -504,7 +538,7 @@ class _AddCompanyFormState extends State<AddCompanyForm> {
               child: TextFormField(
                 controller: _ctcMinController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Min CTC (LPA)', prefixIcon: Icon(Icons.attach_money_rounded)),
+                decoration: const InputDecoration(labelText: 'Min CTC (₹ LPA)', prefixIcon: Icon(Icons.currency_rupee_rounded)),
               ),
             ),
             const SizedBox(width: 10),
@@ -512,7 +546,7 @@ class _AddCompanyFormState extends State<AddCompanyForm> {
               child: TextFormField(
                 controller: _ctcMaxController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Max CTC (LPA)', prefixIcon: Icon(Icons.money_rounded)),
+                decoration: const InputDecoration(labelText: 'Max CTC (₹ LPA)', prefixIcon: Icon(Icons.currency_rupee_rounded)),
               ),
             ),
           ],
@@ -720,27 +754,62 @@ class _AddCompanyFormState extends State<AddCompanyForm> {
         ),
         const SizedBox(height: 14),
 
-        // PDF File Picker
+        // PDF File Picker & Viewer
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
+            color: _pickedPdfPath != null
+                ? (isDark ? AppColors.darkSurfaceContainerHigh : AppColors.lightSurfaceContainer)
+                : null,
             border: Border.all(color: isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
             children: [
-              const Icon(Icons.picture_as_pdf_rounded, color: AppColors.error),
-              const SizedBox(width: 10),
+              IconButton(
+                icon: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.error, size: 28),
+                onPressed: (_pickedPdfPath != null || widget.initialListing?['attachment_pdf_url'] != null)
+                    ? _openPickedPdf
+                    : _pickPdf,
+                tooltip: 'Preview PDF',
+              ),
+              const SizedBox(width: 8),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Job Description PDF Brochure', style: TextStyle(fontSize: 11, color: AppColors.lightTextSecondary)),
-                    Text(_pickedPdfName ?? 'No PDF file attached yet', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
-                  ],
+                child: InkWell(
+                  onTap: (_pickedPdfPath != null || widget.initialListing?['attachment_pdf_url'] != null)
+                      ? _openPickedPdf
+                      : _pickPdf,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Job Description PDF Brochure', style: TextStyle(fontSize: 11, color: AppColors.lightTextSecondary)),
+                      Text(
+                        _pickedPdfName ?? (widget.initialListing?['attachment_pdf_url'] != null ? 'Existing Brochure Attached' : 'No PDF file attached yet'),
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (_pickedPdfPath != null || widget.initialListing?['attachment_pdf_url'] != null)
+                        const Text(
+                          'Tap to view / open PDF',
+                          style: TextStyle(fontSize: 10, color: AppColors.lightPrimary, fontWeight: FontWeight.bold),
+                        ),
+                    ],
+                  ),
                 ),
               ),
-              OutlinedButton(onPressed: _pickPdf, child: const Text('Pick PDF')),
+              if (_pickedPdfPath != null || widget.initialListing?['attachment_pdf_url'] != null) ...[
+                IconButton(
+                  tooltip: 'View PDF',
+                  icon: const Icon(Icons.visibility_rounded, color: AppColors.lightPrimary),
+                  onPressed: _openPickedPdf,
+                ),
+                const SizedBox(width: 4),
+              ],
+              OutlinedButton(
+                onPressed: _pickPdf,
+                child: Text(_pickedPdfPath != null ? 'Change' : 'Pick PDF'),
+              ),
             ],
           ),
         ),

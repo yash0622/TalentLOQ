@@ -31,15 +31,14 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
     final notifs = (data['notifications'] as List?) ?? [];
     final chats = (data['messages'] as List?) ?? [];
 
-    // Also fetch active published drives to populate company recruiter channels
-    List<dynamic> activeDrives = [];
-    try {
-      activeDrives = await _driveService.getPublishedDrives();
-    } catch (_) {}
-
     if (!mounted) return;
 
     setState(() {
+      // Remove any legacy test/mock conversations from memory
+      MockData.conversations.removeWhere((c) =>
+          c.partnerName.contains('UCI Placement') ||
+          c.lastMessage.contains('UCI Placement'));
+
       // 1. Process backend notifications & direct messages
       for (var item in [...notifs, ...chats]) {
         if (item is! Map) continue;
@@ -48,9 +47,12 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
         final id = (item['notification_id'] ?? item['message_id'] ?? 'notif-${DateTime.now().millisecondsSinceEpoch}').toString();
 
         if (body.isEmpty) continue;
+        if (title.contains('UCI Placement') || body.contains('UCI Placement')) continue;
 
         final convIndex = MockData.conversations.indexWhere(
-          (c) => c.id == id || c.partnerName.toLowerCase().contains(title.toLowerCase()),
+          (c) => c.id == id ||
+                 c.partnerName.toLowerCase() == title.toLowerCase() ||
+                 (c.lastMessage.isNotEmpty && c.lastMessage == body),
         );
 
         if (convIndex != -1) {
@@ -81,43 +83,6 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
             time: 'Just Now',
             isMe: false,
           ));
-        }
-      }
-
-      // 2. Auto-populate active placement drive recruiters so chat list is never empty
-      for (var drive in activeDrives) {
-        if (drive is! Map) continue;
-        final companyName = (drive['company_name'] ?? 'Placement Cell').toString();
-        final role = (drive['interview_job'] ?? drive['drive_title'] ?? 'Recruiter').toString();
-        final driveId = (drive['drive_id'] ?? drive['listing_id'] ?? '').toString();
-
-        final exists = MockData.conversations.any(
-          (c) => c.partnerName.toLowerCase().contains(companyName.toLowerCase()),
-        );
-
-        if (!exists) {
-          final conv = Conversation(
-            id: driveId.isNotEmpty ? driveId : 'conv-${DateTime.now().millisecondsSinceEpoch}',
-            partnerName: '$companyName Recruiter',
-            partnerRole: '$role • Campus Placement',
-            avatarUrl: '',
-            lastMessage: 'Tap to chat with $companyName recruiter regarding drive updates & interview rounds.',
-            time: 'Active',
-            unreadCount: 0,
-            isOnline: true,
-          );
-          MockData.conversations.add(conv);
-
-          MockData.conversationMessages.putIfAbsent(conv.id, () => []).add(
-            ChatMessage(
-              id: 'init-${conv.id}',
-              senderId: 'recruiter',
-              senderName: '$companyName Recruiter',
-              text: 'Welcome! Feel free to ask any questions regarding $companyName recruitment drive.',
-              time: 'Today',
-              isMe: false,
-            ),
-          );
         }
       }
     });
@@ -209,6 +174,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                         ? const Center(child: CircularProgressIndicator())
                         : realDrives.isNotEmpty
                             ? ListView.separated(
+                                padding: const EdgeInsets.only(bottom: 120),
                                 itemCount: realDrives.length,
                                 separatorBuilder: (_, _) => const Divider(height: 1),
                                 itemBuilder: (context, index) {
@@ -356,18 +322,11 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
     }).toList();
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _startNewConversation,
-        icon: const Icon(Icons.edit_note_rounded),
-        label: const Text('New Chat'),
-        backgroundColor: isDark ? AppColors.darkPrimaryContainer : AppColors.lightPrimary,
-        foregroundColor: Colors.white,
-      ),
       body: Column(
         children: [
-          // Search Header Bar
+          // Search Header Bar with New Chat Icon Button
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             decoration: BoxDecoration(
               color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
               border: Border(
@@ -376,18 +335,48 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                 ),
               ),
             ),
-            child: TextField(
-              onChanged: (val) => setState(() => _searchQuery = val),
-              decoration: InputDecoration(
-                hintText: 'Search messages and contacts...',
-                prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear_rounded),
-                        onPressed: () => setState(() => _searchQuery = ''),
-                      )
-                    : null,
-              ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                    decoration: InputDecoration(
+                      hintText: 'Search messages and contacts...',
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear_rounded, size: 18),
+                              onPressed: () => setState(() => _searchQuery = ''),
+                            )
+                          : null,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Container(
+                  height: 46,
+                  width: 46,
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.darkPrimary : AppColors.lightPrimary,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (isDark ? AppColors.darkPrimary : AppColors.lightPrimary).withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: IconButton(
+                    tooltip: 'New Chat',
+                    padding: EdgeInsets.zero,
+                    icon: const Icon(Icons.edit_note_rounded, color: Colors.white, size: 24),
+                    onPressed: _startNewConversation,
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -395,7 +384,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
           Expanded(
             child: filteredConversations.isNotEmpty
                 ? ListView.separated(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.only(top: 8, bottom: 120),
                     itemCount: filteredConversations.length,
                     separatorBuilder: (_, _) => Divider(
                       height: 1,
@@ -438,29 +427,14 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                               ),
                           ],
                         ),
-                        title: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                conv.partnerName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: conv.unreadCount > 0 ? FontWeight.bold : FontWeight.w600,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                            Text(
-                              conv.time,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: conv.unreadCount > 0 ? AppColors.lightPrimary : null,
-                                fontWeight: conv.unreadCount > 0 ? FontWeight.bold : null,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
+                        title: Text(
+                          conv.partnerName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: conv.unreadCount > 0 ? FontWeight.bold : FontWeight.w600,
+                            fontSize: 14,
+                          ),
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -468,11 +442,14 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                             const SizedBox(height: 2),
                             Text(
                               conv.partnerRole,
-                              style: theme.textTheme.bodySmall?.copyWith(fontSize: 11, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontSize: 11,
+                                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 3),
                             Text(
                               conv.lastMessage,
                               maxLines: 1,
@@ -487,23 +464,50 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                             ),
                           ],
                         ),
-                        trailing: conv.unreadCount > 0
-                            ? Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: const BoxDecoration(
-                                  color: AppColors.lightPrimary,
-                                  shape: BoxShape.circle,
+                        trailing: SizedBox(
+                          width: 72,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                conv.time,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.end,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: conv.unreadCount > 0
+                                      ? (isDark ? AppColors.darkPrimary : AppColors.lightPrimary)
+                                      : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                                  fontWeight: conv.unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
+                                  fontSize: 11,
                                 ),
-                                child: Text(
-                                  '${conv.unreadCount}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
+                              ),
+                              const SizedBox(height: 4),
+                              if (conv.unreadCount > 0)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? AppColors.darkPrimary : AppColors.lightPrimary,
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
-                                ),
-                              )
-                            : null,
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    '${conv.unreadCount}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                )
+                              else
+                                const SizedBox(height: 18),
+                            ],
+                          ),
+                        ),
                       );
                     },
                   )

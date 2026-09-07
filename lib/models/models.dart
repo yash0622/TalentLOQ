@@ -53,6 +53,8 @@ class Candidate {
   final double cgpa;
   final int activeBacklogs;
   final int closedBacklogs;
+  final String? resumeUrl;
+  final String? ugMarksheetUrl;
 
   Candidate({
     required this.id,
@@ -73,6 +75,8 @@ class Candidate {
     this.cgpa = 8.0,
     this.activeBacklogs = 0,
     this.closedBacklogs = 0,
+    this.resumeUrl,
+    this.ugMarksheetUrl,
   });
 }
 
@@ -194,22 +198,3 @@ class SupportTicket {
   });
 }
 
-class AcademicRecord {
-  final String studentId;
-  final String fullName;
-  final String education;
-  final double currentCgpa;
-  final int activeBacklogs;
-  final int closedBacklogs;
-  final List<Map<String, dynamic>> cgpaHistory;
-
-  AcademicRecord({
-    required this.studentId,
-    required this.fullName,
-    required this.education,
-    required this.currentCgpa,
-    required this.activeBacklogs,
-    required this.closedBacklogs,
-    required this.cgpaHistory,
-  });
-}

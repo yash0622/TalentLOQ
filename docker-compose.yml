@@ -30,14 +30,22 @@ services:
     environment:
       - APP_ENV=production
       - PORT=8000
-      - MONGO_URI=mongodb://mongodb:27017/talentloq_db
-      - JWT_SECRET_KEY=talentloq_jwt_secret_key_production_32bytes
+      - MONGODB_URL=mongodb://mongodb:27017
+      - DATABASE_NAME=talentloq_db
+      - JWT_SECRET=talentloq_jwt_secret_key_production_32bytes
       - JWT_ALGORITHM=HS256
       - ENCRYPTION_KEY=dGFsZW50bG9xX2Flc19lbmNyeXB0aW9uX2tleV8zMg==
       - ALLOWED_ORIGINS=http://localhost,http://localhost:80,http://localhost:8000,http://127.0.0.1
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
     depends_on:
       mongodb:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
     networks:
       - talentloq-network
 
@@ -51,7 +59,8 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - talentloq-network
 

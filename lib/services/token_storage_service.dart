@@ -1,9 +1,8 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:uuid/uuid.dart';
 
 class TokenStorageService {
   static const _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    aOptions: AndroidOptions(resetOnError: true),
     iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
   );
 
@@ -11,6 +10,7 @@ class TokenStorageService {
   static const String _keyRefreshToken = 'talentloq_refresh_token';
   static const String _keyDeviceId = 'talentloq_device_id';
   static const String _keyUserRole = 'talentloq_user_role';
+  static const String _keyIsLoggedIn = 'talentloq_is_logged_in';
 
   /// Save Access Token
   Future<void> saveAccessToken(String token) async {
@@ -41,26 +41,32 @@ class TokenStorageService {
   Future<String?> getUserRole() async {
     return await _storage.read(key: _keyUserRole);
   }
+  /// Save user logged-in status
+  Future<void> saveIsLoggedIn(bool isLoggedIn) async {
+    await _storage.write(key: _keyIsLoggedIn, value: isLoggedIn ? 'true' : 'false');
+  }
+
+  /// Check if user is logged in
+  Future<bool> getIsLoggedIn() async {
+    final status = await _storage.read(key: _keyIsLoggedIn);
+    if (status == 'true') return true;
+    final token = await getAccessToken();
+    final refresh = await getRefreshToken();
+    return (token != null && token.isNotEmpty) || (refresh != null && refresh.isNotEmpty);
+  }
+
 
   /// Save user registered email flag
   Future<void> saveRegisteredEmail(String email) async {
-    await _storage.write(key: 'reg_user_${email.toLowerCase().trim()}', value: 'true');
+    final cleanEmail = email.trim().toLowerCase();
+    await _storage.write(key: 'reg_user_$cleanEmail', value: 'true');
   }
 
   /// Check if user has registered
   Future<bool> isRegisteredUser(String email) async {
-    final res = await _storage.read(key: 'reg_user_${email.toLowerCase().trim()}');
+    final cleanEmail = email.trim().toLowerCase();
+    final res = await _storage.read(key: 'reg_user_$cleanEmail');
     return res == 'true';
-  }
-
-  /// Save user registered password securely for credential validation
-  Future<void> saveUserPassword(String email, String password) async {
-    await _storage.write(key: 'user_pass_${email.toLowerCase().trim()}', value: password);
-  }
-
-  /// Get registered password for email
-  Future<String?> getUserPassword(String email) async {
-    return await _storage.read(key: 'user_pass_${email.toLowerCase().trim()}');
   }
 
   /// Check if an email address has been registered
@@ -71,8 +77,9 @@ class TokenStorageService {
   /// Get or generate a persistent device ID stored in secure storage
   Future<String> getOrCreateDeviceId() async {
     String? deviceId = await _storage.read(key: _keyDeviceId);
-    if (deviceId == null || deviceId.isEmpty) {
-      deviceId = 'dev-${const Uuid().v4().substring(0, 12)}';
+    if (deviceId == null || deviceId.isEmpty || deviceId == 'dev-') {
+      final rand = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
+      deviceId = 'dev-$rand';
       await _storage.write(key: _keyDeviceId, value: deviceId);
     }
     return deviceId;
@@ -83,12 +90,15 @@ class TokenStorageService {
     await _storage.delete(key: _keyAccessToken);
     await _storage.delete(key: _keyRefreshToken);
     await _storage.delete(key: _keyUserRole);
+    await _storage.delete(key: _keyIsLoggedIn);
+    await clearProfile();
   }
 
   /// Save Student Profile Data
   Future<void> saveStudentProfile({
     required String email,
     String? fullName,
+    String? university,
     required String education,
     required double cgpa,
     required int activeBacklogs,
@@ -98,6 +108,9 @@ class TokenStorageService {
     await _storage.write(key: 'profile_email', value: email);
     if (fullName != null && fullName.isNotEmpty) {
       await _storage.write(key: 'profile_full_name', value: fullName);
+    }
+    if (university != null && university.isNotEmpty) {
+      await _storage.write(key: 'profile_university', value: university);
     }
     await _storage.write(key: 'profile_education', value: education);
     await _storage.write(key: 'profile_cgpa', value: cgpa.toString());
@@ -110,22 +123,26 @@ class TokenStorageService {
   Future<Map<String, dynamic>> getStudentProfile() async {
     final email = await _storage.read(key: 'profile_email') ?? '';
     final fullName = await _storage.read(key: 'profile_full_name') ?? '';
-    final education = await _storage.read(key: 'profile_education') ?? 'B.Tech CSE';
-    final cgpaStr = await _storage.read(key: 'profile_cgpa') ?? '7.9';
+    final university = await _storage.read(key: 'profile_university') ?? 'GSFC University';
+    final education = await _storage.read(key: 'profile_education') ?? '';
+    final cgpaStr = await _storage.read(key: 'profile_cgpa') ?? '';
     final activeStr = await _storage.read(key: 'profile_active_backlogs') ?? '0';
-    final closedStr = await _storage.read(key: 'profile_closed_backlogs') ?? '2';
-    final skillsStr = await _storage.read(key: 'profile_skills') ?? 'Python,React JS';
+    final closedStr = await _storage.read(key: 'profile_closed_backlogs') ?? '0';
+    final skillsStr = await _storage.read(key: 'profile_skills') ?? '';
 
-    final skillsList = skillsStr.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+    final skillsList = skillsStr.trim().isEmpty
+        ? <String>[]
+        : skillsStr.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
 
     return {
       'email': email,
       'full_name': fullName,
+      'university': university,
       'education': education,
-      'cgpa': double.tryParse(cgpaStr) ?? 7.9,
+      'cgpa': double.tryParse(cgpaStr) ?? 0.0,
       'active_backlogs': int.tryParse(activeStr) ?? 0,
-      'closed_backlogs': int.tryParse(closedStr) ?? 2,
-      'skills': skillsList.isEmpty ? ['Python', 'React JS'] : skillsList,
+      'closed_backlogs': int.tryParse(closedStr) ?? 0,
+      'skills': skillsList,
     };
   }
 
@@ -146,5 +163,18 @@ class TokenStorageService {
   Future<void> clearResume() async {
     await _storage.delete(key: 'profile_resume_name');
     await _storage.delete(key: 'profile_resume_path');
+  }
+
+  /// Clear Student Profile Data
+  Future<void> clearProfile() async {
+    await _storage.delete(key: 'profile_email');
+    await _storage.delete(key: 'profile_full_name');
+    await _storage.delete(key: 'profile_university');
+    await _storage.delete(key: 'profile_education');
+    await _storage.delete(key: 'profile_cgpa');
+    await _storage.delete(key: 'profile_active_backlogs');
+    await _storage.delete(key: 'profile_closed_backlogs');
+    await _storage.delete(key: 'profile_skills');
+    await clearResume();
   }
 }

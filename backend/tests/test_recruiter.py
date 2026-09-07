@@ -85,6 +85,8 @@ async def test_company_listings_full_lifecycle(monkeypatch):
     monkeypatch.setattr(recruiter_router.company_listings_collection, "count_documents", mock_count_documents)
     monkeypatch.setattr(recruiter_router.drives_collection, "count_documents", AsyncMock(return_value=0))
     monkeypatch.setattr(recruiter_router.drives_collection, "find", lambda q: MockCursor([]))
+    monkeypatch.setattr(recruiter_router.drives_collection, "insert_one", AsyncMock())
+    monkeypatch.setattr(recruiter_router.drives_collection, "update_one", AsyncMock())
     monkeypatch.setattr(recruiter_router.audit_logs_collection, "insert_one", AsyncMock())
     monkeypatch.setattr(recruiter_router.applications_collection, "count_documents", AsyncMock(return_value=2))
     monkeypatch.setattr(recruiter_router.applications_collection, "find", lambda q: MockCursor([{"app_id": "app-1", "student_id": "s-1", "meets_cgpa_criteria": True}]))

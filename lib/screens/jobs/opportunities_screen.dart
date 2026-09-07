@@ -6,11 +6,14 @@ import '../../widgets/paginated_list_view.dart';
 import '../../widgets/skeleton_widgets.dart';
 import 'company_detail_screen.dart';
 
+import '../../services/application_visibility_state.dart';
+
 class OpportunitiesScreen extends StatefulWidget {
   final double studentCgpa;
   final bool hasResume;
   final VoidCallback? onNavigateToProfile;
   final bool embedInTab;
+  final String initialFilterMode;
 
   const OpportunitiesScreen({
     super.key,
@@ -18,32 +21,66 @@ class OpportunitiesScreen extends StatefulWidget {
     this.hasResume = true,
     this.onNavigateToProfile,
     this.embedInTab = false,
+    this.initialFilterMode = 'all',
   });
 
   @override
   State<OpportunitiesScreen> createState() => _OpportunitiesScreenState();
 }
 
-class _OpportunitiesScreenState extends State<OpportunitiesScreen> {
+class _OpportunitiesScreenState extends State<OpportunitiesScreen> with AutomaticKeepAliveClientMixin {
   final DriveService _driveService = DriveService();
   final TextEditingController _searchController = TextEditingController();
   late final PagingController<Map<String, dynamic>> _pagingController;
 
   String _searchQuery = '';
+  late String _filterMode;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
-    _pagingController = PagingController<Map<String, dynamic>>(
-      fetchPage: (page, limit) => _driveService.getPublishedDrivesPaginated(page: page, limit: limit),
-    );
+    _filterMode = widget.initialFilterMode;
+    ApplicationVisibilityState.instance.addListener(_onApplicationRecorded);
+    _initPagingController();
     _searchController.addListener(_onSearchChanged);
+    // Prefetch student's existing applications into visibility cache
+    _driveService.getMyApplicationsPaginated(page: 1, limit: 100);
+  }
+
+  void _initPagingController() {
+    _pagingController = PagingController<Map<String, dynamic>>(
+      fetchPage: (page, limit) => _filterMode == 'matched'
+          ? _driveService.getRecommendedDrivesPaginated(page: page, limit: limit)
+          : _driveService.getPublishedDrivesPaginated(page: page, limit: limit),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant OpportunitiesScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialFilterMode != widget.initialFilterMode) {
+      setState(() {
+        _filterMode = widget.initialFilterMode;
+        _pagingController.dispose();
+        _initPagingController();
+      });
+    }
+  }
+
+  void _onApplicationRecorded() {
+    if (mounted) {
+      _pagingController.refresh();
+    }
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _pagingController.dispose();
+    ApplicationVisibilityState.instance.removeListener(_onApplicationRecorded);
     super.dispose();
   }
 
@@ -53,8 +90,8 @@ class _OpportunitiesScreenState extends State<OpportunitiesScreen> {
     });
   }
 
-  void _openDetail(Map<String, dynamic> item) {
-    Navigator.push(
+  Future<void> _openDetail(Map<String, dynamic> item) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => CompanyDetailScreen(
@@ -66,10 +103,14 @@ class _OpportunitiesScreenState extends State<OpportunitiesScreen> {
         ),
       ),
     );
+    if (mounted) {
+      _pagingController.refresh();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -83,7 +124,9 @@ class _OpportunitiesScreenState extends State<OpportunitiesScreen> {
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: 'Search by company, role, or qualification...',
+                  hintText: _filterMode == 'matched'
+                      ? 'Search matched opportunities...'
+                      : 'Search by company, role, or qualification...',
                   prefixIcon: const Icon(Icons.search_rounded),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
@@ -112,15 +155,19 @@ class _OpportunitiesScreenState extends State<OpportunitiesScreen> {
                       children: [
                         const Icon(Icons.campaign_outlined, size: 54, color: AppColors.lightTextSecondary),
                         const SizedBox(height: 12),
-                        const Text(
-                          'No Placement Drives Found',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        Text(
+                          _filterMode == 'matched'
+                              ? 'No Matching Drives Yet'
+                              : 'No Placement Drives Found',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                         const SizedBox(height: 6),
-                        const Text(
-                          'Check back soon! Placement officers will publish active hiring drives shortly.',
+                        Text(
+                          _filterMode == 'matched'
+                              ? 'Make sure your resume is uploaded with your skills to discover drives tailored to you.'
+                              : 'Check back soon! Placement officers will publish active hiring drives shortly.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 12, color: AppColors.lightTextSecondary),
+                          style: const TextStyle(fontSize: 12, color: AppColors.lightTextSecondary),
                         ),
                       ],
                     ),
@@ -243,6 +290,36 @@ class _OpportunitiesScreenState extends State<OpportunitiesScreen> {
                                 ],
                               ),
                             ),
+
+                            // Skill Overlap Summary Badge (if present)
+                            if (item['match_summary'] != null && item['match_summary'].toString().isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: AppColors.success.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.auto_awesome_rounded, size: 14, color: AppColors.success),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        item['match_summary'].toString(),
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.success,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 10),
 
                             // Description Snippet
@@ -263,7 +340,7 @@ class _OpportunitiesScreenState extends State<OpportunitiesScreen> {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    'CTC: ₹${ctcMin}L - ₹${ctcMax}L / yr • $empType',
+                                    'CTC: ₹${(ctcMin is num && ctcMin % 1 == 0) ? ctcMin.toInt() : ctcMin} - ₹${(ctcMax is num && ctcMax % 1 == 0) ? ctcMax.toInt() : ctcMax} LPA • $empType',
                                     style: const TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,

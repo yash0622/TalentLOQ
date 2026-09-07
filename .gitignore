@@ -51,7 +51,15 @@ venv/
 # Binaries & Tooling Scratch
 *.zip
 *.exe
+*.whl
+en_core_web_sm.whl
 ngrok.exe
+
+# Scratch & Temporary
+scratch/
+backend/scratch/
+datasets/
+backend/datasets/
 
 # Agent & IDE meta
 .gemini/
@@ -59,3 +67,4 @@ ngrok.exe
 .agents/
 .gsd/
 AI_MEMORY.md
+memory.md

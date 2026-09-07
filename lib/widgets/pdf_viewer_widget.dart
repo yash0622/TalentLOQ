@@ -1,8 +1,13 @@
+import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../network/api_client.dart';
 import '../theme/app_colors.dart';
 
 /// Widget that defers loading PDF bytes until the user explicitly taps "View PDF".
+/// Automatically downloads authenticated GridFS PDFs and opens them in the native viewer.
 class DeferredPdfViewerCard extends StatefulWidget {
   final String pdfUrl;
   final String title;
@@ -30,46 +35,85 @@ class _DeferredPdfViewerCardState extends State<DeferredPdfViewerCard> {
 
     try {
       final url = widget.pdfUrl.trim();
-      if (url.startsWith('http://') || url.startsWith('https://')) {
-        await showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Row(
-              children: [
-                Icon(widget.icon, color: AppColors.lightPrimary),
-                const SizedBox(width: 8),
-                Expanded(child: Text(widget.title)),
-              ],
-            ),
-            content: SelectableText('Brochure / Document URL:\n$url'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Close'),
-              ),
-            ],
-          ),
-        );
-      } else {
-        try {
-          await OpenFilex.open(url);
-        } catch (_) {
-          if (mounted) {
-            await showDialog(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: Text(widget.title),
-                content: Text('Document location:\n$url'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Close'),
-                  ),
-                ],
-              ),
-            );
+      if (url.isEmpty) {
+        throw Exception('No document attachment URL provided.');
+      }
+
+      File? localPdfFile;
+
+      // 1. Direct local file on device
+      if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/api/')) {
+        final f = File(url);
+        if (await f.exists()) {
+          localPdfFile = f;
+        }
+      }
+
+      // 2. Download via ApiClient (handles baseUrl, JWT bearer token, ngrok headers)
+      if (localPdfFile == null) {
+        final tempDir = Directory.systemTemp;
+        String safeName = widget.subtitle.trim();
+        if (!safeName.toLowerCase().endsWith('.pdf')) {
+          final cleanTitle = widget.title.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+          safeName = '${cleanTitle}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+        }
+        final tempFile = File('${tempDir.path}/$safeName');
+
+        // Resolve endpoint
+        String endpoint = url;
+        if (!url.startsWith('http')) {
+          if (!url.startsWith('/')) {
+            endpoint = '/$url';
           }
         }
+
+        final dio = ApiClient.instance.dio;
+        final response = await dio.get<List<int>>(
+          endpoint,
+          options: Options(
+            responseType: ResponseType.bytes,
+            headers: {'ngrok-skip-browser-warning': 'true'},
+            sendTimeout: const Duration(seconds: 30),
+            receiveTimeout: const Duration(seconds: 30),
+          ),
+        );
+
+        if (response.statusCode == 200 && response.data != null && response.data!.isNotEmpty) {
+          await tempFile.writeAsBytes(response.data!);
+          localPdfFile = tempFile;
+        } else {
+          throw Exception('Server returned status ${response.statusCode}');
+        }
+      }
+
+      // 3. Open with native PDF viewer
+      if (await localPdfFile.exists()) {
+        final result = await OpenFilex.open(localPdfFile.path);
+        if (result.type != ResultType.done && mounted) {
+          debugPrint('OpenFilex message: ${result.message}');
+          // Fallback to url_launcher if URL is external http(s)
+          if (url.startsWith('http')) {
+            await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+          }
+        }
+      } else {
+        throw Exception('Could not save PDF to temporary device cache.');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(child: Text('Could not open document: $e')),
+              ],
+            ),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 4),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -125,6 +169,7 @@ class _DeferredPdfViewerCardState extends State<DeferredPdfViewerCard> {
                         color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                         fontSize: 12,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),

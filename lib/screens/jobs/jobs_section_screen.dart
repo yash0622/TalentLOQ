@@ -23,7 +23,7 @@ class _JobsSectionScreenState extends State<JobsSectionScreen> with SingleTicker
   void initState() {
     super.initState();
     _tabController = TabController(
-      length: 3,
+      length: 4,
       vsync: this,
       initialIndex: widget.initialTabIndex,
     );
@@ -42,10 +42,13 @@ class _JobsSectionScreenState extends State<JobsSectionScreen> with SingleTicker
 
     return Scaffold(
       appBar: AppBar(
+        titleSpacing: 20,
         title: const Text('Campus Placement Hub'),
         elevation: 0,
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
           indicatorColor: AppColors.lightPrimary,
           indicatorWeight: 3,
           labelColor: isDark ? AppColors.darkPrimary : AppColors.lightPrimary,
@@ -65,15 +68,20 @@ class _JobsSectionScreenState extends State<JobsSectionScreen> with SingleTicker
               icon: Icon(Icons.workspace_premium_rounded, size: 20),
               text: 'Offers',
             ),
+            Tab(
+              icon: Icon(Icons.auto_awesome_rounded, size: 20),
+              text: 'Matched For You',
+            ),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: const [
-          OpportunitiesScreen(embedInTab: true),
+          OpportunitiesScreen(embedInTab: true, initialFilterMode: 'all'),
           MyApplicationsScreen(embedInTab: true),
           MyOffersScreen(embedInTab: true),
+          OpportunitiesScreen(embedInTab: true, initialFilterMode: 'matched'),
         ],
       ),
     );

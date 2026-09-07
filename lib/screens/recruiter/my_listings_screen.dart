@@ -4,9 +4,11 @@ import '../../theme/app_colors.dart';
 import '../../widgets/skeleton_widgets.dart';
 import 'add_company_form.dart';
 import 'applicants_screen.dart';
+import 'matching_students_screen.dart';
 
 class MyListingsScreen extends StatefulWidget {
-  const MyListingsScreen({super.key});
+  final VoidCallback? onOpenDrawer;
+  const MyListingsScreen({super.key, this.onOpenDrawer});
 
   @override
   State<MyListingsScreen> createState() => _MyListingsScreenState();
@@ -77,6 +79,25 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     );
   }
 
+  void _openMatchingStudents(Map<String, dynamic> item) {
+    final driveId = (item['drive_id'] ?? item['listing_id'] ?? '').toString();
+    final companyName = (item['company_name'] ?? 'Company').toString();
+    final driveTitle = (item['drive_title'] ?? item['interview_job'] ?? 'Role').toString();
+    final reqSkills = List<String>.from(item['extracted_required_skills'] ?? item['required_skills'] ?? []);
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MatchingStudentsScreen(
+          driveId: driveId,
+          companyName: companyName,
+          driveTitle: driveTitle,
+          requiredSkills: reqSkills,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -91,18 +112,28 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
             onPressed: _fetchListings,
             tooltip: 'Refresh',
           ),
+          if (widget.onOpenDrawer != null)
+            IconButton(
+              tooltip: 'Settings & Menu',
+              icon: const Icon(Icons.menu_rounded, size: 24),
+              onPressed: widget.onOpenDrawer,
+            ),
+          const SizedBox(width: 4),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openForm(),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Post New Listing'),
+      floatingActionButton: Container(
+        margin: const EdgeInsets.only(bottom: 72),
+        child: FloatingActionButton.extended(
+          onPressed: () => _openForm(),
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Post New Listing'),
+        ),
       ),
       body: RefreshIndicator(
         onRefresh: _fetchListings,
         child: _isLoading
             ? ListView.builder(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                 itemCount: 4,
                 itemBuilder: (_, index) => const Padding(
                   padding: EdgeInsets.only(bottom: 12),
@@ -139,7 +170,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                     ),
                   )
                 : ListView.separated(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                     itemCount: _listings.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
@@ -165,6 +196,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Expanded(
                                       child: Column(
@@ -192,23 +224,41 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                                     ),
                                     const SizedBox(width: 8),
 
-                                    // Status Badge
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: isPublished
-                                            ? AppColors.successLightBg
-                                            : AppColors.warning.withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        statusStr.toUpperCase(),
-                                        style: TextStyle(
-                                          color: isPublished ? AppColors.success : AppColors.warning,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 10,
+                                    // Status Badge and Edit Action
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: isPublished
+                                                ? AppColors.successLightBg
+                                                : AppColors.warning.withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            statusStr.toUpperCase(),
+                                            style: TextStyle(
+                                              color: isPublished ? AppColors.success : AppColors.warning,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 10,
+                                            ),
+                                          ),
                                         ),
-                                      ),
+                                        const SizedBox(width: 4),
+                                        IconButton(
+                                          visualDensity: VisualDensity.compact,
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                          icon: Icon(
+                                            Icons.edit_outlined,
+                                            size: 18,
+                                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                          ),
+                                          onPressed: () => _openForm(listing: item),
+                                          tooltip: 'Edit Listing',
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
@@ -259,28 +309,48 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                                   children: [
                                     Expanded(
                                       child: OutlinedButton.icon(
-                                        onPressed: () => _openApplicants(item),
-                                        icon: const Icon(Icons.how_to_reg_rounded, size: 16),
-                                        label: const Text('Manage Applicants'),
+                                        onPressed: () => _openMatchingStudents(item),
+                                        style: OutlinedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                        ),
+                                        icon: const Icon(Icons.person_search_rounded, size: 16),
+                                        label: const Text(
+                                          'Matching',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(fontSize: 12.5),
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(width: 8),
-                                    if (!isPublished)
+                                    Expanded(
+                                      child: OutlinedButton.icon(
+                                        onPressed: () => _openApplicants(item),
+                                        style: OutlinedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                        ),
+                                        icon: const Icon(Icons.how_to_reg_rounded, size: 16),
+                                        label: const Text(
+                                          'Applicants',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(fontSize: 12.5),
+                                        ),
+                                      ),
+                                    ),
+                                    if (!isPublished) ...[
+                                      const SizedBox(width: 8),
                                       ElevatedButton.icon(
                                         onPressed: () => _publishListing((item['listing_id'] ?? item['drive_id']).toString()),
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: AppColors.success,
                                           foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                                         ),
-                                        icon: const Icon(Icons.send_rounded, size: 16),
-                                        label: const Text('Publish'),
-                                      )
-                                    else
-                                      IconButton(
-                                        icon: const Icon(Icons.edit_rounded, size: 20),
-                                        onPressed: () => _openForm(listing: item),
-                                        tooltip: 'Edit Listing',
+                                        icon: const Icon(Icons.send_rounded, size: 14),
+                                        label: const Text('Publish', style: TextStyle(fontSize: 12)),
                                       ),
+                                    ],
                                   ],
                                 ),
                               ],

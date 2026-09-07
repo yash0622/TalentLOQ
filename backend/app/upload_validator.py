@@ -27,26 +27,13 @@ ALLOWED_EXTENSIONS = {
 MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024  # 5MB limit
 
 def sanitize_filename(filename: str) -> str:
-    """
-    Scans filenames for path traversal attempts (.., /, \\, null bytes)
-    and strips control characters to yield a clean safe filename.
-    """
+    """Sanitizes filename against path traversal and special characters."""
     if not filename:
         return "unnamed_file"
-
-    # Reject null bytes or directory traversal characters
-    if "\x00" in filename or ".." in filename or "/" in filename or "\\" in filename:
-        # Strip path prefixes
-        filename = os.path.basename(filename.replace("\\", "/"))
-        filename = filename.replace("..", "")
-
-    # Retain only alphanumeric, underscore, hyphen, and dot
-    clean_name = re.sub(r'[^a-zA-Z0-9._-]', '_', filename)
-    clean_name = re.sub(r'_{2,}', '_', clean_name)
-    
-    if not clean_name:
-        return "safe_upload"
-    return clean_name
+    name = Path(filename.replace("\\", "/")).name.replace("..", "").replace("\x00", "")
+    clean = re.sub(r'[^a-zA-Z0-9._-]', '_', name)
+    clean = re.sub(r'_{2,}', '_', clean)
+    return clean or "safe_upload"
 
 def validate_file_upload(file: UploadFile, contents: bytes) -> Tuple[str, str]:
     """

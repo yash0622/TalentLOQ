@@ -36,6 +36,7 @@ async def test_non_pdf_file_upload_rejected(monkeypatch):
     import app.routers.recruiter as recruiter_router
 
     monkeypatch.setattr(recruiter_router.company_listings_collection, "insert_one", AsyncMock())
+    monkeypatch.setattr(recruiter_router.drives_collection, "insert_one", AsyncMock())
     monkeypatch.setattr(recruiter_router.audit_logs_collection, "insert_one", AsyncMock())
 
     recruiter_token = create_access_token(user_id="recruiter-uuid-001", role="recruiter")
@@ -161,6 +162,8 @@ async def test_audit_logs_written_for_all_mutating_actions(monkeypatch):
     monkeypatch.setattr(recruiter_router.company_listings_collection, "insert_one", AsyncMock())
     monkeypatch.setattr(recruiter_router.company_listings_collection, "find_one", mock_find_one_recruiter)
     monkeypatch.setattr(recruiter_router.company_listings_collection, "update_one", mock_update_one)
+    monkeypatch.setattr(recruiter_router.drives_collection, "insert_one", AsyncMock())
+    monkeypatch.setattr(recruiter_router.drives_collection, "update_one", AsyncMock())
 
     monkeypatch.setattr(companies_router.audit_logs_collection, "insert_one", mock_insert_audit)
     monkeypatch.setattr(companies_router.company_listings_collection, "find_one", mock_find_one_recruiter)

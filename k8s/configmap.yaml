@@ -6,6 +6,7 @@ metadata:
 data:
   APP_ENV: "production"
   PORT: "8000"
-  MONGO_URI: "mongodb://mongodb-service.talentloq.svc.cluster.local:27017/talentloq_db"
+  MONGODB_URL: "mongodb://mongodb-service.talentloq.svc.cluster.local:27017"
+  DATABASE_NAME: "talentloq_db"
   ALLOWED_ORIGINS: "http://talentloq.local,http://localhost"
   JWT_ALGORITHM: "HS256"

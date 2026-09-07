@@ -1,4 +1,5 @@
-import 'dart:io';
+import 'dart:io' show HttpClient;
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import '../services/token_storage_service.dart';
@@ -14,8 +15,8 @@ class ApiClient {
     dio = Dio(
       BaseOptions(
         baseUrl: _getBaseUrl(),
-        connectTimeout: const Duration(milliseconds: 2500),
-        receiveTimeout: const Duration(milliseconds: 3000),
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 60),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -23,14 +24,18 @@ class ApiClient {
       ),
     );
 
-    // Apply TLS Certificate Pinning via IOHttpClientAdapter
-    (dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
-      final client = HttpClient();
-      client.badCertificateCallback = (cert, host, port) {
-        return CertPinningConfig.validateCertificate(cert, host, port);
-      };
-      return client;
-    };
+    // Apply TLS Certificate Pinning on native mobile/desktop platforms (bypass on Web)
+    if (!kIsWeb) {
+      if (dio.httpClientAdapter is IOHttpClientAdapter) {
+        (dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
+          final client = HttpClient();
+          client.badCertificateCallback = (cert, host, port) {
+            return CertPinningConfig.validateCertificate(cert, host, port);
+          };
+          return client;
+        };
+      }
+    }
 
     // Attach Dio Interceptor
     dio.interceptors.add(
@@ -46,6 +51,9 @@ class ApiClient {
             options.headers['Authorization'] = 'Bearer $accessToken';
           }
 
+          // Bypass ngrok free browser warning interstitial
+          options.headers['ngrok-skip-browser-warning'] = 'true';
+
           return handler.next(options);
         },
         onError: (error, handler) async {
@@ -53,7 +61,7 @@ class ApiClient {
           if (error.response?.statusCode == 401) {
             final path = error.requestOptions.path;
             if (!path.contains('/auth/login') && !path.contains('/auth/refresh')) {
-              final isRefreshed = await _attemptSilentRefresh();
+              final isRefreshed = await attemptSilentRefresh();
               if (isRefreshed) {
                 // Retry original request with new token
                 final newAccessToken = await _tokenStorage.getAccessToken();
@@ -77,15 +85,18 @@ class ApiClient {
     );
   }
 
-    String _getBaseUrl() {
-    if (Platform.isAndroid) {
-      // Live ngrok HTTPS Tunnel for Physical Android Phone & Emulator
-      return 'https://spotting-refuse-scorecard.ngrok-free.dev';
+  String _getBaseUrl() {
+    // 1. Check compile-time environment variable: --dart-define=API_URL=https://...
+    const envUrl = String.fromEnvironment('API_URL');
+    if (envUrl.isNotEmpty) {
+      return envUrl;
     }
-    return 'https://spotting-refuse-scorecard.ngrok-free.dev';
+
+    // 2. Active Cloud ngrok tunnel for reliable real-device connectivity without adb reverse drops
+    return 'https://unrecorded-unpretended-loretta.ngrok-free.dev';
   }
 
-  Future<bool> _attemptSilentRefresh() async {
+  Future<bool> attemptSilentRefresh() async {
     try {
       final refreshToken = await _tokenStorage.getRefreshToken();
       if (refreshToken == null || refreshToken.isEmpty) return false;

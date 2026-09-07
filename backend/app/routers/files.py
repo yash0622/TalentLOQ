@@ -1,14 +1,75 @@
 import io
+import re
 import logging
-from typing import Optional
+from typing import Optional, Any
 from bson import ObjectId
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.responses import Response
-from app.database import grid_fs, async_db
+from app.database import (
+    grid_fs,
+    async_db,
+    verification_documents_collection,
+    students_collection,
+    drives_collection,
+)
+from app.dependencies import get_current_user
 
 logger = logging.getLogger("talentloq.files")
 
 router = APIRouter(tags=["Files"])
+
+async def _verify_file_access(user_payload: dict, metadata: dict, grid_out: Any, file_identifier: str) -> None:
+    user_role = user_payload.get("role", "student")
+    user_id = str(user_payload.get("sub", ""))
+
+    if user_role in ("recruiter", "admin"):
+        return
+
+    # Check direct ownership from metadata
+    meta_owner = str(metadata.get("user_id") or metadata.get("student_id") or "")
+    if meta_owner and meta_owner == user_id:
+        return
+
+    # Check verification_documents collection
+    grid_id_str = str(getattr(grid_out, "_id", ""))
+    filename = str(getattr(grid_out, "filename", file_identifier))
+    doc = await verification_documents_collection.find_one({
+        "$and": [
+            {"$or": [{"user_id": user_id}, {"student_id": user_id}]},
+            {"$or": [
+                {"grid_file_id": grid_id_str},
+                {"grid_file_id": file_identifier},
+                {"filename": filename},
+                {"filename": file_identifier},
+            ]}
+        ]
+    })
+    if doc:
+        return
+
+    # Check student profile documents
+    student = await students_collection.find_one({
+        "$or": [{"user_id": user_id}, {"student_id": user_id}]
+    })
+    if student:
+        student_docs_str = str(student.get("documents", {}))
+        if file_identifier in student_docs_str or grid_id_str in student_docs_str or filename in str(student.get("resume_url", "")) or filename in str(student.get("resume_filename", "")):
+            return
+
+    # Allow public drive attachments posted for students
+    drive = await drives_collection.find_one({
+        "$or": [
+            {"attachment_pdf_url": {"$regex": re.escape(file_identifier)}},
+            {"attachment_pdf_url": {"$regex": re.escape(filename)}},
+        ]
+    })
+    if drive:
+        return
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Access forbidden. You do not have permission to view this file."
+    )
 
 async def _fetch_gridfs_stream(file_identifier: str):
     """Utility to locate and open GridFS download stream by ObjectId or filename."""
@@ -68,9 +129,13 @@ async def _fetch_gridfs_stream(file_identifier: str):
     return None
 
 @router.get("/api/v1/files/{file_id}")
-async def get_file_by_id(file_id: str):
+async def get_file_by_id(
+    file_id: str,
+    user_payload: dict = Depends(get_current_user),
+):
     """
     Retrieve and stream binary file directly from MongoDB GridFS database bucket.
+    Protected endpoint: Requires valid authenticated session (student or recruiter).
     """
     grid_out = await _fetch_gridfs_stream(file_id)
 
@@ -82,6 +147,7 @@ async def get_file_by_id(file_id: str):
 
     content = await grid_out.read()
     metadata = getattr(grid_out, "metadata", {}) or {}
+    await _verify_file_access(user_payload, metadata, grid_out, file_id)
     content_type = metadata.get("content_type")
     filename = getattr(grid_out, "filename", "document.pdf") or "document.pdf"
 
@@ -99,33 +165,14 @@ async def get_file_by_id(file_id: str):
         media_type=content_type,
         headers={
             "Content-Disposition": f'inline; filename="{filename}"',
-            "Cache-Control": "public, max-age=86400",
+            "Cache-Control": "private, max-age=3600",
         }
     )
 
 @router.get("/static/uploads/{filename}")
-async def get_legacy_static_file(filename: str):
-    """
-    Backwards-compatibility route for legacy /static/uploads/... links.
-    Streams directly from MongoDB GridFS without reading from local disk.
-    """
-    grid_out = await _fetch_gridfs_stream(filename)
-
-    if not grid_out:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"File '{filename}' not found in MongoDB GridFS database."
-        )
-
-    content = await grid_out.read()
-    metadata = getattr(grid_out, "metadata", {}) or {}
-    content_type = metadata.get("content_type") or "application/pdf"
-
-    return Response(
-        content=content,
-        media_type=content_type,
-        headers={
-            "Content-Disposition": f'inline; filename="{filename}"',
-            "Cache-Control": "public, max-age=86400",
-        }
-    )
+async def get_legacy_static_file(
+    filename: str,
+    user_payload: dict = Depends(get_current_user),
+):
+    """Backwards-compatibility route for legacy /static/uploads/... links."""
+    return await get_file_by_id(file_id=filename, user_payload=user_payload)

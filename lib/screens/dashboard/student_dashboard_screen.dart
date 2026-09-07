@@ -3,6 +3,8 @@ import '../../mock_data/mock_data.dart';
 import '../../models/models.dart';
 import '../../theme/app_colors.dart';
 import '../../services/drive_service.dart';
+import '../../services/interview_service.dart';
+import '../../services/application_visibility_state.dart';
 import '../../widgets/skeleton_widgets.dart';
 import '../jobs/company_detail_screen.dart';
 
@@ -29,20 +31,64 @@ class StudentDashboardScreen extends StatefulWidget {
 class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   final DriveService _driveService = DriveService();
   List<Map<String, dynamic>> _recommendedDrives = [];
+  List<Map<String, dynamic>> _broadcasts = [];
   bool _isLoadingJobs = true;
+  int _appliedCount = 0;
+  int _inReviewCount = 0;
+  int _interviewsCount = 0;
+  Map<String, dynamic>? _upcomingInterview;
 
   @override
   void initState() {
     super.initState();
+    ApplicationVisibilityState.instance.addListener(_onApplicationStateChanged);
     _loadBackendDrives();
+  }
+
+  void _onApplicationStateChanged() {
+    if (mounted) {
+      _loadBackendDrives();
+    }
+  }
+
+  @override
+  void dispose() {
+    ApplicationVisibilityState.instance.removeListener(_onApplicationStateChanged);
+    super.dispose();
   }
 
   Future<void> _loadBackendDrives() async {
     try {
+      final appsResponse = await _driveService.getMyApplicationsPaginated(page: 1, limit: 100);
+      final apps = appsResponse.items;
+      final inReview = apps.where((a) {
+        final st = a['status'];
+        final outcome = (st is Map ? st['final_outcome'] : '')?.toString().toLowerCase() ?? '';
+        return outcome.contains('progress') || outcome.contains('review') || outcome.contains('pending');
+      }).length;
+
+      final interviews = await InterviewService().getMyInterviews();
+      final nextIntv = interviews.isNotEmpty ? interviews.first : null;
+
       final drives = await _driveService.getPublishedDrives();
+      final announcements = await _driveService.getBroadcastAnnouncements();
+
       if (mounted) {
         setState(() {
-          _recommendedDrives = drives.cast<Map<String, dynamic>>().take(5).toList();
+          _appliedCount = appsResponse.totalCount > 0 ? appsResponse.totalCount : apps.length;
+          _inReviewCount = inReview;
+          _interviewsCount = interviews.isNotEmpty ? interviews.length : MockData.interviewSlots.where((s) => s.isBooked).length;
+          _upcomingInterview = nextIntv;
+          _broadcasts = announcements;
+          _recommendedDrives = drives
+              .cast<Map<String, dynamic>>()
+              .where((d) {
+                final id = (d['drive_id'] ?? d['listing_id'] ?? '').toString();
+                final company = (d['company_name'] ?? d['company'] ?? '').toString();
+                return !ApplicationVisibilityState.instance.isApplied(id, company);
+              })
+              .take(5)
+              .toList();
         });
       }
     } catch (_) {
@@ -62,7 +108,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     final contentPadding = isSmallScreen ? 12.0 : 16.0;
 
     return SingleChildScrollView(
-      padding: EdgeInsets.all(contentPadding),
+      padding: EdgeInsets.fromLTRB(contentPadding, contentPadding, contentPadding, 120.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -72,8 +118,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               _buildStatCard(
                 context: context,
                 title: 'Applications',
-                value: '${MockData.applications.length}',
-                subtitle: '${MockData.applications.where((a) => a.status.contains('Review')).length} In Review',
+                value: '$_appliedCount',
+                subtitle: '$_inReviewCount In Review',
                 icon: Icons.assignment_outlined,
                 color: AppColors.lightPrimary,
                 onTap: widget.onViewApplications ?? widget.onViewAllJobs,
@@ -82,8 +128,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               _buildStatCard(
                 context: context,
                 title: 'Interviews',
-                value: '${MockData.interviewSlots.where((s) => s.isBooked).length}',
-                subtitle: MockData.interviewSlots.where((s) => s.isBooked).isNotEmpty ? 'Scheduled' : 'None',
+                value: '$_interviewsCount',
+                subtitle: _interviewsCount > 0 ? 'Scheduled' : 'None',
                 icon: Icons.calendar_today_rounded,
                 color: AppColors.success,
                 onTap: () => _showUpcomingInterviewDetailsSheet(context),
@@ -91,9 +137,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               SizedBox(width: isSmallScreen ? 6 : 8),
               _buildStatCard(
                 context: context,
-                title: 'Match Index',
-                value: MockData.jobs.isNotEmpty ? '94%' : '--',
-                subtitle: MockData.jobs.isNotEmpty ? 'Top 5%' : 'No Drives',
+                title: 'Active Drives',
+                value: _recommendedDrives.isNotEmpty ? '${_recommendedDrives.length}' : '0',
+                subtitle: _recommendedDrives.isNotEmpty ? 'Open For You' : 'None Active',
                 icon: Icons.bolt_rounded,
                 color: AppColors.warning,
                 onTap: widget.onViewAllJobs,
@@ -103,7 +149,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           const SizedBox(height: 24),
 
           // Upcoming Interview Alert Card
-          if (MockData.interviewSlots.where((s) => s.isBooked).isNotEmpty) ...[
+          if (_upcomingInterview != null || MockData.interviewSlots.where((s) => s.isBooked).isNotEmpty) ...[
             Card(
               color: isDark ? AppColors.darkSurfaceContainerLow : AppColors.lightSurface,
               shape: RoundedRectangleBorder(
@@ -173,7 +219,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      MockData.interviewSlots.firstWhere((s) => s.isBooked).position,
+                      _upcomingInterview?['interview_type'] ??
+                          (MockData.interviewSlots.isNotEmpty
+                              ? MockData.interviewSlots.firstWhere((s) => s.isBooked, orElse: () => MockData.interviewSlots.first).position
+                              : 'Technical Interview'),
                       style: theme.textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.w600,
                         fontSize: isSmallScreen ? 13 : 15,
@@ -188,7 +237,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            MockData.interviewSlots.firstWhere((s) => s.isBooked).time,
+                            _upcomingInterview != null
+                                ? '${_upcomingInterview?['date'] ?? ''} • ${_upcomingInterview?['time'] ?? ''}'
+                                : (MockData.interviewSlots.isNotEmpty
+                                    ? MockData.interviewSlots.firstWhere((s) => s.isBooked, orElse: () => MockData.interviewSlots.first).time
+                                    : ''),
                             style: theme.textTheme.bodyMedium?.copyWith(
                               fontSize: isSmallScreen ? 11 : 13,
                             ),
@@ -247,6 +300,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               ),
             ),
           ],
+          if (_broadcasts.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            _buildBroadcastSection(context, isDark),
+          ],
           const SizedBox(height: 24),
 
           // Recommended Jobs Header
@@ -286,143 +343,145 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                   ),
                 )
               : _recommendedDrives.isNotEmpty
-                  ? ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _recommendedDrives.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final drive = _recommendedDrives[index];
-                        final rawMin = drive['ctc_min'];
-                        final rawMax = drive['ctc_max'];
-                        final ctcMin = (rawMin != null ? (double.tryParse(rawMin.toString()) ?? 6.0) : 6.0).round();
-                        final ctcMax = (rawMax != null ? (double.tryParse(rawMax.toString()) ?? 12.0) : 12.0).round();
-                        final title = drive['interview_job'] ?? drive['drive_title'] ?? 'Placement Listing';
-                        final company = drive['company_name'] ?? drive['company'] ?? 'Company';
-                        final jobType = (drive['mode'] ?? 'Full-Time').toString().replaceAll('_', ' ');
+                  ? Column(
+                      children: [
+                        for (int index = 0; index < _recommendedDrives.length; index++) ...[
+                          if (index > 0) const SizedBox(height: 12),
+                          Builder(
+                            builder: (context) {
+                              final drive = _recommendedDrives[index];
+                              final rawMin = drive['ctc_min'];
+                              final rawMax = drive['ctc_max'];
+                              final ctcMin = (rawMin != null ? (double.tryParse(rawMin.toString()) ?? 6.0) : 6.0).round();
+                              final ctcMax = (rawMax != null ? (double.tryParse(rawMax.toString()) ?? 12.0) : 12.0).round();
+                              final title = drive['interview_job'] ?? drive['drive_title'] ?? 'Placement Listing';
+                              final company = drive['company_name'] ?? drive['company'] ?? 'Company';
+                              final jobType = (drive['mode'] ?? 'Full-Time').toString().replaceAll('_', ' ');
 
-                        return Container(
-                          decoration: BoxDecoration(
-                            color: isDark ? AppColors.darkSurfaceContainerLow : AppColors.lightSurface,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant,
-                            ),
-                          ),
-                          child: InkWell(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => CompanyDetailScreen(
-                                    listingId: (drive['drive_id'] ?? drive['listing_id']).toString(),
-                                    initialData: drive,
-                                    onNavigateToProfile: () => widget.onViewApplications?.call(),
+                              return Container(
+                                key: ValueKey(drive['drive_id'] ?? drive['listing_id'] ?? index),
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppColors.darkSurfaceContainerLow : AppColors.lightSurface,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant,
                                   ),
                                 ),
-                              );
-                            },
-                            borderRadius: BorderRadius.circular(16),
-                            child: Padding(
-                              padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Container(
-                                        width: isSmallScreen ? 38 : 44,
-                                        height: isSmallScreen ? 38 : 44,
-                                        decoration: BoxDecoration(
-                                          color: isDark
-                                              ? AppColors.darkSurfaceContainerHigh
-                                              : AppColors.lightSurfaceContainerLow,
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: const Icon(
-                                          Icons.business_center_rounded,
-                                          color: AppColors.lightPrimary,
-                                          size: 22,
+                                child: InkWell(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => CompanyDetailScreen(
+                                          listingId: (drive['drive_id'] ?? drive['listing_id']).toString(),
+                                          initialData: drive,
+                                          onNavigateToProfile: () => widget.onViewApplications?.call(),
                                         ),
                                       ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
+                                    );
+                                  },
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Padding(
+                                    padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Text(
-                                              title,
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: isSmallScreen ? 14 : 15,
+                                            Container(
+                                              width: isSmallScreen ? 38 : 44,
+                                              height: isSmallScreen ? 38 : 44,
+                                              decoration: BoxDecoration(
+                                                color: isDark ? AppColors.darkSurfaceContainerHigh : AppColors.lightSurfaceContainer,
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: Center(
+                                                child: Icon(
+                                                  Icons.business_rounded,
+                                                  color: isDark ? AppColors.darkPrimary : AppColors.lightPrimary,
+                                                  size: isSmallScreen ? 20 : 24,
+                                                ),
                                               ),
                                             ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              '$company • On Campus',
-                                              style: TextStyle(
-                                                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                                                fontSize: isSmallScreen ? 12 : 13,
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    title,
+                                                    style: theme.textTheme.titleMedium?.copyWith(
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: isSmallScreen ? 14 : 15,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    company,
+                                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                                      color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                                      fontSize: isSmallScreen ? 12 : 13,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            Icon(
+                                              Icons.arrow_forward_ios_rounded,
+                                              size: 14,
+                                              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Wrap(
+                                          spacing: 6,
+                                          runSpacing: 6,
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: isDark
+                                                    ? AppColors.darkSurfaceContainerHigh
+                                                    : AppColors.lightSurfaceContainerLow,
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                jobType,
+                                                style: theme.textTheme.labelMedium?.copyWith(
+                                                  fontSize: isSmallScreen ? 10 : 11,
+                                                ),
+                                              ),
+                                            ),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.successLightBg,
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                '₹${ctcMin % 1 == 0 ? ctcMin.toInt() : ctcMin} - ₹${ctcMax % 1 == 0 ? ctcMax.toInt() : ctcMax} LPA',
+                                                style: theme.textTheme.labelMedium?.copyWith(
+                                                  color: AppColors.success,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: isSmallScreen ? 10 : 11,
+                                                ),
                                               ),
                                             ),
                                           ],
                                         ),
-                                      ),
-                                      IconButton(
-                                        icon: Icon(
-                                          Icons.bookmark_border_rounded,
-                                          size: isSmallScreen ? 18 : 22,
-                                        ),
-                                        onPressed: () {},
-                                        constraints: const BoxConstraints(),
-                                        padding: EdgeInsets.zero,
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                  const SizedBox(height: 10),
-                                  Wrap(
-                                    spacing: 6,
-                                    runSpacing: 6,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: isDark
-                                              ? AppColors.darkSurfaceContainerHigh
-                                              : AppColors.lightSurfaceContainerLow,
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Text(
-                                          jobType,
-                                          style: theme.textTheme.labelMedium?.copyWith(
-                                            fontSize: isSmallScreen ? 10 : 11,
-                                          ),
-                                        ),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.successLightBg,
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Text(
-                                          '₹${ctcMin}L - ₹${ctcMax}L / year',
-                                          style: theme.textTheme.labelMedium?.copyWith(
-                                            color: AppColors.success,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: isSmallScreen ? 10 : 11,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
+                        ],
+                      ],
                     )
                   : Card(
                       color: isDark ? AppColors.darkSurfaceContainerLow : AppColors.lightSurface,
@@ -452,6 +511,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                         ),
                       ),
                     ),
+          const SizedBox(height: 110),
         ],
       ),
     );
@@ -662,6 +722,78 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildBroadcastSection(BuildContext context, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Row(
+          children: [
+            Icon(Icons.campaign_rounded, color: AppColors.warning, size: 20),
+            SizedBox(width: 8),
+            Text(
+              'Official Campus Broadcasts',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        ..._broadcasts.take(3).map((b) {
+          final title = (b['title'] ?? 'Announcement').toString();
+          final content = (b['content'] ?? b['message'] ?? '').toString();
+          final date = (b['created_at'] ?? '').toString();
+          final dateLabel = date.length > 10 ? date.substring(0, 10) : date;
+          return Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(
+                color: AppColors.warning.withValues(alpha: 0.35),
+                width: 1.2,
+              ),
+            ),
+            color: isDark ? AppColors.darkSurfaceContainerLow : Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (dateLabel.isNotEmpty)
+                        Text(
+                          dateLabel,
+                          style: const TextStyle(fontSize: 10, color: AppColors.lightTextSecondary),
+                        ),
+                    ],
+                  ),
+                  if (content.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      content,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+        }),
+      ],
     );
   }
 }

@@ -5,23 +5,23 @@ from app.config import settings
 
 logger = logging.getLogger("talentloq.encryption")
 
-# Load Field Encryption Key from environment, or generate a stable default for dev
-raw_key = os.environ.get("FIELD_ENCRYPTION_KEY")
-if not raw_key:
-    # Deterministic Fernet key derived for dev environment if not supplied
+def _derive_fallback_key() -> str:
     import base64, hashlib
     default_secret = settings.JWT_SECRET + "_field_encryption_key_salt"
     derived = hashlib.sha256(default_secret.encode()).digest()
-    raw_key = base64.urlsafe_b64encode(derived).decode()
+    return base64.urlsafe_b64encode(derived).decode()
+
+# Load Field Encryption Key from environment, or generate a stable default for dev
+raw_key = os.environ.get("FIELD_ENCRYPTION_KEY")
+if not raw_key or raw_key.strip().startswith("replace_with_"):
+    raw_key = _derive_fallback_key()
 
 try:
     fernet = Fernet(raw_key.encode('utf-8'))
 except Exception as e:
-    logger.error(f"Invalid FIELD_ENCRYPTION_KEY provided: {e}")
-    # Fallback to key generation
-    generated_key = Fernet.generate_key()
-    fernet = Fernet(generated_key)
-    logger.warning("Generated temporary Fernet key for field encryption.")
+    logger.warning(f"Invalid FIELD_ENCRYPTION_KEY provided: {e}. Falling back to stable derived key.")
+    raw_key = _derive_fallback_key()
+    fernet = Fernet(raw_key.encode('utf-8'))
 
 def encrypt_field(plaintext: str) -> str:
     """

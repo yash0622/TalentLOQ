@@ -1,12 +1,11 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import '../network/api_client.dart';
 import '../controllers/paging_controller.dart';
-import 'api_cache.dart';
 import 'application_visibility_state.dart';
 
 class DriveService {
   final ApiClient _apiClient = ApiClient.instance;
-  final ApiCache _cache = ApiCache.instance;
 
   // 1. Create Placement Drive (Multipart FormData)
   Future<bool> createDrive(Map<String, dynamic> data, String? pdfFilePath) async {
@@ -26,8 +25,6 @@ class DriveService {
         data: formData,
       );
       if (response.statusCode == 201) {
-        _cache.invalidatePrefix('/recruiter/drives');
-        _cache.invalidatePrefix('/drives');
         return true;
       }
       return false;
@@ -44,8 +41,6 @@ class DriveService {
         data: updateData,
       );
       if (response.statusCode == 200) {
-        _cache.invalidatePrefix('/recruiter/drives');
-        _cache.invalidatePrefix('/drives');
         return true;
       }
       return false;
@@ -61,8 +56,6 @@ class DriveService {
         '/recruiter/drives/$driveId/publish?target_audience=$targetAudience',
       );
       if (response.statusCode == 200) {
-        _cache.invalidatePrefix('/recruiter/drives');
-        _cache.invalidatePrefix('/drives');
         return true;
       }
       return false;
@@ -190,7 +183,8 @@ class DriveService {
       if (listData is List) {
         for (var item in listData) {
           final id = (item['drive_id'] ?? item['listing_id'] ?? '').toString();
-          if (id.isNotEmpty && !seenIds.contains(id)) {
+          final company = (item['company_name'] ?? item['company'] ?? '').toString();
+          if (id.isNotEmpty && !seenIds.contains(id) && !ApplicationVisibilityState.instance.isApplied(id, company)) {
             seenIds.add(id);
             combined.add(item);
           }
@@ -205,9 +199,53 @@ class DriveService {
     try {
       final response = await _apiClient.dio.get('/drives?page=$page&limit=$limit');
       if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
-        return PaginatedResponse<Map<String, dynamic>>.fromJson(
+        final paginated = PaginatedResponse<Map<String, dynamic>>.fromJson(
           response.data as Map<String, dynamic>,
           (item) => Map<String, dynamic>.from(item as Map),
+        );
+        final filtered = paginated.items.where((item) {
+          final id = (item['drive_id'] ?? item['listing_id'] ?? '').toString();
+          final company = (item['company_name'] ?? item['company'] ?? '').toString();
+          return !ApplicationVisibilityState.instance.isApplied(id, company);
+        }).toList();
+        return PaginatedResponse<Map<String, dynamic>>(
+          items: filtered,
+          page: paginated.page,
+          limit: paginated.limit,
+          totalCount: paginated.totalCount,
+          hasMore: paginated.hasMore,
+        );
+      }
+    } catch (_) {}
+    return PaginatedResponse<Map<String, dynamic>>(
+      items: [],
+      page: page,
+      limit: limit,
+      totalCount: 0,
+      hasMore: false,
+    );
+  }
+
+  // 8b. Fetch Student Recommended Drives (Matched by verified skills)
+  Future<PaginatedResponse<Map<String, dynamic>>> getRecommendedDrivesPaginated({int page = 1, int limit = 20}) async {
+    try {
+      final response = await _apiClient.dio.get('/drives/recommended?page=$page&limit=$limit');
+      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+        final paginated = PaginatedResponse<Map<String, dynamic>>.fromJson(
+          response.data as Map<String, dynamic>,
+          (item) => Map<String, dynamic>.from(item as Map),
+        );
+        final filtered = paginated.items.where((item) {
+          final id = (item['drive_id'] ?? item['listing_id'] ?? '').toString();
+          final company = (item['company_name'] ?? item['company'] ?? '').toString();
+          return !ApplicationVisibilityState.instance.isApplied(id, company);
+        }).toList();
+        return PaginatedResponse<Map<String, dynamic>>(
+          items: filtered,
+          page: paginated.page,
+          limit: paginated.limit,
+          totalCount: paginated.totalCount,
+          hasMore: paginated.hasMore,
         );
       }
     } catch (_) {}
@@ -246,8 +284,6 @@ class DriveService {
       }
 
       if (response.statusCode == 201) {
-        _cache.invalidatePrefix('/drives');
-        _cache.invalidate('/drives/my-applications');
         final body = response.data is Map ? Map<String, dynamic>.from(response.data as Map) : <String, dynamic>{};
         final application = body['application'];
         if (application is Map) {
@@ -303,10 +339,12 @@ class DriveService {
     try {
       final response = await _apiClient.dio.get('/drives/my-applications?page=$page&limit=$limit');
       if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
-        return PaginatedResponse<Map<String, dynamic>>.fromJson(
+        final paginated = PaginatedResponse<Map<String, dynamic>>.fromJson(
           response.data as Map<String, dynamic>,
           (item) => Map<String, dynamic>.from(item as Map),
         );
+        ApplicationVisibilityState.instance.recordMultipleApplications(paginated.items);
+        return paginated;
       }
     } catch (_) {}
     return PaginatedResponse<Map<String, dynamic>>(
@@ -337,5 +375,75 @@ class DriveService {
     } catch (_) {
       return false;
     }
+  }
+
+  // 15. Fetch Smart AI Match Analysis & Interview Coach
+  Future<Map<String, dynamic>?> getDriveAIMatch(String driveId, {bool bypassCache = false}) async {
+    try {
+      final response = await _apiClient.dio.get(
+        '/drives/$driveId/ai-match${bypassCache ? "?bypass_cache=true" : ""}',
+      );
+      if (response.statusCode == 200 && response.data is Map) {
+        return Map<String, dynamic>.from(response.data as Map);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // 16. Setup / Issue Placement Offer (Recruiter)
+  Future<bool> setupOffer({
+    required String driveId,
+    required String studentId,
+    required Map<String, dynamic> offerData,
+  }) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/recruiter/drives/$driveId/applications/$studentId/offer',
+        data: offerData,
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('[SETUP OFFER ERROR] $e');
+      return false;
+    }
+  }
+
+  // 17. Accept Placement Offer (Student)
+  Future<bool> acceptOffer(String driveId) async {
+    try {
+      final response = await _apiClient.dio.post('/drives/$driveId/accept-offer');
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('[ACCEPT OFFER ERROR] $e');
+      return false;
+    }
+  }
+
+  // 18. Decline Placement Offer (Student)
+  Future<bool> declineOffer(String driveId, {String? reason}) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/drives/$driveId/decline-offer',
+        data: reason != null ? {'reason': reason} : null,
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('[DECLINE OFFER ERROR] $e');
+      return false;
+    }
+  }
+
+  // 19. Fetch Campus Broadcast Announcements (Student)
+  Future<List<Map<String, dynamic>>> getBroadcastAnnouncements() async {
+    try {
+      final response = await _apiClient.dio.get('/announcements');
+      if (response.statusCode == 200 && response.data is Map) {
+        final list = (response.data['announcements'] as List?) ?? [];
+        return list.cast<Map<String, dynamic>>();
+      }
+    } catch (e) {
+      debugPrint('[GET ANNOUNCEMENTS ERROR] $e');
+    }
+    return [];
   }
 }

@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import List, Literal, Optional, Generic, TypeVar
+from typing import List, Literal, Optional, Generic, TypeVar, Dict, Any
 from pydantic import BaseModel, EmailStr, Field, field_validator
 import uuid
 import re
@@ -32,18 +32,90 @@ class UserModel(BaseModel):
 class StudentModel(BaseModel):
     """
     MongoDB schema for 'students' collection.
+    Canonical profile record for student candidates.
     """
     student_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str  # Foreign key referencing UserModel.user_id
     full_name: str = Field(default="Student User")
-    education: str
-    CGPA: float = Field(ge=0.0, le=10.0)
+    email: Optional[str] = None
+    university: str = Field(default="GSFC University")
+    education: str = Field(default="")
+    CGPA: float = Field(default=0.0, ge=0.0, le=10.0)
     active_backlogs: int = Field(default=0, ge=0)
     closed_backlogs: int = Field(default=0, ge=0)
     skills: List[str] = Field(default_factory=list)
+    languages: List[str] = Field(default_factory=list)
+    coding_languages: List[str] = Field(default_factory=list)
+    spoken_languages: List[str] = Field(default_factory=list)
+    social_links: Dict[str, str] = Field(default_factory=dict)
+    linkedin_url: Optional[str] = None
+    github_url: Optional[str] = None
+    leetcode_url: Optional[str] = None
+    hackerrank_url: Optional[str] = None
+    codeforces_url: Optional[str] = None
+    kaggle_url: Optional[str] = None
+    geeksforgeeks_url: Optional[str] = None
+    twitter_url: Optional[str] = None
     has_resume: bool = False
     resume_url: Optional[str] = None
     resume_filename: Optional[str] = None
+
+    # Academic verified fields (Source-of-truth from Marksheets)
+    tenth_percentage: Optional[float] = Field(default=None, ge=0.0, le=100.0)
+    tenth_board: Optional[str] = None
+    tenth_passing_year: Optional[int] = None
+    twelfth_percentage: Optional[float] = Field(default=None, ge=0.0, le=100.0)
+    twelfth_board: Optional[str] = None
+    twelfth_passing_year: Optional[int] = None
+    diploma_cgpa: Optional[float] = Field(default=None, ge=0.0, le=10.0)
+    diploma_college: Optional[str] = None
+    current_semester: Optional[int] = Field(default=None, ge=1, le=12)
+    branch: Optional[str] = None
+    enrollment_number: Optional[str] = None
+    sgpa: Optional[float] = Field(default=None, ge=0.0, le=10.0)
+
+    # Verification Metadata & Provenance tracking
+    verified_fields: Dict[str, Any] = Field(default_factory=dict)
+    documents: Dict[str, Any] = Field(default_factory=dict)
+
+class VerificationDocumentModel(BaseModel):
+    """
+    MongoDB schema for 'verification_documents' collection.
+    Stores metadata, hashes, extracted values, and verification states of uploaded academic files.
+    """
+    document_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    student_id: str
+    user_id: str
+    document_type: str  # RESUME, TENTH_MARKSHEET, TWELFTH_MARKSHEET, DIPLOMA_MARKSHEET, UG_MARKSHEET, UNKNOWN
+    filename: str
+    file_hash: str  # SHA-256 for change detection & deduplication
+    grid_file_id: str
+    file_url: str
+    processing_status: str = Field(default="PROCESSING")  # PROCESSING, VERIFIED, REVIEW_REQUIRED, MANUAL_REVIEW, FAILED, REPLACED
+    extracted_data: Dict[str, Any] = Field(default_factory=dict)
+    ocr_confidence: float = Field(default=0.0, ge=0.0, le=100.0)
+    extraction_confidence: float = Field(default=0.0, ge=0.0, le=100.0)
+    validation_confidence: float = Field(default=0.0, ge=0.0, le=100.0)
+    validation_errors: List[str] = Field(default_factory=list)
+    uploaded_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    verified_at: Optional[datetime] = None
+    processed_at: Optional[datetime] = None
+
+class VerificationAuditModel(BaseModel):
+    """
+    MongoDB schema for 'verification_audits' collection.
+    Immutable log of every field modification initiated by the verification pipeline.
+    """
+    audit_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    student_id: str
+    field_name: str
+    old_value: Any = None
+    new_value: Any = None
+    source_document_id: str
+    source_document_type: str
+    reason: str = "Document Verification Sync"
+    status: str = "VERIFIED"
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class AuditLogModel(BaseModel):
     """
@@ -295,12 +367,16 @@ class InterviewScheduleRequest(BaseModel):
     meeting_link: str = "https://talentloq.meet/interview-hd"
 
 class InterviewOutcomeRequest(BaseModel):
-    status: Literal["passed", "failed", "next_round"]
-    feedback: str = ""
+    status: Optional[str] = "passed"
+    outcome: Optional[str] = None
+    feedback: Optional[str] = ""
+    notes: Optional[str] = ""
 
 class AnnouncementCreateRequest(BaseModel):
     title: str
-    content: str
+    content: Optional[str] = None
+    message: Optional[str] = None
+    target_audience: Optional[str] = "ALL"
 
 class SupportTicketRespondRequest(BaseModel):
     response: str
@@ -392,6 +468,7 @@ class DriveModel(BaseModel):
     description: str = ""
     key_responsibilities: List[str] = Field(default_factory=list)
     required_skills: List[str] = Field(default_factory=list)
+    extracted_required_skills: List[str] = Field(default_factory=list)
     preferred_skills: List[str] = Field(default_factory=list)
     qualifications: str = "B.Tech / BCA"
     additional_requirements: str = ""
@@ -439,6 +516,7 @@ class DriveCreate(BaseModel):
     description: str = ""
     key_responsibilities: List[str] = Field(default_factory=list)
     required_skills: List[str] = Field(default_factory=list)
+    extracted_required_skills: List[str] = Field(default_factory=list)
     preferred_skills: List[str] = Field(default_factory=list)
     qualifications: str = "B.Tech / BCA"
     additional_requirements: str = ""
@@ -468,6 +546,7 @@ class DriveUpdate(BaseModel):
     description: Optional[str] = None
     key_responsibilities: Optional[List[str]] = None
     required_skills: Optional[List[str]] = None
+    extracted_required_skills: Optional[List[str]] = None
     preferred_skills: Optional[List[str]] = None
     qualifications: Optional[str] = None
     additional_requirements: Optional[str] = None
@@ -498,6 +577,7 @@ class DriveResponse(BaseModel):
     description: str
     key_responsibilities: List[str]
     required_skills: List[str]
+    extracted_required_skills: List[str] = Field(default_factory=list)
     preferred_skills: List[str]
     qualifications: str
     additional_requirements: str
@@ -563,23 +643,75 @@ class DriveLeanResponse(BaseModel):
     ctc_max: float
     min_cgpa: float
     is_eligible: Optional[bool] = None
+    extracted_required_skills: List[str] = Field(default_factory=list)
 
-class RecruiterDriveLeanResponse(BaseModel):
+class MatchingStudentItem(BaseModel):
     """
-    Lean DTO for recruiter list view (GET /recruiter/drives).
-    Omits heavy description & selection process arrays.
+    Lean DTO for candidate matching recruiter view (GET /recruiter/drives/{drive_id}/matching-students).
+    """
+    student_id: str
+    name: str
+    email: Optional[str] = None
+    branch: Optional[str] = None
+    cgpa: float
+    skills: List[str] = Field(default_factory=list)
+    matched_skills: List[str] = Field(default_factory=list)
+    missing_skills: List[str] = Field(default_factory=list)
+    match_count: int = 0
+    total_required: int = 0
+    resume_url: Optional[str] = None
+    has_resume: bool = False
+
+class RecommendedDriveItem(BaseModel):
+    """
+    Lean DTO for student recommended drives view (GET /drives/recommended).
     """
     drive_id: str
     company_name: str
     drive_title: str
     employment_type: str
+    location: str
     ctc_min: float
     ctc_max: float
     min_cgpa: float
-    status: str
-    created_at: str
+    eligible_courses: List[str] = Field(default_factory=list)
+    is_eligible: bool = True
+    extracted_required_skills: List[str] = Field(default_factory=list)
+    matched_skills: List[str] = Field(default_factory=list)
+    missing_skills: List[str] = Field(default_factory=list)
+    match_count: int = 0
+    total_required: int = 0
+    match_summary: str = ""
+
+class RecruiterDriveLeanResponse(BaseModel):
+    """
+    Recruiter list view DTO (GET /recruiter/drives).
+    Includes essential metadata and drive overview for recruiter portal cards and bottom sheets.
+    """
+    drive_id: str
+    company_name: str
+    drive_title: str
+    employment_type: str = "full_time"
+    ctc_min: float = 6.0
+    ctc_max: float = 12.0
+    min_cgpa: float = 6.0
+    status: str = "draft"
+    created_at: str = ""
     applicant_count: int = 0
     eligible_applicant_count: int = 0
+    description: Optional[str] = ""
+    location: Optional[str] = ""
+    mode: Optional[str] = "on_campus"
+    company_email: Optional[str] = ""
+    bond_details: Optional[str] = ""
+    bond_time: Optional[str] = ""
+    schedule_datetime: Optional[str] = ""
+    interview_datetime: Optional[str] = ""
+    registration_deadline: Optional[str] = ""
+    required_skills: List[str] = []
+    preferred_skills: List[str] = []
+    attachment_pdf_url: Optional[str] = None
+    pdf_url: Optional[str] = None
 
 class ApplicantResponse(BaseModel):
     """
@@ -597,7 +729,7 @@ class ApplicantResponse(BaseModel):
     current_round: int = 0
     round_history: List[dict] = Field(default_factory=list)
     final_outcome: str = "in_progress"
-    resume_link: str = "/static/uploads/resume.pdf"
+    resume_link: Optional[str] = None
     applied_at: Optional[str] = None
 
 class RecruiterStatsResponse(BaseModel):
@@ -608,7 +740,3 @@ class RecruiterStatsResponse(BaseModel):
     total_active_listings: int
     total_active_drives: int
     total_offers_made: int
-
-
-
-

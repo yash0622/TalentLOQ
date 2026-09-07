@@ -4,6 +4,7 @@ import '../../services/application_visibility_state.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/pdf_viewer_widget.dart';
 import '../../widgets/skeleton_widgets.dart';
+import '../../widgets/ai_match_coach_card.dart';
 
 class CompanyDetailScreen extends StatefulWidget {
   final String listingId;
@@ -185,12 +186,13 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     if (numVal != null && numVal > 0) {
       if (numVal >= 100000) {
         final lpa = numVal / 100000;
-        return '${lpa % 1 == 0 ? lpa.toInt() : lpa.toStringAsFixed(1)} LPA';
+        return '₹${lpa % 1 == 0 ? lpa.toInt() : lpa.toStringAsFixed(1)} LPA';
       } else if (numVal <= 100) {
-        return '${numVal % 1 == 0 ? numVal.toInt() : numVal.toStringAsFixed(1)} LPA';
+        return '₹${numVal % 1 == 0 ? numVal.toInt() : numVal.toStringAsFixed(1)} LPA';
       }
     }
-    return str.contains('LPA') ? str : '$str LPA';
+    final cleanStr = str.replaceAll('₹', '').trim();
+    return cleanStr.contains('LPA') ? '₹$cleanStr' : '₹$cleanStr LPA';
   }
 
   @override
@@ -215,7 +217,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     }
 
     final isEligible = item?['is_eligible'] ?? true;
-    final pdfUrl = item?['pdf_url'] ?? item?['attachment_pdf_url'];
+    final pdfUrl = item?['attachment_pdf_url'] ?? item?['pdf_url'] ?? item?['attachment_url'];
     final description = item?['description'] ?? 'No description provided.';
     final reqSkills = (item?['required_skills'] as List?) ?? ['Communication', 'Problem Solving'];
     final selectionRounds = (item?['selection_process'] as List?) ?? [
@@ -292,13 +294,12 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
 
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     Expanded(
                                       child: Text(
                                         ctcDisplay,
                                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                     const SizedBox(width: 8),
@@ -323,6 +324,10 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                             ),
                           ),
                         ),
+                        const SizedBox(height: 16),
+
+                        // Smart AI Match & Interview Coach Card
+                        AIMatchCoachCard(driveId: widget.listingId),
                         const SizedBox(height: 16),
 
                         // Auto-Eligibility Criteria Section
@@ -473,8 +478,8 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                           const SizedBox(height: 8),
                           DeferredPdfViewerCard(
                             pdfUrl: pdfUrl.toString(),
-                            title: 'Company Brochure PDF',
-                            subtitle: pdfUrl.toString().split('/').last,
+                            title: 'Job Overview & Brochure (PDF)',
+                            subtitle: 'Tap to view official job description document',
                             icon: Icons.picture_as_pdf_rounded,
                           ),
                           const SizedBox(height: 16),
@@ -535,22 +540,27 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
   }
 
   Widget _buildDetailRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: AppColors.lightPrimary),
-        const SizedBox(width: 10),
-        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.lightTextSecondary)),
-        const Spacer(),
-        Expanded(
-          flex: 2,
-          child: Text(
-            value,
-            textAlign: TextAlign.end,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-            overflow: TextOverflow.ellipsis,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(icon, size: 18, color: AppColors.lightPrimary),
+          const SizedBox(width: 10),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: AppColors.lightTextSecondary, fontWeight: FontWeight.w500),
           ),
-        ),
-      ],
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

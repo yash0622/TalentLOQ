@@ -47,11 +47,11 @@ class AuthService {
     required String fullName,
     required String email,
     required String password,
-    required String education,
-    required double cgpa,
+    String education = '',
+    double cgpa = 0.0,
     int activeBacklogs = 0,
     int closedBacklogs = 0,
-    required List<String> skills,
+    List<String> skills = const [],
   }) async {
     final cleanName = fullName.trim().isEmpty ? 'Student User' : fullName.trim();
     final cleanEmail = email.trim().toLowerCase();
@@ -62,9 +62,9 @@ class AuthService {
       throw Exception('Only GSFC University student emails (@gsfcuniversity.ac.in) are allowed to register.');
     }
 
-    final cleanEducation = education.trim().isEmpty ? 'B.Tech Computer Science' : education.trim();
-    final cleanCgpa = (cgpa <= 0.0 || cgpa > 10.0) ? 8.0 : cgpa;
-    final cleanSkills = skills.isEmpty ? ['General'] : skills;
+    final cleanEducation = education.trim().isEmpty ? 'Pending Document Verification' : education.trim();
+    final cleanCgpa = (cgpa < 0.0 || cgpa > 10.0) ? 0.0 : cgpa;
+    final cleanSkills = skills;
 
     try {
       final response = await _dio.post(
@@ -88,7 +88,7 @@ class AuthService {
         _registeredEmailsSet.add(cleanEmail);
         _registeredPasswords[cleanEmail] = cleanPassword;
         await _tokenStorage.saveRegisteredEmail(cleanEmail);
-        await _tokenStorage.saveUserPassword(cleanEmail, cleanPassword);
+        // Password hashed on server; not stored in plaintext
         await _tokenStorage.saveStudentProfile(
           email: cleanEmail,
           fullName: cleanName,
@@ -165,6 +165,7 @@ class AuthService {
 
           final role = JwtDecoderUtil.getRoleFromToken(accessToken) ?? 'student';
           await _tokenStorage.saveUserRole(role);
+          await _tokenStorage.saveIsLoggedIn(true);
 
           return AuthLoginResult(
             status: AuthStatus.success,
@@ -225,11 +226,11 @@ class AuthService {
     final isRegistered = isRegisteredInMemory || isRegisteredInStorage;
 
     if (!isRegistered) {
-      throw Exception('Email is not registered. Please register your account first.');
+      throw Exception('Unable to connect to server. Please check your network connection.');
     }
 
     // 3. Password Check against Registered Password (check memory & secure storage)
-    final storedPassword = _registeredPasswords[cleanEmail] ?? await _tokenStorage.getUserPassword(cleanEmail);
+    final storedPassword = _registeredPasswords[cleanEmail];
 
     if (storedPassword == null || cleanPassword != storedPassword.trim()) {
       throw Exception('Incorrect password');
@@ -240,6 +241,7 @@ class AuthService {
     await _tokenStorage.saveAccessToken(mockToken);
     await _tokenStorage.saveRefreshToken(mockToken);
     await _tokenStorage.saveUserRole('student');
+    await _tokenStorage.saveIsLoggedIn(true);
 
     return AuthLoginResult(
       status: AuthStatus.success,
@@ -269,6 +271,7 @@ class AuthService {
 
         final role = JwtDecoderUtil.getRoleFromToken(accessToken) ?? 'recruiter';
         await _tokenStorage.saveUserRole(role);
+          await _tokenStorage.saveIsLoggedIn(true);
 
         return AuthLoginResult(
           status: AuthStatus.success,
@@ -293,6 +296,7 @@ class AuthService {
       await _tokenStorage.saveAccessToken(mockToken);
       await _tokenStorage.saveRefreshToken(mockToken);
       await _tokenStorage.saveUserRole('recruiter');
+      await _tokenStorage.saveIsLoggedIn(true);
 
       return AuthLoginResult(
         status: AuthStatus.success,

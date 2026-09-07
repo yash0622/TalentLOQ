@@ -21,7 +21,7 @@ class PaginatedListView<T> extends StatelessWidget {
     required this.itemKey,
     this.emptyWidget,
     this.skeletonBuilder,
-    this.padding = const EdgeInsets.all(16),
+    this.padding = const EdgeInsets.fromLTRB(16, 16, 16, 120),
     this.separator = const SizedBox(height: 12),
   });
 
@@ -34,13 +34,14 @@ class PaginatedListView<T> extends StatelessWidget {
       listenable: controller,
       builder: (context, _) {
         if (controller.isLoading) {
-          if (skeletonBuilder != null) {
+          final sBuilder = skeletonBuilder;
+          if (sBuilder != null) {
             return ListView.separated(
               padding: padding,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: 4,
               separatorBuilder: (_, _) => separator ?? const SizedBox(height: 12),
-              itemBuilder: (ctx, index) => skeletonBuilder!(ctx, index),
+              itemBuilder: (ctx, index) => sBuilder(ctx, index),
             );
           }
           return const Center(

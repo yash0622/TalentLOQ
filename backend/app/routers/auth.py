@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Request, Depends, UploadFile, File
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+from bson import ObjectId
 from app.config import settings, RESERVED_EMAILS, determine_role
 from app.database import (
     users_collection,
@@ -15,7 +16,8 @@ from app.database import (
     otps_collection,
     notifications_collection,
     chat_messages_collection,
-    grid_fs,
+    verification_documents_collection,
+    grid_fs, get_grid_fs,
 )
 from app.models import (
     StudentRegisterRequest,
@@ -83,7 +85,7 @@ async def register_student(data: StudentRegisterRequest, request: Request):
             detail="Reserved email"
         )
 
-    if not (email_clean.endswith("@gsfcuniversity.ac.in") or "gsfcuniversity" in email_clean):
+    if not email_clean.endswith("@gsfcuniversity.ac.in"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Registration is restricted to GSFC University students (@gsfcuniversity.ac.in)."
@@ -204,16 +206,7 @@ async def login(
         # 1. IP Restriction Check
         verify_recruiter_ip_restriction(client_ip)
 
-        # 2. Device Binding Check
-        if device_id not in user.trusted_devices:
-            # Auto-bind new recruiter device ID upon login
-            user.trusted_devices.append(device_id)
-            await users_collection.update_one(
-                {"user_id": user.user_id},
-                {"$addToSet": {"trusted_devices": device_id}}
-            )
-
-        # 3. Check CAPTCHA requirement if failed attempts >= 3
+        # 2. Check CAPTCHA requirement if failed attempts >= 3
         if user.failed_login_attempts >= settings.RECRUITER_MAX_FAILED_ATTEMPTS:
             if not data.captcha_token or not verify_captcha(data.captcha_token):
                 raise HTTPException(
@@ -221,8 +214,8 @@ async def login(
                     detail="CAPTCHA verification required due to multiple failed login attempts"
                 )
 
-        # 4. Verify Password
-        is_valid_pw = verify_password(data.password, user.password_hash) or data.password in ("telentloq@authentication", "ChangeMeRecruiter2026!")
+        # 3. Verify Password
+        is_valid_pw = verify_password(data.password, user.password_hash)
         if not is_valid_pw:
             new_failed = user.failed_login_attempts + 1
             update_fields: Dict[str, Any] = {"failed_login_attempts": new_failed}
@@ -245,7 +238,7 @@ async def login(
                 detail="Incorrect password"
             )
 
-        # 5. Generate 6-digit OTP
+        # 4. Generate 6-digit OTP
         otp_code = generate_otp()
         otp_expires = now + timedelta(minutes=settings.TEMP_TOKEN_EXPIRE_MINUTES)
         
@@ -259,7 +252,7 @@ async def login(
         await otps_collection.insert_one(otp_doc.model_dump())
 
         send_otp_email(user.email, otp_code)
-        temp_token = create_temp_token(user.user_id)
+        temp_token = create_temp_token(user.user_id, device_id=device_id)
 
         audit = AuditLogModel(
             user_id=user.user_id,
@@ -420,6 +413,13 @@ async def verify_otp(data: VerifyOTPRequest, request: Request):
         {"$set": {"failed_login_attempts": 0, "lockout_until": None}}
     )
 
+    device_to_bind = payload.get("device_id") or request.headers.get("x-device-id")
+    if device_to_bind:
+        await users_collection.update_one(
+            {"user_id": user_id},
+            {"$addToSet": {"trusted_devices": device_to_bind}}
+        )
+
     send_recruiter_login_alert(ip=client_ip, device=user_agent, timestamp=now)
 
     audit = AuditLogModel(
@@ -555,7 +555,8 @@ async def upload_resume(
     file_id_str = str(uuid.uuid4())[:8]
     safe_name = f"resume_{file_id_str}_{clean_filename}"
     
-    grid_file = await grid_fs.upload_from_stream(
+    grid_bucket = get_grid_fs()
+    grid_file = await grid_bucket.upload_from_stream(
         safe_name,
         io.BytesIO(contents),
         metadata={
@@ -578,7 +579,15 @@ async def upload_resume(
         except Exception:
             pass
 
-    # 4. Update student document in MongoDB 'students' collection
+    # 4. Extract verified skills and update student document in MongoDB 'students' collection
+    from app.document_detection.parsers import ResumeParser
+    from app.services.skill_matcher import skill_matcher_engine
+    parsed_resume = ResumeParser.parse(extracted_text)
+    parsed_skills = parsed_resume.get("skills", [])
+    direct_extracted = skill_matcher_engine.extract_skills_from_text(extracted_text)
+    normalized_parsed = [skill_matcher_engine.taxonomy.get(s.lower(), s.strip()) for s in parsed_skills if s and s.strip()]
+    canonical_skills = sorted(list(set(normalized_parsed + direct_extracted)))
+
     update_data = {
         "has_resume": True,
         "resume_url": resume_url,
@@ -587,6 +596,10 @@ async def upload_resume(
         "resume_uploaded_at": datetime.now(timezone.utc).isoformat(),
         "resume_confidence": classification.confidence,
     }
+    if canonical_skills:
+        update_data["skills"] = canonical_skills
+    if parsed_resume.get("languages"):
+        update_data["languages"] = parsed_resume.get("languages")
 
     try:
         if user_id:
@@ -617,6 +630,73 @@ async def upload_resume(
     }
 
 
+@router.delete("/resume")
+async def delete_resume(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_bearer_optional),
+):
+    """
+    Permanently deletes student's resume from database:
+    - Removes binary from GridFS
+    - Removes records from verification_documents
+    - Resets has_resume, resume_filename, resume_url, resume_id, and skills in students collection
+    """
+    user_id = None
+    if credentials and credentials.credentials:
+        try:
+            payload = decode_token(credentials.credentials, expected_type="access")
+            user_id = payload.get("sub")
+        except Exception:
+            pass
+
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
+
+    student_doc = await students_collection.find_one({"$or": [{"user_id": user_id}, {"student_id": user_id}]})
+    if not student_doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student profile not found")
+
+    grid_file_id = student_doc.get("resume_id")
+    if grid_file_id:
+        try:
+            grid_bucket = get_grid_fs()
+            await grid_bucket.delete(ObjectId(grid_file_id))
+        except Exception:
+            pass
+
+    # Delete from verification_documents
+    await verification_documents_collection.delete_many({
+        "document_type": "RESUME",
+        "$or": [{"user_id": user_id}, {"student_id": user_id}]
+    })
+
+    # Update student profile to completely remove resume and skills
+    doc_summaries = student_doc.get("documents", {})
+    doc_summaries.pop("resume", None)
+    ver_fields = student_doc.get("verified_fields", {})
+    ver_fields.pop("skills", None)
+    ver_fields.pop("technical_skills", None)
+    ver_fields.pop("soft_skills", None)
+    ver_fields.pop("languages", None)
+
+    await students_collection.update_one(
+        {"$or": [{"user_id": user_id}, {"student_id": user_id}]},
+        {"$set": {
+            "has_resume": False,
+            "resume_filename": None,
+            "resume_url": None,
+            "resume_id": None,
+            "skills": [],
+            "technical_skills": [],
+            "soft_skills": [],
+            "languages": [],
+            "documents": doc_summaries,
+            "verified_fields": ver_fields,
+        }}
+    )
+
+    return {"message": "Resume deleted successfully and removed from database."}
+
+
 # ---------------------------------------------------------------------------
 # 8. Student Profile Endpoints (Real MongoDB Data)
 # ---------------------------------------------------------------------------
@@ -640,20 +720,10 @@ async def get_current_user_profile(
         user_doc = await users_collection.find_one({"$or": [{"user_id": user_id}, {"email": user_id}]})
 
     if not user_doc:
-        # Fallback to latest student user or first student
-        user_doc = await users_collection.find_one({"role": "student"})
-
-    if not user_doc:
-        return {
-            "email": "",
-            "full_name": "Student Candidate",
-            "education": "B.Tech CSE",
-            "cgpa": 8.0,
-            "active_backlogs": 0,
-            "closed_backlogs": 0,
-            "skills": [],
-            "has_resume": False,
-        }
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
 
     uid = user_doc.get("user_id")
     email = user_doc.get("email", "")
@@ -664,25 +734,30 @@ async def get_current_user_profile(
             {"user_id": uid},
             {"student_id": uid},
             {"email": email},
-            {"full_name": full_name},
         ]
     })
 
     if student_doc:
-        education = student_doc.get("education") or student_doc.get("course") or "B.Tech CSE"
-        cgpa = student_doc.get("CGPA") or student_doc.get("cgpa") or 8.0
+        education = student_doc.get("education") or student_doc.get("course") or ""
+        cgpa = student_doc.get("CGPA") or student_doc.get("cgpa") or 0.0
         active_backlogs = student_doc.get("active_backlogs") or 0
         closed_backlogs = student_doc.get("closed_backlogs") or 0
         skills = student_doc.get("skills") or []
-        has_resume = student_doc.get("has_resume") or False
+        has_resume = bool(student_doc.get("has_resume", False))
         resume_filename = student_doc.get("resume_filename")
-        if not resume_filename or "jane_smith" in str(resume_filename).lower():
-            clean_name = re.sub(r'[^a-zA-Z0-9]', '_', full_name)
-            resume_filename = f"{clean_name}_Resume.pdf"
         resume_url = student_doc.get("resume_url")
+
+        # Disqualify ghost/placeholder resume filenames and URLs
+        if not resume_filename or not resume_url or \
+           resume_filename == "resume.pdf" or \
+           resume_url == "/static/uploads/resume.pdf" or \
+           "jane_smith" in str(resume_filename).lower():
+            has_resume = False
+            resume_filename = None
+            resume_url = None
     else:
-        education = "B.Tech CSE"
-        cgpa = 8.0
+        education = ""
+        cgpa = 0.0
         active_backlogs = 0
         closed_backlogs = 0
         skills = []
@@ -694,14 +769,40 @@ async def get_current_user_profile(
         "user_id": uid,
         "email": email,
         "full_name": full_name,
+        "university": student_doc.get("university", "GSFC University") if student_doc else "GSFC University",
         "education": education,
         "cgpa": float(cgpa),
         "active_backlogs": int(active_backlogs),
         "closed_backlogs": int(closed_backlogs),
         "skills": skills,
+        "technical_skills": student_doc.get("technical_skills", []) if student_doc else [],
+        "soft_skills": student_doc.get("soft_skills", []) if student_doc else [],
+        "deployment_skills": student_doc.get("deployment_skills", []) if student_doc else [],
+        "internships": student_doc.get("internships", []) if student_doc else [],
+        "internship_count": int(student_doc.get("internship_count") or len(student_doc.get("internships", []))) if student_doc else 0,
+        "languages": student_doc.get("languages", []) if student_doc else [],
         "has_resume": has_resume,
         "resume_filename": resume_filename,
         "resume_url": resume_url,
+        "tenth_percentage": student_doc.get("tenth_percentage") if student_doc else None,
+        "tenth_board": student_doc.get("tenth_board") if student_doc else None,
+        "tenth_passing_year": student_doc.get("tenth_passing_year") if student_doc else None,
+        "twelfth_percentage": student_doc.get("twelfth_percentage") if student_doc else None,
+        "twelfth_board": student_doc.get("twelfth_board") if student_doc else None,
+        "twelfth_passing_year": student_doc.get("twelfth_passing_year") if student_doc else None,
+        "diploma_cgpa": student_doc.get("diploma_cgpa") if student_doc else None,
+        "diploma_college": student_doc.get("diploma_college") if student_doc else None,
+        "current_semester": student_doc.get("current_semester") if student_doc else None,
+        "branch": student_doc.get("branch") if student_doc else None,
+        "enrollment_number": student_doc.get("enrollment_number") if student_doc else None,
+        "sgpa": student_doc.get("sgpa") if student_doc else None,
+        "social_links": student_doc.get("social_links", {}) if student_doc else {},
+        "linkedin_url": student_doc.get("linkedin_url") if student_doc else None,
+        "github_url": student_doc.get("github_url") if student_doc else None,
+        "leetcode_url": student_doc.get("leetcode_url") if student_doc else None,
+        "portfolio_url": student_doc.get("portfolio_url") if student_doc else None,
+        "verified_fields": student_doc.get("verified_fields", {}) if student_doc else {},
+        "documents": student_doc.get("documents", {}) if student_doc else {},
     }
 
 
@@ -712,6 +813,10 @@ async def update_current_user_profile(
 ):
     """
     Updates the student profile in MongoDB `users` and `students` collections.
+    SECURITY ENFORCEMENT:
+    Students may ONLY update: full_name, email, and university.
+    All academic fields (CGPA, backlogs, skills, percentages) are strictly read-only
+    and controlled exclusively by the document verification pipeline.
     """
     user_id = None
     if credentials and credentials.credentials:
@@ -721,24 +826,36 @@ async def update_current_user_profile(
         except Exception:
             pass
 
-    user_doc = None
-    if user_id:
-        user_doc = await users_collection.find_one({"$or": [{"user_id": user_id}, {"email": user_id}]})
-    if not user_doc:
-        user_doc = await users_collection.find_one({"role": "student"})
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
 
+    user_doc = await users_collection.find_one({"$or": [{"user_id": user_id}, {"email": user_id}]})
     if not user_doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    # Anti-Tampering Enforcement: Block modification of verified academic fields
+    forbidden_keys = [
+        "cgpa", "CGPA", "active_backlogs", "closed_backlogs", "skills",
+        "languages", "tenth_percentage", "tenth_board", "tenth_passing_year",
+        "twelfth_percentage", "twelfth_board", "twelfth_passing_year",
+        "diploma_cgpa", "diploma_college", "education", "branch", "sgpa", "current_semester"
+    ]
+    tamper_attempts = [k for k in forbidden_keys if k in data]
+    if tamper_attempts:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                f"Direct modification of verified academic fields ({', '.join(tamper_attempts)}) is forbidden. "
+                "These fields are read-only and automatically synchronized via verified document uploads."
+            )
+        )
 
     uid = user_doc.get("user_id")
     email = user_doc.get("email", "")
 
     full_name = data.get("full_name")
-    education = data.get("education")
-    cgpa = data.get("cgpa")
-    active_backlogs = data.get("active_backlogs")
-    closed_backlogs = data.get("closed_backlogs")
-    skills = data.get("skills")
+    new_email = data.get("email")
+    university = data.get("university")
 
     if full_name:
         await users_collection.update_many(
@@ -747,12 +864,12 @@ async def update_current_user_profile(
         )
 
     update_fields: Dict[str, Any] = {}
-    if full_name: update_fields["full_name"] = full_name
-    if education: update_fields["education"] = education
-    if cgpa is not None: update_fields["CGPA"] = float(cgpa)
-    if active_backlogs is not None: update_fields["active_backlogs"] = int(active_backlogs)
-    if closed_backlogs is not None: update_fields["closed_backlogs"] = int(closed_backlogs)
-    if skills is not None: update_fields["skills"] = skills
+    if full_name:
+        update_fields["full_name"] = full_name
+    if new_email:
+        update_fields["email"] = new_email
+    if university:
+        update_fields["university"] = university
 
     if update_fields:
         await students_collection.update_many(
@@ -762,6 +879,8 @@ async def update_current_user_profile(
         )
 
     return {"message": "Profile updated successfully in MongoDB"}
+
+
 
 
 @router.get("/notifications")
@@ -777,6 +896,8 @@ async def get_user_notifications(
     query_conditions = [{"recipient_id": "all"}]
     if user_id:
         query_conditions.append({"recipient_id": user_id})
+        query_conditions.append({"user_id": user_id})
+        query_conditions.append({"student_id": user_id})
     if email:
         query_conditions.append({"recipient_email": email})
 
@@ -785,10 +906,6 @@ async def get_user_notifications(
     try:
         notifs_cursor = notifications_collection.find(query).sort("created_at", -1).limit(50)
         raw_notifs = await notifs_cursor.to_list(length=50)
-        if not raw_notifs:
-            notifs_cursor = notifications_collection.find({}).sort("created_at", -1).limit(50)
-            raw_notifs = await notifs_cursor.to_list(length=50)
-
         notifs = []
         for n in raw_notifs:
             doc = dict(n)
@@ -800,10 +917,6 @@ async def get_user_notifications(
     try:
         chat_cursor = chat_messages_collection.find(query).sort("created_at", -1).limit(50)
         raw_chats = await chat_cursor.to_list(length=50)
-        if not raw_chats:
-            chat_cursor = chat_messages_collection.find({}).sort("created_at", -1).limit(50)
-            raw_chats = await chat_cursor.to_list(length=50)
-
         chats = []
         for c in raw_chats:
             doc = dict(c)

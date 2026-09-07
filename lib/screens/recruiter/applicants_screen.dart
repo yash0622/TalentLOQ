@@ -11,6 +11,9 @@ import '../../widgets/app_avatar.dart';
 import '../../widgets/paginated_list_view.dart';
 import '../../widgets/skeleton_widgets.dart';
 import 'round_result_screen.dart';
+import 'talent_comparison_screen.dart';
+import 'offer_setup_modal.dart';
+import '../../widgets/recruiter_ai_insight_modal.dart';
 
 class ApplicantsScreen extends StatefulWidget {
   final String listingId;
@@ -106,7 +109,7 @@ class _ApplicantsScreenState extends State<ApplicantsScreen> {
     // 2. Direct HttpClient fallback request if Dio encountered an error
     if (cleanPath.startsWith('/api/v1/files/') || cleanPath.startsWith('/static/uploads/') || cleanPath.startsWith('http')) {
       try {
-        const baseUrl = 'https://spotting-refuse-scorecard.ngrok-free.dev';
+        final baseUrl = ApiClient.instance.dio.options.baseUrl;
         final fullUrl = cleanPath.startsWith('http') ? cleanPath : '$baseUrl${cleanPath.startsWith('/') ? '' : '/'}$cleanPath';
         final client = HttpClient();
         final request = await client.getUrl(Uri.parse(fullUrl));
@@ -305,7 +308,46 @@ class _ApplicantsScreenState extends State<ApplicantsScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+
+              // AI Screening Insight Quick Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(sheetCtx);
+                    RecruiterAIInsightModal.show(
+                      context,
+                      driveId: widget.listingId,
+                      studentId: studentId,
+                      studentName: studentName,
+                      jobTitle: widget.interviewJob,
+                      onViewResume: () => _openResumeViewer(context, app),
+                      onRecordRound: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => RoundResultScreen(
+                              driveId: widget.listingId,
+                              applicantData: app,
+                              onUpdated: () => _pagingController.refresh(),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  icon: const Icon(Icons.bolt_rounded, size: 18),
+                  label: const Text('View AI Candidate Screening Insight', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDark ? AppColors.darkPrimaryContainer : AppColors.lightPrimary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
 
               // Action Buttons Row
               Row(
@@ -341,6 +383,40 @@ class _ApplicantsScreenState extends State<ApplicantsScreen> {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(sheetCtx);
+                    final studentId = (app['student_id'] ?? app['user_id'] ?? app['id'] ?? '').toString();
+                    final studentName = (app['name'] ?? app['full_name'] ?? app['student_name'] ?? 'Candidate').toString();
+                    OfferSetupModal.show(
+                      context,
+                      driveId: widget.listingId,
+                      studentId: studentId,
+                      candidateName: studentName,
+                      companyName: widget.companyName,
+                      roleTitle: widget.interviewJob,
+                      initialOfferData: app['offer_details'] as Map<String, dynamic>?,
+                    ).then((val) {
+                      if (val == true) {
+                        _pagingController.refresh();
+                      }
+                    });
+                  },
+                  icon: const Icon(Icons.workspace_premium_rounded, color: AppColors.success, size: 18),
+                  label: const Text(
+                    'Setup Placement Offer Package',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.success),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.success, width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
               ),
             ],
           ),
@@ -389,6 +465,22 @@ class _ApplicantsScreenState extends State<ApplicantsScreen> {
       appBar: AppBar(
         title: Text('${widget.companyName} Applicants'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.auto_awesome_rounded, color: AppColors.lightPrimary),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => TalentComparisonScreen(
+                    driveId: widget.listingId,
+                    companyName: widget.companyName,
+                    interviewJob: widget.interviewJob,
+                  ),
+                ),
+              );
+            },
+            tooltip: 'Compare & Rank Top Talent',
+          ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             onPressed: () => _pagingController.refresh(),
@@ -452,6 +544,35 @@ class _ApplicantsScreenState extends State<ApplicantsScreen> {
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => TalentComparisonScreen(
+                                  driveId: widget.listingId,
+                                  companyName: widget.companyName,
+                                  interviewJob: widget.interviewJob,
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.auto_awesome_rounded, size: 16),
+                          label: const Text(
+                            'Compare & Rank Top Talent',
+                            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.lightPrimary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 9),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -582,59 +703,143 @@ class _ApplicantsScreenState extends State<ApplicantsScreen> {
                             const Divider(height: 1),
                             const SizedBox(height: 10),
 
-                            // Footer Actions & Details
+                            // Footer Actions & Details (Responsive 2-line layout)
                             Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Expanded(
+                                Text(
+                                  'Applied: ${_formatAppliedAt(appliedAt)}',
+                                  style: const TextStyle(fontSize: 11, color: AppColors.lightTextSecondary),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? AppColors.darkSurfaceContainerHigh : AppColors.lightSurfaceContainer,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
                                   child: Text(
-                                    'Applied: ${_formatAppliedAt(appliedAt)}',
-                                    style: const TextStyle(fontSize: 11, color: AppColors.lightTextSecondary),
-                                    overflow: TextOverflow.ellipsis,
+                                    'Round ${app['current_round'] ?? 0}',
+                                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                OutlinedButton.icon(
-                                  onPressed: () => _openResumeViewer(context, app),
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    minimumSize: Size.zero,
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  ),
-                                  icon: Icon(
-                                    Icons.picture_as_pdf_rounded,
-                                    size: 14,
-                                    color: hasResume ? AppColors.error : AppColors.lightTextSecondary,
-                                  ),
-                                  label: Text(
-                                    hasResume ? 'View Resume' : 'No Resume',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: hasResume ? AppColors.lightTextPrimary : AppColors.lightTextSecondary,
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: () {
+                                      RecruiterAIInsightModal.show(
+                                        context,
+                                        driveId: widget.listingId,
+                                        studentId: (app['student_id'] ?? app['user_id'] ?? '').toString(),
+                                        studentName: studentName,
+                                        jobTitle: widget.interviewJob,
+                                        onViewResume: () => _openResumeViewer(context, app),
+                                        onRecordRound: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => RoundResultScreen(
+                                                driveId: widget.listingId,
+                                                applicantData: app,
+                                                onUpdated: () => _pagingController.refresh(),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    },
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                                      minimumSize: Size.zero,
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      side: const BorderSide(color: AppColors.lightPrimary),
+                                    ),
+                                    child: const FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.bolt_rounded, size: 14, color: AppColors.lightPrimary),
+                                          SizedBox(width: 3),
+                                          Text(
+                                            'AI Insight',
+                                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.lightPrimary),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 6),
-                                ElevatedButton.icon(
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => RoundResultScreen(
-                                          driveId: widget.listingId,
-                                          applicantData: app,
-                                          onUpdated: () => _pagingController.refresh(),
-                                        ),
+                                const SizedBox(width: 5),
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: () => _openResumeViewer(context, app),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                                      minimumSize: Size.zero,
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.picture_as_pdf_rounded,
+                                            size: 14,
+                                            color: hasResume ? AppColors.error : AppColors.lightTextSecondary,
+                                          ),
+                                          const SizedBox(width: 3),
+                                          Text(
+                                            hasResume ? 'Resume' : 'No Resume',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: hasResume ? AppColors.lightTextPrimary : AppColors.lightTextSecondary,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    );
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    minimumSize: Size.zero,
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    ),
                                   ),
-                                  icon: const Icon(Icons.how_to_reg_rounded, size: 14),
-                                  label: const Text('Record Round', style: TextStyle(fontSize: 11)),
+                                ),
+                                const SizedBox(width: 5),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => RoundResultScreen(
+                                            driveId: widget.listingId,
+                                            applicantData: app,
+                                            onUpdated: () => _pagingController.refresh(),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                                      minimumSize: Size.zero,
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                    child: const FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.how_to_reg_rounded, size: 14),
+                                          SizedBox(width: 3),
+                                          Text(
+                                            'Round',
+                                            style: TextStyle(fontSize: 11),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),

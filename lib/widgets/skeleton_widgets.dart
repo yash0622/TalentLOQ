@@ -102,7 +102,7 @@ class SkeletonBox extends StatelessWidget {
   }
 }
 
-/// Skeleton Card matching the real Drive Card layout (OpportunitiesScreen & MyDrivesScreen).
+/// Skeleton Card matching the real Drive Card layout (OpportunitiesScreen).
 class DriveCardSkeleton extends StatelessWidget {
   const DriveCardSkeleton({super.key});
 
@@ -383,16 +383,17 @@ class ProfileSkeleton extends StatelessWidget {
 
     return AppShimmer(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top Summary Card
+            // 1. Top Summary Header Card
             Container(
-              padding: const EdgeInsets.all(20),
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                   color: isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant,
                 ),
@@ -400,147 +401,265 @@ class ProfileSkeleton extends StatelessWidget {
               child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SkeletonBox(width: 140, height: 20),
-                  SizedBox(height: 8),
-                  SkeletonBox(width: 180, height: 14),
+                  SkeletonBox(width: 150, height: 18),
+                  SizedBox(height: 6),
+                  SkeletonBox(width: 220, height: 13),
+                  SizedBox(height: 6),
+                  SkeletonBox(width: 180, height: 12),
                   SizedBox(height: 12),
-                  SkeletonBox(width: 130, height: 24, borderRadius: 12),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Academic & Education Profile Card
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant,
-                ),
-              ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      SkeletonBox(width: 200, height: 18),
-                      SkeletonBox(width: 24, height: 24, borderRadius: 12),
-                    ],
-                  ),
-                  SizedBox(height: 20),
                   Row(
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SkeletonBox(width: 100, height: 12),
-                            SizedBox(height: 6),
-                            SkeletonBox(width: 90, height: 16),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SkeletonBox(width: 100, height: 12),
-                            SizedBox(height: 6),
-                            SkeletonBox(width: 70, height: 16),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SkeletonBox(width: 100, height: 12),
-                            SizedBox(height: 6),
-                            SkeletonBox(width: 70, height: 16),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SkeletonBox(width: 100, height: 12),
-                            SizedBox(height: 6),
-                            SkeletonBox(width: 70, height: 16),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 20),
-                  SkeletonBox(width: 100, height: 12),
-                  SizedBox(height: 10),
-                  Row(
-                    children: [
-                      SkeletonBox(width: 75, height: 28, borderRadius: 8),
+                      SkeletonBox(width: 110, height: 24, borderRadius: 6),
                       SizedBox(width: 8),
-                      SkeletonBox(width: 85, height: 28, borderRadius: 8),
+                      SkeletonBox(width: 105, height: 24, borderRadius: 6),
                     ],
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 14),
 
-            // Resume Card
+            // 2. Academic & Education Profile Card
             Container(
-              padding: const EdgeInsets.all(20),
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                   color: isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant,
                 ),
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  const Row(
                     children: [
-                      SkeletonBox(width: 44, height: 44, borderRadius: 12),
-                      SizedBox(width: 12),
+                      SkeletonBox(width: 20, height: 20, borderRadius: 4),
+                      SizedBox(width: 8),
+                      Expanded(child: SkeletonBox(width: 180, height: 16)),
+                      SkeletonBox(width: 20, height: 20, borderRadius: 4),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Divider(
+                    height: 1,
+                    color: isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant,
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Row 1 Skeleton: CGPA & 12th/Diploma
+                  const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SkeletonBox(width: 180, height: 16),
+                            SkeletonBox(width: 90, height: 12),
                             SizedBox(height: 6),
-                            SkeletonBox(width: 140, height: 12),
+                            SkeletonBox(width: 75, height: 14),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SkeletonBox(width: 120, height: 12),
+                            SizedBox(height: 6),
+                            SkeletonBox(width: 75, height: 14),
+                            SizedBox(height: 4),
+                            SkeletonBox(width: 95, height: 11),
                           ],
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 16),
-                  Divider(height: 1),
-                  SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  const SizedBox(height: 14),
+
+                  // Row 2 Skeleton: 10th & Backlogs
+                  const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SkeletonBox(width: 36, height: 36, borderRadius: 18),
-                      SkeletonBox(width: 36, height: 36, borderRadius: 18),
-                      SkeletonBox(width: 36, height: 36, borderRadius: 18),
-                      SkeletonBox(width: 36, height: 36, borderRadius: 18),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SkeletonBox(width: 100, height: 12),
+                            SizedBox(height: 6),
+                            SkeletonBox(width: 60, height: 14),
+                            SizedBox(height: 4),
+                            SkeletonBox(width: 80, height: 11),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SkeletonBox(width: 95, height: 12),
+                            SizedBox(height: 6),
+                            SkeletonBox(width: 65, height: 14),
+                            SizedBox(height: 4),
+                            SkeletonBox(width: 70, height: 11),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
+                  const SizedBox(height: 16),
+                  Divider(
+                    height: 1,
+                    color: isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant,
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Skills Skeleton
+                  const Row(
+                    children: [
+                      SkeletonBox(width: 20, height: 20, borderRadius: 4),
+                      SizedBox(width: 8),
+                      SkeletonBox(width: 110, height: 16),
+                      SizedBox(width: 8),
+                      SkeletonBox(width: 65, height: 16, borderRadius: 10),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Wrap(
+                    spacing: 7,
+                    runSpacing: 7,
+                    children: [
+                      SkeletonBox(width: 85, height: 26, borderRadius: 8),
+                      SkeletonBox(width: 65, height: 26, borderRadius: 8),
+                      SkeletonBox(width: 75, height: 26, borderRadius: 8),
+                      SkeletonBox(width: 90, height: 26, borderRadius: 8),
+                      SkeletonBox(width: 70, height: 26, borderRadius: 8),
+                      SkeletonBox(width: 80, height: 26, borderRadius: 8),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // 3. Document Verification Action Card Skeleton
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant,
+                ),
+              ),
+              child: const Row(
+                children: [
+                  SkeletonBox(width: 38, height: 38, borderRadius: 19),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SkeletonBox(width: 120, height: 14),
+                        SizedBox(height: 4),
+                        SkeletonBox(width: 150, height: 11),
+                      ],
+                    ),
+                  ),
+                  SkeletonBox(width: 24, height: 24, borderRadius: 4),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Shimmer skeleton for Document Verification Screen.
+class DocumentVerificationSkeleton extends StatelessWidget {
+  const DocumentVerificationSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    Widget buildSlotCardSkeleton() {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant,
+          ),
+        ),
+        child: const Row(
+          children: [
+            SkeletonBox(width: 38, height: 38, borderRadius: 10),
+            SizedBox(width: 12),
+            Expanded(
+              child: SkeletonBox(width: 150, height: 16, borderRadius: 4),
+            ),
+            SizedBox(width: 8),
+            SkeletonBox(width: 38, height: 38, borderRadius: 10),
+          ],
+        ),
+      );
+    }
+
+    return AppShimmer(
+      child: ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        children: [
+          // Section Title Skeleton
+          const Row(
+            children: [
+              SkeletonBox(width: 20, height: 20, borderRadius: 4),
+              SizedBox(width: 8),
+              SkeletonBox(width: 210, height: 16),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // 4 Slot Card Skeletons
+          buildSlotCardSkeleton(),
+          const SizedBox(height: 10),
+          buildSlotCardSkeleton(),
+          const SizedBox(height: 10),
+          buildSlotCardSkeleton(),
+          const SizedBox(height: 10),
+          buildSlotCardSkeleton(),
+          const SizedBox(height: 16),
+
+          // Policy Card Skeleton
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkSurfaceContainerLow : AppColors.lightSurfaceContainer,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant,
+              ),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonBox(width: 160, height: 12),
+                SizedBox(height: 6),
+                SkeletonBox(width: double.infinity, height: 10),
+                SizedBox(height: 4),
+                SkeletonBox(width: 220, height: 10),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

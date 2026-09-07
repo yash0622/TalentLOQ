@@ -3,6 +3,7 @@ import '../../mock_data/mock_data.dart';
 import '../../models/models.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_avatar.dart';
+import '../../services/interview_service.dart';
 
 class InterviewSchedulingScreen extends StatefulWidget {
   final Candidate? candidate;
@@ -299,16 +300,29 @@ class _InterviewSchedulingScreenState extends State<InterviewSchedulingScreen> {
             child: SafeArea(
               top: false,
               child: ElevatedButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Interview scheduled with ${targetCandidate.name} on ${_dates[_selectedDateIndex]} at ${_times[_selectedTimeIndex]}!',
-                      ),
-                      backgroundColor: AppColors.success,
-                    ),
+                onPressed: () async {
+                  final targetName = targetCandidate.name;
+                  final targetId = targetCandidate.id;
+
+                  await InterviewService().scheduleInterview(
+                    studentId: targetId,
+                    candidateName: targetName,
+                    date: _dates[_selectedDateIndex],
+                    timeSlot: _times[_selectedTimeIndex],
+                    interviewType: _interviewTypes[_selectedTypeIndex],
                   );
-                  widget.onBookedSuccess();
+
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Interview scheduled with $targetName on ${_dates[_selectedDateIndex]} at ${_times[_selectedTimeIndex]}!',
+                        ),
+                        backgroundColor: AppColors.success,
+                      ),
+                    );
+                    widget.onBookedSuccess();
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size.fromHeight(42),

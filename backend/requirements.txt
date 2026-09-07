@@ -17,3 +17,15 @@ pytest==8.0.0
 pytest-asyncio==0.23.5
 httpx==0.26.0
 pip-audit==2.7.1
+
+# AI, NLP & Taxonomy Matching
+spacy>=3.8.0
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
+
+# Document Processing, Vision & OCR Support
+Pillow>=10.4.0
+numpy>=1.26.0
+opencv-python-headless>=4.10.0
+pypdf>=4.3.0
+PyMuPDF>=1.24.0
+google-genai>=0.1.0

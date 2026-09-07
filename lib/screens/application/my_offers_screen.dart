@@ -5,7 +5,7 @@ import '../../services/application_visibility_state.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/paginated_list_view.dart';
 import '../../widgets/skeleton_widgets.dart';
-import '../jobs/company_detail_screen.dart';
+import 'offer_details_screen.dart';
 
 class MyOffersScreen extends StatefulWidget {
   final bool embedInTab;
@@ -36,6 +36,31 @@ class _MyOffersScreenState extends State<MyOffersScreen> {
     if (mounted) _pagingController.refresh();
   }
 
+  void _openOfferDetails(Map<String, dynamic> item, Map<String, dynamic> drive, Map<String, dynamic> st) {
+    final offerDetails = Map<String, dynamic>.from(item['offer_details'] as Map? ?? {});
+    final studentId = (item['student_id'] ?? '').toString();
+    final candidateName = (item['student_name'] ?? 'Candidate').toString();
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OfferDetailsScreen(
+          drive: drive,
+          status: st,
+          offerDetails: offerDetails,
+          studentId: studentId,
+          candidateName: candidateName,
+          isRecruiter: false,
+          onOfferActionCompleted: () {
+            if (mounted) _pagingController.refresh();
+          },
+        ),
+      ),
+    ).then((_) {
+      if (mounted) _pagingController.refresh();
+    });
+  }
+
   @override
   void dispose() {
     _pagingController.dispose();
@@ -59,32 +84,30 @@ class _MyOffersScreenState extends State<MyOffersScreen> {
         skeletonBuilder: (_, _) => const DriveCardSkeleton(),
         emptyWidget: Center(
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 32),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     color: AppColors.successLightBg,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.workspace_premium_rounded,
-                    size: 48,
-                    color: AppColors.success,
-                  ),
+                  child: const Icon(Icons.stars_rounded, size: 48, color: AppColors.success),
                 ),
-                const SizedBox(height: 16),
-                const Text(
+                const SizedBox(height: 20),
+                Text(
                   'No Placement Offers Yet',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Apply to placement drives under the Drives tab and clear selection rounds to receive official placement offer letters here.',
+                Text(
+                  'When a company selects you and releases an official job or internship offer, it will appear here.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, color: AppColors.lightTextSecondary, height: 1.4),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                  ),
                 ),
               ],
             ),
@@ -126,15 +149,7 @@ class _MyOffersScreenState extends State<MyOffersScreen> {
               borderRadius: BorderRadius.circular(16),
               onTap: () {
                 if (driveId.isNotEmpty) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => CompanyDetailScreen(
-                        listingId: driveId,
-                        initialData: drive,
-                      ),
-                    ),
-                  );
+                  _openOfferDetails(item, drive, st);
                 }
               },
               child: Padding(
@@ -142,7 +157,7 @@ class _MyOffersScreenState extends State<MyOffersScreen> {
                 child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Offer Banner Pill
+                  // Offer Banner Pill with overflow protection
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -150,17 +165,23 @@ class _MyOffersScreenState extends State<MyOffersScreen> {
                       color: AppColors.successLightBg,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Row(
+                    child: Row(
                       children: [
-                        Icon(Icons.stars_rounded, color: AppColors.success, size: 18),
-                        SizedBox(width: 6),
-                        Text(
-                          '🎉 OFFICIAL PLACEMENT OFFER EXTENDED',
-                          style: TextStyle(
-                            color: AppColors.success,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
-                            letterSpacing: 0.3,
+                        const Icon(Icons.stars_rounded, color: AppColors.success, size: 18),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            finalOutcome == 'accepted'
+                                ? '🎉 PLACEMENT OFFER ACCEPTED'
+                                : '🎉 OFFICIAL PLACEMENT OFFER EXTENDED',
+                            style: const TextStyle(
+                              color: AppColors.success,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                              letterSpacing: 0.3,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         ),
                       ],
@@ -221,7 +242,7 @@ class _MyOffersScreenState extends State<MyOffersScreen> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            'Offered CTC: ₹${ctcMin}L - ₹${ctcMax}L / yr • $empType',
+                            'Offered CTC: ₹${(ctcMin is num && ctcMin % 1 == 0) ? ctcMin.toInt() : ctcMin} - ₹${(ctcMax is num && ctcMax % 1 == 0) ? ctcMax.toInt() : ctcMax} LPA • $empType',
                             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -237,15 +258,7 @@ class _MyOffersScreenState extends State<MyOffersScreen> {
                     child: ElevatedButton.icon(
                       onPressed: () {
                         if (driveId.isNotEmpty) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => CompanyDetailScreen(
-                                listingId: driveId,
-                                initialData: drive,
-                              ),
-                            ),
-                          );
+                          _openOfferDetails(item, drive, st);
                         }
                       },
                       icon: const Icon(Icons.visibility_rounded, size: 16),

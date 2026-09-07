@@ -1,4 +1,12 @@
 class Validators {
+  /// Validates generic required field
+  static String? validateRequired(String? value, [String fieldName = 'This field']) {
+    if (value == null || value.trim().isEmpty) {
+      return '$fieldName is required';
+    }
+    return null;
+  }
+
   /// Validates Full Name field
   static String? validateFullName(String? value) {
     if (value == null || value.trim().isEmpty) {

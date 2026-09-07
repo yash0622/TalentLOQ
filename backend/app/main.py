@@ -24,21 +24,15 @@ async def lifespan(app: FastAPI):
     # Initialize MongoDB indexes on startup
     try:
         await init_db_indexes()
-        from app.database import students_collection
-        await students_collection.update_many(
-            {"has_resume": {"$exists": False}},
-            {"$set": {
-                "has_resume": True,
-                "resume_url": "/static/uploads/resume.pdf",
-                "resume_filename": "resume.pdf"
-            }}
-        )
-        logger.info("MongoDB indexes & student resume fields configured successfully.")
+        logger.info("MongoDB indexes initialized successfully.")
     except (asyncio.CancelledError, KeyboardInterrupt):
         pass
     except Exception as e:
         logger.warning(f"Could not initialize MongoDB indexes on startup: {e}")
-    yield
+    try:
+        yield
+    except (asyncio.CancelledError, KeyboardInterrupt):
+        pass
 
 app = FastAPI(
     title="Talentloq API",
@@ -57,15 +51,17 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS Configuration with Explicit Allowed Origins (Never '*' in Production)
+# CORS Configuration with Explicit Allowed Origins & Controlled Dev Tunnel Regex
 origins_list = [origin.strip() for origin in settings.ALLOWED_ORIGINS.split(",") if origin.strip()]
+dev_origin_regex = r"https?://(localhost|127\.0\.0\.1)(:[0-9]+)?|https://.*\.ngrok-free\.dev"
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins_list if origins_list else ["http://localhost:3000"],
+    allow_origin_regex=dev_origin_regex,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Device-ID"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
 )
 
 # Custom 422 Request Validation Error Handler (Log exact field validation failures)
@@ -102,19 +98,24 @@ async def centralized_exception_handler(request: Request, exc: Exception):
         content={"detail": "Internal server error. Please contact system administrator."}
     )
 
-from app.routers import auth, admin_audit, recruiter, announcements, companies, drives_recruiter, drives_student, files
+from app.routers import auth, admin_audit, recruiter, announcements, companies, drives_recruiter, drives_student, files, chat, interviews, documents
 
 # Include Routers
 app.include_router(files.router)
 app.include_router(auth.router)
+app.include_router(documents.router)
+app.include_router(documents.profile_router)
 app.include_router(admin_audit.router)
 app.include_router(recruiter.router)
 app.include_router(announcements.router)
 app.include_router(companies.router)
 app.include_router(drives_recruiter.router)
 app.include_router(drives_student.router)
+app.include_router(chat.router)
+app.include_router(interviews.router)
 
 @app.get("/", tags=["Health Check"])
+@app.get("/health", tags=["Health Check"])
 async def root():
     return {
         "status": "healthy",

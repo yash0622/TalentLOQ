@@ -409,6 +409,50 @@ python -m pytest tests/
   flutter build web --release
   ```
 
+### 🐳 Docker & Docker Compose Deployment
+
+TalentLOQ is fully containerized across all tiers (MongoDB 6.0, FastAPI Backend, and Flutter Web Nginx Frontend):
+
+1. **Start the Entire Stack:**
+   ```bash
+   docker-compose up -d --build
+   ```
+2. **Access Endpoints:**
+   * **Web App Frontend:** [http://localhost](http://localhost)
+   * **FastAPI Backend API:** [http://localhost:8000](http://localhost:8000)
+   * **Interactive API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
+   * **MongoDB Engine:** `localhost:27017`
+3. **Check Container Status:**
+   ```bash
+   docker-compose ps
+   ```
+
+### ☸️ Kubernetes (K8s) Cluster Deployment
+
+TalentLOQ includes enterprise-grade Kubernetes manifests located in `k8s/` with automated persistent volume claims, health probes, ingress routing, and multi-replica scalability.
+
+1. **Deploy with Kustomize (One Command):**
+   ```bash
+   kubectl apply -k k8s/
+   ```
+   *Or apply individual manifests sequentially:*
+   ```bash
+   kubectl apply -f k8s/namespace.yaml
+   kubectl apply -f k8s/configmap.yaml
+   kubectl apply -f k8s/secret.yaml
+   kubectl apply -f k8s/mongodb.yaml
+   kubectl apply -f k8s/backend.yaml
+   kubectl apply -f k8s/frontend.yaml
+   kubectl apply -f k8s/ingress.yaml
+   ```
+
+2. **Verify Cluster Health:**
+   ```bash
+   kubectl get pods -n talentloq
+   kubectl get svc -n talentloq
+   kubectl get ingress -n talentloq
+   ```
+
 ---
 
 ## 19. Known Limitations
