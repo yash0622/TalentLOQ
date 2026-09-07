@@ -74,6 +74,7 @@ class SmartAIMatchResponse(BaseModel):
     student_prep_checklist: List[str] = Field(default_factory=list, description="48-hour actionable prep steps for the student")
     source: str = Field("groq_ai", description="'groq_ai' | 'cached' | 'heuristic_fallback' | 'tier1_heuristic_filter'")
     model_used: Optional[str] = None
+    tokens_used: Optional[Dict[str, int]] = Field(None, description="Prompt, completion, and total tokens consumed")
 
 
 class GroqMatcherService:
@@ -347,7 +348,30 @@ Placement Role:
                             },
                         )
                         if resp.status_code == 200:
-                            content = resp.json()["choices"][0]["message"]["content"]
+                            raw_resp = resp.json()
+                            usage = raw_resp.get("usage", {})
+                            p_tok = int(usage.get("prompt_tokens") or 0)
+                            c_tok = int(usage.get("completion_tokens") or 0)
+                            t_tok = int(usage.get("total_tokens") or (p_tok + c_tok))
+
+                            # Print prominent token metrics directly to the server terminal
+                            print(
+                                f"\n\033[1;36m+==================== [AI API TOKEN USAGE] ====================+\033[0m\n"
+                                f"  \033[1mAPI Endpoint:\033[0m      {endpoint_url}\n"
+                                f"  \033[1mProvider:\033[0m          {provider_tag.upper()}\n"
+                                f"  \033[1mModel:\033[0m             {model}\n"
+                                f"  \033[1;33mPrompt Tokens:\033[0m     {p_tok:,}\n"
+                                f"  \033[1;32mCompletion Tokens:\033[0m {c_tok:,}\n"
+                                f"  \033[1;35mTotal Tokens Used:\033[0m {t_tok:,}\n"
+                                f"\033[1;36m+==============================================================+\033[0m\n",
+                                flush=True
+                            )
+                            logger.info(
+                                "[AI Token Usage] Provider: %s | Model: %s | Prompt: %d | Completion: %d | Total: %d",
+                                provider_tag, model, p_tok, c_tok, t_tok
+                            )
+
+                            content = raw_resp["choices"][0]["message"]["content"]
                             clean_json_str = cls._clean_json(content)
                             data = json.loads(clean_json_str)
 
@@ -390,6 +414,7 @@ Placement Role:
                                 student_prep_checklist=[str(c) for c in data.get("student_prep_checklist", []) if c][:3],
                                 source=provider_tag,
                                 model_used=model,
+                                tokens_used={"prompt_tokens": p_tok, "completion_tokens": c_tok, "total_tokens": t_tok},
                             )
 
                             # Save to Cache in background

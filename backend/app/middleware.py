@@ -27,6 +27,28 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         
         return response
 
+import time
+
+class ApiMetricsLoggingMiddleware(BaseHTTPMiddleware):
+    """
+    Logs API method, path, response status code, and latency in terminal with color highlights.
+    """
+    async def dispatch(self, request: Request, call_next):
+        start_time = time.perf_counter()
+        response = await call_next(request)
+        duration_ms = (time.perf_counter() - start_time) * 1000
+
+        status = response.status_code
+        color = "\033[92m" if status < 400 else "\033[93m" if status < 500 else "\033[91m"
+        reset = "\033[0m"
+
+        # Log to terminal
+        print(
+            f"[API CALL] {request.method:<6} {request.url.path:<35} -> {color}{status}{reset} ({duration_ms:.1f}ms)",
+            flush=True
+        )
+        return response
+
 from typing import Union, List
 
 def check_ip_in_cidrs(client_ip: str, allowed_cidrs: Union[str, List[str]]) -> bool:

@@ -11,7 +11,7 @@ from slowapi.errors import RateLimitExceeded
 from app.routers import auth
 from app.routers.auth import limiter
 from app.config import settings
-from app.middleware import SecurityHeadersMiddleware
+from app.middleware import SecurityHeadersMiddleware, ApiMetricsLoggingMiddleware
 from app.dependencies import get_current_user, require_role, require_recent_reauth
 
 from contextlib import asynccontextmanager
@@ -40,6 +40,9 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# Attach API Metrics Logging Middleware
+app.add_middleware(ApiMetricsLoggingMiddleware)
 
 # Attach Security Headers Middleware
 app.add_middleware(SecurityHeadersMiddleware)

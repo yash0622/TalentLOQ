@@ -77,6 +77,28 @@ class LLMService:
             except Exception as e:
                 logger.warning(f"Could not initialize Gemini client: {e}")
 
+    @staticmethod
+    def _print_token_usage(provider: str, model: str, prompt_tokens: int, completion_tokens: int, total_tokens: int) -> Dict[str, int]:
+        print(
+            f"\n\033[1;36m+==================== [AI API TOKEN USAGE] ====================+\033[0m\n"
+            f"  \033[1mProvider:\033[0m          {provider.upper()}\n"
+            f"  \033[1mModel:\033[0m             {model}\n"
+            f"  \033[1;33mPrompt Tokens:\033[0m     {prompt_tokens:,}\n"
+            f"  \033[1;32mCompletion Tokens:\033[0m {completion_tokens:,}\n"
+            f"  \033[1;35mTotal Tokens Used:\033[0m {total_tokens:,}\n"
+            f"\033[1;36m+==============================================================+\033[0m\n",
+            flush=True
+        )
+        logger.info(
+            "[AI Token Usage] Provider: %s | Model: %s | Prompt: %d | Completion: %d | Total: %d",
+            provider, model, prompt_tokens, completion_tokens, total_tokens
+        )
+        return {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+        }
+
     async def generate(self, prompt: str, system_prompt: Optional[str] = None, max_tokens: int = 500) -> Dict[str, Any]:
         """
         Executes generation strictly through free models across available providers.
@@ -98,12 +120,19 @@ class LLMService:
                         max_tokens=max_tokens,
                     )
                     text = res.choices[0].message.content.strip()
+                    usage = getattr(res, "usage", None)
+                    p_tok = int(getattr(usage, "prompt_tokens", 0) or 0)
+                    c_tok = int(getattr(usage, "completion_tokens", 0) or 0)
+                    t_tok = int(getattr(usage, "total_tokens", 0) or (p_tok + c_tok))
+                    tokens_dict = self._print_token_usage("groq", model_name, p_tok, c_tok, t_tok)
+
                     return {
                         "text": text,
                         "provider": "groq",
                         "model": model_name,
                         "is_free": True,
                         "fallback_used": False,
+                        "tokens_used": tokens_dict,
                     }
                 except Exception as e:
                     logger.warning(f"Groq {model_name} failed: {e}")
@@ -123,12 +152,19 @@ class LLMService:
                         max_tokens=max_tokens,
                     )
                     text = res.choices[0].message.content.strip()
+                    usage = getattr(res, "usage", None)
+                    p_tok = int(getattr(usage, "prompt_tokens", 0) or 0)
+                    c_tok = int(getattr(usage, "completion_tokens", 0) or 0)
+                    t_tok = int(getattr(usage, "total_tokens", 0) or (p_tok + c_tok))
+                    tokens_dict = self._print_token_usage("openrouter", model_name, p_tok, c_tok, t_tok)
+
                     return {
                         "text": text,
                         "provider": "openrouter",
                         "model": model_name,
                         "is_free": True,
                         "fallback_used": True,
+                        "tokens_used": tokens_dict,
                     }
                 except Exception as e:
                     logger.warning(f"OpenRouter {model_name} failed: {e}")
@@ -148,12 +184,19 @@ class LLMService:
                         max_tokens=max_tokens,
                     )
                     text = res.choices[0].message.content.strip()
+                    usage = getattr(res, "usage", None)
+                    p_tok = int(getattr(usage, "prompt_tokens", 0) or 0)
+                    c_tok = int(getattr(usage, "completion_tokens", 0) or 0)
+                    t_tok = int(getattr(usage, "total_tokens", 0) or (p_tok + c_tok))
+                    tokens_dict = self._print_token_usage("mistral", model_name, p_tok, c_tok, t_tok)
+
                     return {
                         "text": text,
                         "provider": "mistral",
                         "model": model_name,
                         "is_free": True,
                         "fallback_used": True,
+                        "tokens_used": tokens_dict,
                     }
                 except Exception as e:
                     logger.warning(f"Mistral {model_name} failed: {e}")
@@ -169,12 +212,19 @@ class LLMService:
                         contents=full_content,
                     )
                     text = res.text.strip()
+                    usage = getattr(res, "usage_metadata", None)
+                    p_tok = int(getattr(usage, "prompt_token_count", 0) or 0)
+                    c_tok = int(getattr(usage, "candidates_token_count", 0) or 0)
+                    t_tok = int(getattr(usage, "total_token_count", 0) or (p_tok + c_tok))
+                    tokens_dict = self._print_token_usage("gemini", model_name, p_tok, c_tok, t_tok)
+
                     return {
                         "text": text,
                         "provider": "gemini",
                         "model": model_name,
                         "is_free": True,
                         "fallback_used": True,
+                        "tokens_used": tokens_dict,
                     }
                 except Exception as e:
                     logger.warning(f"Gemini {model_name} failed: {e}")
