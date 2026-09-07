@@ -9,12 +9,12 @@
 **TalentLOQ** is an enterprise-grade, cross-platform placement tracking platform engineered to automate and digitize the end-to-end campus recruitment lifecycle. Built to replace error-prone manual spreadsheets, physical paperwork, and fragmented communication channels, TalentLOQ provides a unified digital experience connecting **Students**, **Corporate Recruiters**, and **University Placement Officers**.
 
 ### Problem Solved
-Traditional university hiring processes suffer from communication delays, lack of real-time application status visibility for students, high administrative sorting overhead for recruiters, and privacy risks when handling unencrypted academic records. TalentLOQ solves these challenges by offering automated CGPA eligibility screening, an AI-powered Candidate-Job Match engine with real-time token telemetry, live application tracking across interview rounds, native PDF resume viewing, direct recruiter-applicant messaging, a dedicated Candidate Validation Dashboard, and bank-grade data security.
+Traditional university hiring processes suffer from communication delays, lack of real-time application status visibility for students, high administrative sorting overhead for recruiters, and privacy risks when handling unencrypted academic records. TalentLOQ solves these challenges by offering automated CGPA eligibility screening, an autonomous AI-powered Placement Matching Agent with real-time token telemetry, live application tracking across interview rounds, native PDF resume viewing, direct recruiter-applicant messaging, a dedicated Candidate Validation Dashboard, and bank-grade data security.
 
 ### Core Capabilities
 * **Automated Eligibility Engine:** Instant CGPA cutoff and backlog qualification gate before application submission.
-* **AI Match & Candidate Intelligence:** Calibrated multi-factor fit scoring (Core Skills, Project Depth, Role Readiness, Learnability) with automated failover across Groq, OpenRouter, Mistral, and Google Gemini.
-* **Real-Time Token & Latency Observability:** Terminal token banners displaying prompt, completion, and total tokens per AI query alongside HTTP request latency metrics.
+* **Placement Intelligence Agents:** Calibrated multi-factor fit scoring (Core Skills, Project Depth, Role Readiness, Learnability) powered by intelligent Placement Matching Agents with automated failover and heuristic resilience.
+* **Real-Time Token & Latency Observability:** Terminal token banners displaying prompt, completion, and total tokens per Agent query alongside HTTP request latency metrics.
 * **Candidate Validation Dashboard:** Centralized recruiter screening interface to inspect applicant profiles, review AI match metrics, and validate credentials across drives.
 * **Scheduled Campus Interviews Hub:** Real-time scheduling, tracking, and outcome logging across Aptitude, Technical, and HR interview rounds.
 * **Direct Candidate Messaging:** Recruiter-to-student in-app chat and selection round advancement notices.
@@ -41,9 +41,9 @@ Traditional university hiring processes suffer from communication delays, lack o
 * **Applicant Evaluation Dashboard:** Grade candidate progress across selection rounds (Pass / Fail / Pending) with custom interview feedback notes.
 * **Offer Setup & Dispatch:** Set up custom compensation, joining dates, and formal offer letters dispatched directly to student dashboards.
 
-### 🤖 AI Matching & Real-Time Telemetry
-* **Cascading Multi-Provider Architecture:** Primary free-tier Groq LLMs with automatic failover to OpenRouter (:free), Mistral, and Google Gemini, backed by deterministic heuristic scoring and Mongo TTL caching.
-* **Live Terminal Token Telemetry:** Prominent terminal banners printed on every AI inference displaying exact prompt tokens, completion tokens, total tokens, provider, and model.
+### 🤖 Multi-Agent Placement & Observability
+* **Multi-Agent Placement Architecture:** Resilient, multi-tiered AI Agents orchestrating candidate screening, skill verification, and rubric evaluation, backed by deterministic heuristic scoring and Mongo TTL caching.
+* **Live Terminal Token Telemetry:** Prominent terminal banners printed on every Agent inference displaying exact prompt tokens, completion tokens, and total tokens consumed.
 * **API Metrics Profiler:** Built-in middleware logging method, endpoint path, HTTP status, and millisecond latency for all REST calls.
 
 ### 🔒 Security, Compliance & System Resilience
@@ -65,13 +65,13 @@ Traditional university hiring processes suffer from communication delays, lack o
 | **Networking & Pinning** | **Dio (`^5.4.1`)** | HTTP client with TLS Certificate Pinning (`CertPinningConfig`) |
 | **Local Secure Storage** | **`flutter_secure_storage`** | Encrypted JWT token and device ID storage |
 | **Backend Framework** | **Python 3.10+ / FastAPI** | Asynchronous REST API server (`app/main.py`) |
-| **AI Matching & LLMs** | **Groq / OpenRouter / Mistral / Gemini** | Free-tier cascading models with real-time token tracking |
+| **AI Placement Intelligence** | **Multi-Agent AI Engine** | Cascading intelligent agents with real-time token tracking |
 | **Data Validation** | **Pydantic v2** | Request/response schema validation (`app/models.py`) |
 | **Database Engine** | **MongoDB (Async Motor Driver)** | NoSQL document database (`app/database.py`) |
 | **File Storage** | **MongoDB GridFS** | Binary PDF resume & document bucket storage |
 | **Security & Auth** | **PyJWT / Passlib (Bcrypt)** | JWT bearer tokens & hashed password validation |
 | **Rate Limiting** | **SlowAPI** | Endpoint rate limiting (`get_remote_address`) |
-| **Document Processing** | **PyPDF2 / Google GenAI** | Multimodal OCR & document classification engine |
+| **Document Processing** | **PyPDF2 / Multimodal Vision Agents** | Document classification & multimodal OCR agent pipeline |
 | **Containerization** | **Docker & Docker Compose** | Multi-stage production container images |
 | **Orchestration** | **Kubernetes (K8s)** | Enterprise manifests with Kustomize, PVC, and Ingress |
 | **Testing** | **Pytest (170 tests passing)** | Complete backend unit, integration, and security test suite |
@@ -98,8 +98,8 @@ flowchart TD
         AES["AES-256 GCM Encryption Engine"]
         Limiter["SlowAPI Rate Limiter"]
         Observability["API Metrics & Token Telemetry"]
-        AI_Engine["Groq & Multi-Provider AI Matcher"]
-        Parser["Document Detection & Multimodal OCR"]
+        AI_Engine["Placement Intelligence Agents"]
+        Parser["Document Detection & Multimodal Vision Agents"]
         API --> Auth
         API --> AES
         API --> Limiter
@@ -131,7 +131,7 @@ TalentLOQ/
 │   │   ├── document_detection/    # Resume classification & multimodal OCR engine
 │   │   │   ├── classifier.py      # Structural document classification logic
 │   │   │   ├── extractor.py       # PDF text & key-value parsing engine
-│   │   │   ├── gemini_extractor.py# Multimodal Gemini OCR with token observability
+│   │   │   ├── gemini_extractor.py# Multimodal OCR agent with token observability
 │   │   │   └── schemas.py         # Document classification data models
 │   │   ├── routers/               # FastAPI route controllers
 │   │   │   ├── auth.py            # Authentication, OTP, profile, & notification endpoints
@@ -139,8 +139,8 @@ TalentLOQ/
 │   │   │   ├── drives_student.py  # Student drive browsing & application endpoints
 │   │   │   └── recruiter.py       # Candidate validation, applicant queries, & company endpoints
 │   │   ├── services/              # AI & business logic services
-│   │   │   ├── groq_matcher.py    # AI placement match engine with token telemetry
-│   │   │   └── llm_service.py     # Multi-provider free-tier LLM failover service
+│   │   │   ├── groq_matcher.py    # AI Placement Match Agent with token telemetry
+│   │   │   └── llm_service.py     # Multi-Agent inference & failover orchestration
 │   │   ├── config.py              # Application settings & environment configuration
 │   │   ├── database.py            # MongoDB Motor client & GridFS initialization
 │   │   ├── dependencies.py        # Authentication & Role-Based Access Control (RBAC)
@@ -185,9 +185,9 @@ TalentLOQ/
 
 ---
 
-## 6. AI Match Engine & Real-Time Token Telemetry
+## 6. Placement Intelligence Agents & Real-Time Token Telemetry
 
-TalentLOQ incorporates an **Enterprise Placement Director & AI Match Engine** ([`backend/app/services/groq_matcher.py`](file:///c:/Flutter/TalentLOQ/backend/app/services/groq_matcher.py)):
+TalentLOQ incorporates an **Enterprise Placement Intelligence Agent** ([`backend/app/services/groq_matcher.py`](file:///c:/Flutter/TalentLOQ/backend/app/services/groq_matcher.py)):
 
 ### 1. Multi-Dimensional Rubric Calibration
 Candidate suitability is evaluated across four role-adaptive rubric dimensions:
@@ -197,13 +197,12 @@ Candidate suitability is evaluated across four role-adaptive rubric dimensions:
 * **Learnability & Skill Gap (10–20%):** Determines adjacency of existing skills to missing job requirements.
 
 ### 2. Live Terminal Token Observability
-Every AI inference automatically captures and prints a formatted terminal banner:
+Every Agent inference automatically captures and prints a formatted terminal banner:
 
 ```text
-+==================== [AI API TOKEN USAGE] ====================+
-  API Endpoint:      https://api.groq.com/openai/v1/chat/completions
-  Provider:          GROQ_AI
-  Model:             openai/gpt-oss-20b
++=================== [AGENT TOKEN TELEMETRY] ===================+
+  Agent:             Placement Matching Agent
+  Task:              Candidate-Drive Rubric Analysis
   Prompt Tokens:     788
   Completion Tokens: 1,460
   Total Tokens Used: 2,248
@@ -270,11 +269,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 REFRESH_TOKEN_EXPIRE_DAYS=7
 ENCRYPTION_KEY=your_32_byte_base64_aes_encryption_key_here
 
-# AI & LLM API Keys (Free Tier Supported)
-GROQ_API_KEY=gsk_...
-OPENROUTER_API_KEY=sk-or-...
-MISTRAL_API_KEY=...
-GEMINI_API_KEY=AIzaSy...
+# AI Placement Agent Configuration
+AI_AGENT_ENABLED=true
 
 # CORS Configuration
 ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000,http://127.0.0.1:8000
@@ -386,4 +382,4 @@ kubectl get pods,svc,ingress -n talentloq
 * **Flutter Framework** for cross-platform UI development.
 * **FastAPI** for high-performance Python backend routing.
 * **MongoDB & Motor** for async NoSQL document and GridFS storage.
-* **Groq & Google Gemini** for ultra-fast AI inference and multimodal document OCR.
+* **Intelligent AI Agents** for automated candidate-role alignment and multimodal document parsing.
