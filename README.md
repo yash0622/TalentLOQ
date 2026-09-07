@@ -9,14 +9,18 @@
 **TalentLOQ** is an enterprise-grade, cross-platform placement tracking platform engineered to automate and digitize the end-to-end campus recruitment lifecycle. Built to replace error-prone manual spreadsheets, physical paperwork, and fragmented communication channels, TalentLOQ provides a unified digital experience connecting **Students**, **Corporate Recruiters**, and **University Placement Officers**.
 
 ### Problem Solved
-Traditional university hiring processes suffer from communication delays, lack of real-time application status visibility for students, high administrative sorting overhead for recruiters, and privacy risks when handling unencrypted academic records. TalentLOQ solves these challenges by offering automated CGPA eligibility screening, real-time application tracking across interview rounds, native PDF resume viewing, direct recruiter-applicant messaging, and bank-grade data security.
+Traditional university hiring processes suffer from communication delays, lack of real-time application status visibility for students, high administrative sorting overhead for recruiters, and privacy risks when handling unencrypted academic records. TalentLOQ solves these challenges by offering automated CGPA eligibility screening, an AI-powered Candidate-Job Match engine with real-time token telemetry, live application tracking across interview rounds, native PDF resume viewing, direct recruiter-applicant messaging, a dedicated Candidate Validation Dashboard, and bank-grade data security.
 
 ### Core Capabilities
 * **Automated Eligibility Engine:** Instant CGPA cutoff and backlog qualification gate before application submission.
-* **Multi-Round Selection Grading:** Real-time logging of Aptitude, Technical, and HR interview outcomes.
+* **AI Match & Candidate Intelligence:** Calibrated multi-factor fit scoring (Core Skills, Project Depth, Role Readiness, Learnability) with automated failover across Groq, OpenRouter, Mistral, and Google Gemini.
+* **Real-Time Token & Latency Observability:** Terminal token banners displaying prompt, completion, and total tokens per AI query alongside HTTP request latency metrics.
+* **Candidate Validation Dashboard:** Centralized recruiter screening interface to inspect applicant profiles, review AI match metrics, and validate credentials across drives.
+* **Scheduled Campus Interviews Hub:** Real-time scheduling, tracking, and outcome logging across Aptitude, Technical, and HR interview rounds.
 * **Direct Candidate Messaging:** Recruiter-to-student in-app chat and selection round advancement notices.
 * **Embedded Resume Vault:** Integrated native PDF viewer for uploaded student resumes.
 * **Enterprise Security Suite:** AES-256 GCM field-level encryption, short-lived JWT access tokens, OTP 2FA, TLS certificate pinning, and audit trails.
+* **Production-Grade Containerization:** Multi-stage Docker builds, Docker Compose orchestration, and scalable Kubernetes (`k8s/`) deployment manifests with Kustomize.
 
 ---
 
@@ -30,17 +34,24 @@ Traditional university hiring processes suffer from communication delays, lack o
 * **Direct Recruiter Chat:** Receive immediate selection round notices, interview notes, and messages directly from recruiters.
 
 ### 🏢 Recruiter & Placement Control Center
+* **Candidate Validation Dashboard:** Live applicant verification across all drives with multi-state filter chips (`All`, `Pending`, `Valid`, `Not Valid`), candidate CGPA & AI Match pills, 1-tap validation status toggles, and direct offer setup.
 * **Drive Publishing Engine:** Create, draft, and publish company placement listings specifying min CGPA cutoffs, CTC packages, job roles, and PDF attachments.
+* **AI Match Insights Modal:** Real-time screening cheat sheet with generated technical questions, semantic skill equivalence mapping, and project evidence mining.
+* **Scheduled Campus Interviews Hub:** Dedicated schedule manager organizing upcoming candidate sessions with interview type, date/time, and status tracking.
 * **Applicant Evaluation Dashboard:** Grade candidate progress across selection rounds (Pass / Fail / Pending) with custom interview feedback notes.
-* **Direct Candidate Dispatch:** Automatically send round advancement notifications and direct chat messages to selected applicants.
-* **Offer Management:** Record and confirm official placement offers upon candidates clearing final selection rounds.
+* **Offer Setup & Dispatch:** Set up custom compensation, joining dates, and formal offer letters dispatched directly to student dashboards.
 
-### 🔒 Security, Compliance & System Features
+### 🤖 AI Matching & Real-Time Telemetry
+* **Cascading Multi-Provider Architecture:** Primary free-tier Groq LLMs with automatic failover to OpenRouter (:free), Mistral, and Google Gemini, backed by deterministic heuristic scoring and Mongo TTL caching.
+* **Live Terminal Token Telemetry:** Prominent terminal banners printed on every AI inference displaying exact prompt tokens, completion tokens, total tokens, provider, and model.
+* **API Metrics Profiler:** Built-in middleware logging method, endpoint path, HTTP status, and millisecond latency for all REST calls.
+
+### 🔒 Security, Compliance & System Resilience
 * **AES-256 GCM Field Encryption:** Encrypts sensitive academic data (CGPA, backlogs, contact info) at rest in MongoDB.
 * **Multi-Factor Authentication (OTP 2FA):** Email-based OTP verification for sensitive login attempts and password resets.
 * **Device Fingerprinting:** Captures unique `X-Device-ID` headers to detect and block untrusted device logins.
 * **Rate Limiting & Threat Prevention:** `slowapi` rate-limiting middleware to guard authentication endpoints against brute-force attacks.
-* **Security Audit Logging:** Immutable audit logs tracking user operations, client IP addresses, and timestamps.
+* **Windows Hot-Reload Resilience:** Automated `WindowsProactorEventLoopPolicy` configuration and `_BaseSelectorEventLoop` teardown safeguards preventing asyncio `_ssock` crashes during developer hot-reload on Windows with Python 3.12.
 * **Theme-Aware Branding:** Automatic light and dark theme UI switching across native splash screens, launcher icons, and app headers.
 
 ---
@@ -50,17 +61,20 @@ Traditional university hiring processes suffer from communication delays, lack o
 | Category | Technology | Usage Details |
 | :--- | :--- | :--- |
 | **Frontend Framework** | **Flutter (Dart `^3.12.2`)** | Cross-platform mobile & web client app |
-| **UI Design System** | **Material 3 / Custom CSS** | Dynamic Light & Dark mode, curated AppColors design system |
+| **UI Design System** | **Material 3 / Custom Design System** | Dynamic Light & Dark mode, curated AppColors design system |
 | **Networking & Pinning** | **Dio (`^5.4.1`)** | HTTP client with TLS Certificate Pinning (`CertPinningConfig`) |
 | **Local Secure Storage** | **`flutter_secure_storage`** | Encrypted JWT token and device ID storage |
 | **Backend Framework** | **Python 3.10+ / FastAPI** | Asynchronous REST API server (`app/main.py`) |
+| **AI Matching & LLMs** | **Groq / OpenRouter / Mistral / Gemini** | Free-tier cascading models with real-time token tracking |
 | **Data Validation** | **Pydantic v2** | Request/response schema validation (`app/models.py`) |
 | **Database Engine** | **MongoDB (Async Motor Driver)** | NoSQL document database (`app/database.py`) |
 | **File Storage** | **MongoDB GridFS** | Binary PDF resume & document bucket storage |
 | **Security & Auth** | **PyJWT / Passlib (Bcrypt)** | JWT bearer tokens & hashed password validation |
 | **Rate Limiting** | **SlowAPI** | Endpoint rate limiting (`get_remote_address`) |
-| **Document Processing** | **PyPDF2 / Custom Extractor** | Text extraction & document classification engine |
-| **Testing** | **Pytest / Flutter Test** | Backend unit/integration tests & Dart widget tests |
+| **Document Processing** | **PyPDF2 / Google GenAI** | Multimodal OCR & document classification engine |
+| **Containerization** | **Docker & Docker Compose** | Multi-stage production container images |
+| **Orchestration** | **Kubernetes (K8s)** | Enterprise manifests with Kustomize, PVC, and Ingress |
+| **Testing** | **Pytest (170 tests passing)** | Complete backend unit, integration, and security test suite |
 
 ---
 
@@ -83,15 +97,19 @@ flowchart TD
         Auth["JWT & OTP Auth Engine"]
         AES["AES-256 GCM Encryption Engine"]
         Limiter["SlowAPI Rate Limiter"]
-        Parser["Document Detection Engine"]
+        Observability["API Metrics & Token Telemetry"]
+        AI_Engine["Groq & Multi-Provider AI Matcher"]
+        Parser["Document Detection & Multimodal OCR"]
         API --> Auth
         API --> AES
         API --> Limiter
+        API --> Observability
+        API --> AI_Engine
         API --> Parser
     end
 
     subgraph Database ["3. Data & Storage Layer (MongoDB)"]
-        Mongo[("MongoDB Collections\n(users, students, drives,\napplications, notifications)")]
+        Mongo[("MongoDB Collections\n(users, students, drives,\napplications, interviews, cache)")]
         GridFS[("GridFS Bucket\n(Resumes & PDFs)")]
     end
 
@@ -100,81 +118,115 @@ flowchart TD
     API -- "Async Stream Upload/Download" --> GridFS
 ```
 
-### Data & Communication Flow
-1. **Request Execution:** The Flutter client sends API requests wrapped with `Authorization: Bearer <token>` and `X-Device-ID` headers via the `Dio` network client.
-2. **Security & Validation:** FastAPI routes validate credentials against short-lived JWT tokens, enforce rate limits via `slowapi`, and process request data through Pydantic models.
-3. **Field Encryption:** Sensitive academic fields (CGPA, backlogs) are encrypted/decrypted transparently using AES-256 GCM (`app/encryption.py`) before writing to or reading from MongoDB.
-4. **Binary PDF Management:** Resumes uploaded by candidates are processed through document classifiers and stored directly in MongoDB GridFS buckets (`fs.files` and `fs.chunks`).
-
 ---
 
 ## 5. Project Structure
 
 ```text
-telentloq/
+TalentLOQ/
 ├── assets/
 │   └── logo/                      # Extracted branding assets (splash, launcher icon, headers)
 ├── backend/
 │   ├── app/
-│   │   ├── document_detection/    # Resume classification & text extraction engine
+│   │   ├── document_detection/    # Resume classification & multimodal OCR engine
 │   │   │   ├── classifier.py      # Structural document classification logic
 │   │   │   ├── extractor.py       # PDF text & key-value parsing engine
+│   │   │   ├── gemini_extractor.py# Multimodal Gemini OCR with token observability
 │   │   │   └── schemas.py         # Document classification data models
 │   │   ├── routers/               # FastAPI route controllers
 │   │   │   ├── auth.py            # Authentication, OTP, profile, & notification endpoints
 │   │   │   ├── drives_recruiter.py# Recruiter drive publishing & applicant grading endpoints
 │   │   │   ├── drives_student.py  # Student drive browsing & application endpoints
-│   │   │   └── recruiter.py       # Company management endpoints
+│   │   │   └── recruiter.py       # Candidate validation, applicant queries, & company endpoints
+│   │   ├── services/              # AI & business logic services
+│   │   │   ├── groq_matcher.py    # AI placement match engine with token telemetry
+│   │   │   └── llm_service.py     # Multi-provider free-tier LLM failover service
 │   │   ├── config.py              # Application settings & environment configuration
 │   │   ├── database.py            # MongoDB Motor client & GridFS initialization
 │   │   ├── dependencies.py        # Authentication & Role-Based Access Control (RBAC)
 │   │   ├── encryption.py          # AES-256 GCM field encryption implementation
 │   │   ├── jwt_utils.py           # Short-lived access & refresh token utilities
-│   │   ├── main.py                # FastAPI entry point & middleware configuration
-│   │   ├── models.py              # Pydantic data schemas
-   │   ├── notifications.py       # Notification & direct messaging dispatch engine
-   │   ├── security.py            # Password hashing & security utilities
-   │   └── upload_validator.py    # Document upload validation rules
-   ├── tests/                     # Automated Pytest suite
-   │   ├── test_auth.py           # Auth API unit tests
-   │   ├── test_drives.py         # Drive & application unit tests
-   │   └── test_notifications.py  # Notification dispatch tests
-   └── requirements.txt           # Python backend dependencies
+│   │   ├── main.py                # FastAPI entry point, Windows event loop safeguard, & middlewares
+│   │   ├── middleware.py          # SecurityHeadersMiddleware & ApiMetricsLoggingMiddleware
+│   │   ├── models.py              # Pydantic data schemas & response models
+│   │   ├── notifications.py       # Notification & direct messaging dispatch engine
+│   │   └── security.py            # Password hashing & security utilities
+│   ├── tests/                     # Automated Pytest suite (170 tests passing)
+│   ├── Dockerfile                 # Multi-stage production backend container image
+│   └── requirements.txt           # Python backend dependencies
+├── k8s/                           # Production Kubernetes orchestration manifests
+│   ├── kustomization.yaml         # Kustomize root manifest
+│   ├── namespace.yaml             # Dedicated talentloq namespace
+│   ├── configmap.yaml             # Environment configuration map
+│   ├── secret.yaml                # Encrypted secrets definition
+│   ├── mongodb.yaml               # MongoDB StatefulSet with PersistentVolumeClaim
+│   ├── backend.yaml               # FastAPI Backend Deployment & Service
+│   ├── frontend.yaml              # Flutter Web Nginx Deployment & Service
+│   └── ingress.yaml               # Ingress routing configuration
 ├── lib/
 │   ├── controllers/               # UI Paging & state controllers
-│   ├── mock_data/                 # Mock dataset fallback defaults
-│   ├── models/                    # Dart data models (Job, Candidate, ChatMessage, etc.)
+│   ├── models/                    # Dart data models (Job, Candidate, Application, etc.)
 │   ├── navigation/                # Main Navigation Wrapper & Role-Based Router
 │   ├── network/                   # Dio ApiClient & TLS Cert Pinning configuration
-│   ├── screens/                   # UI Screens (Auth, Recruiter, Student, Chat, Jobs)
-│   ├── services/                  # Business logic services (AuthService, DriveService, etc.)
+│   ├── screens/                   # UI Screens (Auth, Recruiter, Student, Dashboard, Validation)
+│   │   ├── recruiter/
+│   │   │   ├── company_portal_screen.dart    # Drives, Validation Dashboard, & Interviews tabs
+│   │   │   ├── candidate_detail_screen.dart  # Deep profile, skills, & AI match overview
+│   │   │   └── round_result_screen.dart      # Interview grading & round advancement
+│   │   └── ...
+│   ├── services/                  # Business logic services (RecruiterService, AuthService, etc.)
 │   ├── theme/                     # AppColors & AppTheme Material 3 styles
-│   ├── utils/                     # JWT decoder, validators, performance logger
-│   ├── widgets/                   # Reusable widgets (PDF Viewer, AppAvatar, BrandingHeader)
 │   └── main.dart                  # Flutter application entry point
-├── flutter_launcher_icons.yaml    # Launcher icon generator configuration
-├── flutter_native_splash.yaml     # Native splash screen generator configuration
+├── docker-compose.yml             # Local multi-container stack orchestration
+├── Dockerfile                     # Multi-stage Flutter Web production container image
 ├── pubspec.yaml                   # Flutter dependencies & asset declarations
 └── README.md                      # Project documentation
 ```
 
 ---
 
-## 6. Requirements
+## 6. AI Match Engine & Real-Time Token Telemetry
 
-### Software & Runtimes
-* **Flutter SDK:** `>= 3.12.2` (Dart SDK `>= 3.12.2`)
-* **Python:** `>= 3.10`
-* **Database:** MongoDB Server `>= 6.0` (Local instance or MongoDB Atlas cluster)
+TalentLOQ incorporates an **Enterprise Placement Director & AI Match Engine** ([`backend/app/services/groq_matcher.py`](file:///c:/Flutter/TalentLOQ/backend/app/services/groq_matcher.py)):
+
+### 1. Multi-Dimensional Rubric Calibration
+Candidate suitability is evaluated across four role-adaptive rubric dimensions:
+* **Core Technical Skills (30–50%):** Evaluates depth and alignment of primary technical competencies.
+* **Project Evidence & Depth (20–40%):** Scans portfolio for real-world complexity, production frameworks, and architecture.
+* **Role Readiness (10–25%):** Assesses graduation readiness, tools familiarity (Git, Docker, CI/CD), and industry best practices.
+* **Learnability & Skill Gap (10–20%):** Determines adjacency of existing skills to missing job requirements.
+
+### 2. Live Terminal Token Observability
+Every AI inference automatically captures and prints a formatted terminal banner:
+
+```text
++==================== [AI API TOKEN USAGE] ====================+
+  API Endpoint:      https://api.groq.com/openai/v1/chat/completions
+  Provider:          GROQ_AI
+  Model:             openai/gpt-oss-20b
+  Prompt Tokens:     788
+  Completion Tokens: 1,460
+  Total Tokens Used: 2,248
++==============================================================+
+```
+
+### 3. HTTP Request Latency Logging
+FastAPI's [`ApiMetricsLoggingMiddleware`](file:///c:/Flutter/TalentLOQ/backend/app/middleware.py) records latency and HTTP status in real time:
+
+```text
+⚡ [API CALL] GET    /health                             -> 200 (1.1ms)
+⚡ [API CALL] GET    /recruiter/validation/applicants    -> 200 (18.4ms)
+⚡ [API CALL] POST   /recruiter/ai-match                 -> 200 (1120.5ms)
+```
 
 ---
 
-## 7. Installation
+## 7. Installation & Setup
 
-### 1. Repository Setup
+### 1. Clone Repository
 ```bash
-git clone https://github.com/<YOUR_USERNAME>/talentloq.git
-cd talentloq
+git clone https://github.com/yash0622/TalentLOQ.git
+cd TalentLOQ
 ```
 
 ### 2. Backend Setup
@@ -182,7 +234,6 @@ cd talentloq
 cd backend
 python -m venv venv
 
-# Activate virtual environment
 # Windows (PowerShell):
 .\venv\Scripts\Activate.ps1
 # Linux/macOS:
@@ -193,16 +244,15 @@ pip install -r requirements.txt
 
 ### 3. Frontend Setup
 ```bash
-# Return to project root
 cd ..
 flutter pub get
 ```
 
 ---
 
-## 8. Environment Variables
+## 8. Environment Configuration
 
-Create a `.env` file inside the `backend/` directory based on the following template:
+Create a `.env` file inside `backend/` based on the following template:
 
 ```env
 # Application Mode & Host
@@ -210,7 +260,8 @@ APP_ENV=development
 PORT=8000
 
 # MongoDB Configuration
-MONGO_URI=mongodb://localhost:27017/talentloq_db
+MONGODB_URL=mongodb://localhost:27017
+DATABASE_NAME=talentloq_db
 
 # Security & Encryption Keys
 JWT_SECRET_KEY=your_secure_jwt_secret_key_here
@@ -219,276 +270,120 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 REFRESH_TOKEN_EXPIRE_DAYS=7
 ENCRYPTION_KEY=your_32_byte_base64_aes_encryption_key_here
 
+# AI & LLM API Keys (Free Tier Supported)
+GROQ_API_KEY=gsk_...
+OPENROUTER_API_KEY=sk-or-...
+MISTRAL_API_KEY=...
+GEMINI_API_KEY=AIzaSy...
+
 # CORS Configuration
-ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000
-
-# SMTP Email Configuration (Optional - for real email OTPs)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your_email@gmail.com
-SMTP_PASSWORD=your_app_specific_password
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000,http://127.0.0.1:8000
 ```
-
-> **Note:** Never commit real secret keys or `.env` files to version control. The repository includes `.env` in `.gitignore`.
 
 ---
 
-## 9. Running the Project
+## 9. Running the Application
 
 ### Start Backend API Server
 ```bash
 cd backend
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
-* **Interactive API Documentation (Swagger UI):** `http://localhost:8000/docs`
-* **Alternative API Documentation (ReDoc):** `http://localhost:8000/redoc`
+* **Interactive Swagger UI:** [http://localhost:8000/docs](http://localhost:8000/docs)
+* **Alternative ReDoc:** [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
-### Start Flutter Application
+### Start Flutter Client
 ```bash
-# Run on connected mobile device or Chrome emulator
 flutter run
 ```
 
 ---
 
-## 10. API Documentation
+## 10. API Endpoints Reference
 
-| Method | Endpoint | Description | Authentication |
+| Method | Endpoint | Description | Auth Required |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/auth/register` | Register a new student or recruiter account | None |
-| `POST` | `/auth/login` | Authenticate user and receive JWT access/refresh tokens | None |
-| `POST` | `/auth/otp/send` | Request email OTP for 2FA or verification | None |
-| `POST` | `/auth/otp/verify` | Verify OTP code | None |
-| `GET` | `/auth/notifications` | Fetch user notifications and direct selection messages | Bearer Token |
-| `POST` | `/auth/resume/upload` | Upload student PDF resume to GridFS | Bearer Token |
+| `POST` | `/auth/register` | Register student or recruiter account | None |
+| `POST` | `/auth/login` | Authenticate user and receive access/refresh tokens | None |
+| `POST` | `/auth/otp/send` | Request email OTP for 2FA verification | None |
+| `POST` | `/auth/otp/verify` | Verify email OTP code | None |
+| `GET` | `/auth/notifications` | Fetch user alerts and selection notices | Bearer Token |
+| `POST` | `/auth/resume/upload` | Upload candidate PDF resume to GridFS | Bearer Token |
 | `GET` | `/recruiter/drives` | List published placement drives | Optional Bearer |
 | `POST` | `/recruiter/drives` | Create a new company placement drive | Recruiter Bearer |
-| `POST` | `/recruiter/drives/{drive_id}/applicants/{student_id}/round` | Update candidate round outcome & dispatch direct message | Recruiter Bearer |
-
-### Sample API Request & Response (`/auth/login`)
-
-#### Request
-```json
-POST /auth/login
-Content-Type: application/json
-
-{
-  "email": "student@gsfcuniversity.ac.in",
-  "password": "SecurePassword123"
-}
-```
-
-#### Response
-```json
-{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "bearer",
-  "role": "student",
-  "user": {
-    "user_id": "usr_9f8b7a6c",
-    "email": "student@gsfcuniversity.ac.in",
-    "role": "student"
-  }
-}
-```
+| `GET` | `/recruiter/validation/applicants` | Fetch applicants across drives for validation | Recruiter Bearer |
+| `POST` | `/recruiter/applications/{id}/validate` | Update candidate validation status (`valid`/`not_valid`) | Recruiter Bearer |
+| `POST` | `/recruiter/ai-match` | Generate calibrated AI Match Report & cheat sheet | Recruiter Bearer |
+| `POST` | `/recruiter/drives/{drive_id}/applicants/{student_id}/round` | Grade candidate round and dispatch direct alert | Recruiter Bearer |
+| `GET` | `/recruiter/interviews` | List scheduled campus interviews | Recruiter Bearer |
 
 ---
 
-## 11. Authentication & Security
+## 11. Automated Testing Suite
 
-TalentLOQ implements multi-layered security controls across the client and server layers:
-
-1. **Short-Lived JWT Bearer Authentication:** Access tokens expire after 30 minutes; refresh tokens enable silent background renewal without forcing frequent user logins.
-2. **AES-256 GCM Field Encryption:** Sensitive student records (CGPA, backlogs, phone numbers) are encrypted prior to database insertion (`app/encryption.py`).
-3. **TLS Certificate Pinning:** The Flutter `Dio` network client validates server SSL/TLS certificates against trusted public key fingerprints (`CertPinningConfig`), mitigating Man-in-the-Middle (MITM) attacks.
-4. **Device Fingerprinting (`X-Device-ID`):** Tracks and binds registered user devices to prevent session hijacking from untrusted clients.
-5. **Rate Limiting:** `slowapi` rate limiters restrict authentication attempts to prevent brute-force attacks.
-6. **Immutable Audit Logging:** System operations, role changes, and round updates are recorded in `audit_logs_collection` with client IP address and timestamp headers.
-
----
-
-## 12. Document Classification Engine
-
-The backend features a dedicated document processing pipeline (`app/document_detection/`):
-
-* **Purpose:** Inspects uploaded files to verify whether an attachment is a valid student resume before storing it in GridFS.
-* **Extraction:** `extractor.py` parses raw text from PDF files using `PyPDF2`.
-* **Classification:** `classifier.py` analyzes structural keywords (Education, Work Experience, Skills, Projects, Contact Details) and computes a confidence score (`0.0` to `1.0`).
-* **Enforcement:** Uploads scoring below threshold are rejected with a descriptive `400 Bad Request` error message.
-
----
-
-## 13. Database Schema
-
-TalentLOQ uses **MongoDB** with Motor async IO client and **MongoDB GridFS**:
-
-### Primary Collections
-* **`users`:** Stores user credentials, bcrypt hashed passwords, roles (`student`/`recruiter`), and bound device IDs.
-* **`students`:** Stores student academic metadata, branch, encrypted CGPA fields, backlog counts, and resume GridFS references.
-* **`drives`:** Stores company placement drive listings, job titles, CTC packages, minimum CGPA prerequisites, and round schedules.
-* **`applications`:** Tracks student drive submissions, eligibility evaluation status, current selection round index, and historical outcome logs.
-* **`notifications` & `chat_messages`:** Stores in-app alerts and direct recruiter-applicant chat messages.
-* **`audit_logs`:** Enterprise compliance logs recording system actions, user IDs, IP addresses, and timestamps.
-* **`fs.files` & `fs.chunks`:** GridFS bucket collections storing binary PDF resume attachments.
-
----
-
-## 14. Screenshots & Media Assets
-
-> Screenshots demonstrating key user flows:
-
-* **Splash Screen & App Launcher Icon:** Extracted branding variations from [`TALENTLOQ Logo Variations Sheet.png`](file:///d:/Lab%20Practicals/Projects/telentloq/TALENTLOQ%20Logo%20Variations%20Sheet.png) rendered with native theme-aware splash support.
-* **System Architecture Diagram:** 3-Tier architecture flow chart available in [`assets/logo/`](file:///d:/Lab%20Practicals/Projects/telentloq/assets/logo/).
-
----
-
-## 15. Usage Workflow
-
-### Student User Journey
-1. **Register / Login:** Authenticate using GSFC University email and password/OTP.
-2. **Profile Setup:** Upload PDF resume (validated by Document Classification Engine) and confirm academic CGPA details.
-3. **Browse Drives:** View published company placement drives; non-eligible drives display clear CGPA cutoff warnings.
-4. **Apply with 1-Tap:** Submit drive application instantly.
-5. **Track & Chat:** Monitor selection round advancement in real-time and communicate with company recruiters via the **Messages** tab.
-
-### Recruiter User Journey
-1. **Login & Dashboard:** Log into Recruiter Portal.
-2. **Publish Drive:** Create new placement listing specifying minimum CGPA criteria, CTC package, and PDF details.
-3. **Screen & Grade Applicants:** Review automated candidate eligibility lists and record selection round outcomes (Aptitude, Tech, HR).
-4. **Dispatch Selection Message:** System automatically sends a direct selection message and push notification to advancing candidates.
-5. **Log Offer:** Formally record final placement offers upon candidates clearing all interview rounds.
-
----
-
-## 16. Testing
-
-### Backend Test Suite (Pytest)
-The backend includes automated test coverage across authentication, drive management, selection notifications, and document processing:
+TalentLOQ maintains a comprehensive automated testing suite with **170 passing tests**:
 
 ```bash
 cd backend
 python -m pytest tests/
 ```
 
-#### Test Modules Covered:
-* `tests/test_auth.py`: Authentication, registration, JWT validation, and `/auth/notifications` endpoint.
-* `tests/test_drives.py`: Drive creation, eligibility filtering, and applicant application workflow.
-* `tests/test_notifications.py`: Round selection message dispatch and MongoDB notification persistence.
-* `tests/test_document_detection.py`: PDF resume parsing and structural classification tests.
+```text
+============================= test session starts =============================
+collected 170 items
+
+tests\test_advanced_parsers.py .....                                     [  2%]
+tests\test_application_visibility.py .....                               [  5%]
+tests\test_auth.py .......                                               [ 10%]
+tests\test_auth_flow.py ........                                         [ 14%]
+tests\test_companies.py ..                                               [ 15%]
+tests\test_document_detection.py ..............                          [ 24%]
+tests\test_document_verification.py ...............                      [ 32%]
+tests\test_drives.py .                                                   [ 33%]
+tests\test_eligibility.py ....                                           [ 35%]
+tests\test_email_draft.py ..                                             [ 37%]
+tests\test_groq_matcher.py .....                                         [ 40%]
+tests\test_marks_table_extractor.py .....                                [ 42%]
+tests\test_notifications.py ...                                          [ 44%]
+tests\test_parser_robustness.py ........................................ [ 68%]
+tests\test_part3_security.py .......                                     [ 80%]
+tests\test_part5_security_checklist.py ......                            [ 84%]
+tests\test_part6_security_hardening.py .....                             [ 87%]
+tests\test_recruiter.py ....                                             [ 89%]
+tests\test_resume_internship_extraction.py .                             [ 90%]
+tests\test_security_audit_fixes.py ..........                            [ 95%]
+tests\test_skill_matching.py ....                                        [ 98%]
+tests\test_talent_comparator.py ...                                      [100%]
+
+====================== 170 passed, 3 warnings in 15.98s =======================
+```
 
 ---
 
-## 17. Troubleshooting
+## 12. Deployment & Containerization
 
-| Symptom | Probable Cause | Solution |
-| :--- | :--- | :--- |
-| `pymongo.errors.ServerSelectionTimeoutError` | MongoDB service is not running locally | Ensure MongoDB service is running (`mongod`) or update `MONGO_URI` in `.env` |
-| `HTTP 401 Unauthorized` | Expired JWT token or missing Bearer header | Re-authenticate via `/auth/login` to obtain a fresh access token |
-| `HTTP 400 Bad Request (Invalid Document)` | File uploaded is not a valid resume | Ensure uploaded PDF contains recognizable resume sections (Education, Skills, Experience) |
-| `TLS Handshake Failure in Dev` | Self-signed SSL certificate mismatch | Update `CertPinningConfig` in `lib/network/cert_pinning_config.dart` for local debugging |
-
----
-
-## 18. Deployment
-
-### Backend Deployment (Production)
-* **ASGI Server:** Run Uvicorn behind a Gunicorn process manager:
-  ```bash
-  gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
-  ```
-* **Reverse Proxy:** Configure Nginx as an SSL-terminating reverse proxy forwarding requests to port 8000.
-
-### Frontend Deployment
-* **Android Release Build:**
-  ```bash
-  flutter build apk --release
-  ```
-* **Web Release Build:**
-  ```bash
-  flutter build web --release
-  ```
-
-### 🐳 Docker & Docker Compose Deployment
-
-TalentLOQ is fully containerized across all tiers (MongoDB 6.0, FastAPI Backend, and Flutter Web Nginx Frontend):
-
-1. **Start the Entire Stack:**
-   ```bash
-   docker-compose up -d --build
-   ```
-2. **Access Endpoints:**
-   * **Web App Frontend:** [http://localhost](http://localhost)
-   * **FastAPI Backend API:** [http://localhost:8000](http://localhost:8000)
-   * **Interactive API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
-   * **MongoDB Engine:** `localhost:27017`
-3. **Check Container Status:**
-   ```bash
-   docker-compose ps
-   ```
+### 🐳 Docker Compose Deployment
+```bash
+docker-compose up -d --build
+```
+* **Web App Frontend:** [http://localhost](http://localhost)
+* **FastAPI Backend:** [http://localhost:8000](http://localhost:8000)
+* **MongoDB Database:** `localhost:27017`
 
 ### ☸️ Kubernetes (K8s) Cluster Deployment
-
-TalentLOQ includes enterprise-grade Kubernetes manifests located in `k8s/` with automated persistent volume claims, health probes, ingress routing, and multi-replica scalability.
-
-1. **Deploy with Kustomize (One Command):**
-   ```bash
-   kubectl apply -k k8s/
-   ```
-   *Or apply individual manifests sequentially:*
-   ```bash
-   kubectl apply -f k8s/namespace.yaml
-   kubectl apply -f k8s/configmap.yaml
-   kubectl apply -f k8s/secret.yaml
-   kubectl apply -f k8s/mongodb.yaml
-   kubectl apply -f k8s/backend.yaml
-   kubectl apply -f k8s/frontend.yaml
-   kubectl apply -f k8s/ingress.yaml
-   ```
-
-2. **Verify Cluster Health:**
-   ```bash
-   kubectl get pods -n talentloq
-   kubectl get svc -n talentloq
-   kubectl get ingress -n talentloq
-   ```
+```bash
+kubectl apply -k k8s/
+```
+Verify cluster health:
+```bash
+kubectl get pods,svc,ingress -n talentloq
+```
 
 ---
 
-## 19. Known Limitations
-
-* **Offline Mode Scope:** Offline fallback mode utilizes cached mock data when backend connectivity is unavailable; real-time database sync requires active internet access.
-* **Resume Parsing Scope:** Document text extraction is currently optimized for standard text-based PDF formats; scanned image-only PDFs require OCR preprocessing.
-
----
-
-## 20. Future Improvements
-
-* **WebSockets Integration:** Transition direct candidate messaging to full-duplex WebSockets for sub-millisecond instant chat.
-* **AI Match Scoring:** Implement vector embeddings to compute candidate-to-job match percentage based on resume skills.
-* **Firebase Cloud Messaging (FCM):** Expand push notification delivery to native FCM background push channels.
-
----
-
-## 21. Contributing
-
-1. Fork the repository.
-2. Create a descriptive feature branch (`git checkout -b feature/amazing-feature`).
-3. Commit changes (`git commit -m 'Add amazing feature'`).
-4. Push to branch (`git push origin feature/amazing-feature`).
-5. Open a Pull Request.
-
----
-
-## 22. License
-
-No license has currently been specified for this project.
-
----
-
-## 23. Acknowledgements
+## 13. License & Acknowledgements
 
 * **Flutter Framework** for cross-platform UI development.
 * **FastAPI** for high-performance Python backend routing.
 * **MongoDB & Motor** for async NoSQL document and GridFS storage.
-* **Material 3 Design System** for UI aesthetics.
+* **Groq & Google Gemini** for ultra-fast AI inference and multimodal document OCR.
