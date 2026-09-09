@@ -36,10 +36,13 @@ migrate_working_dir/
 # Symbolication related
 app.*.symbols
 
-# Environment files
+# Environment and Secret files
 .env
 *.env
 backend/.env
+k8s/secret.yaml
+*secret.yaml
+!k8s/secret.example.yaml
 
 # Python related
 __pycache__/
@@ -58,6 +61,8 @@ ngrok.exe
 # Scratch & Temporary
 scratch/
 backend/scratch/
+graphify-out/
+.graphify_cache/
 datasets/
 backend/datasets/
 

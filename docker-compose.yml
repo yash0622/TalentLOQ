@@ -32,9 +32,9 @@ services:
       - PORT=8000
       - MONGODB_URL=mongodb://mongodb:27017
       - DATABASE_NAME=talentloq_db
-      - JWT_SECRET=talentloq_jwt_secret_key_production_32bytes
-      - JWT_ALGORITHM=HS256
-      - ENCRYPTION_KEY=dGFsZW50bG9xX2Flc19lbmNyeXB0aW9uX2tleV8zMg==
+      - JWT_SECRET=${JWT_SECRET:-}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
       - ALLOWED_ORIGINS=http://localhost,http://localhost:80,http://localhost:8000,http://127.0.0.1
       - GROQ_API_KEY=${GROQ_API_KEY:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
