@@ -32,6 +32,8 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
   Map<String, dynamic>? _detail;
   bool _hasApplied = false;
   bool _isApplying = false;
+  Map<String, dynamic>? _atsAnalysis;
+  bool _isLoadingAts = false;
 
   @override
   void initState() {
@@ -42,6 +44,18 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     }
     _fetchDetail();
     _checkMyStatus();
+    _fetchAtsCheck();
+  }
+
+  Future<void> _fetchAtsCheck() async {
+    setState(() => _isLoadingAts = true);
+    final res = await _driveService.getDriveAtsCheck(widget.listingId);
+    if (mounted) {
+      setState(() {
+        _atsAnalysis = res;
+        _isLoadingAts = false;
+      });
+    }
   }
 
   Future<void> _fetchDetail() async {
@@ -49,7 +63,9 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     if (mounted && res != null) {
       setState(() {
         _detail = res;
-        _hasApplied = res['has_applied'] == true || ApplicationVisibilityState.instance.isApplied(widget.listingId);
+        _hasApplied =
+            res['has_applied'] == true ||
+            ApplicationVisibilityState.instance.isApplied(widget.listingId);
         _isLoading = false;
       });
     } else {
@@ -128,7 +144,9 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.warning),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.warning,
+              ),
               onPressed: () => Navigator.pop(ctx, true),
               child: const Text('Apply Anyway'),
             ),
@@ -162,17 +180,26 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
       );
     } else if (res['no_resume'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res['message'] ?? 'Please upload a resume first.'), backgroundColor: AppColors.error),
+        SnackBar(
+          content: Text(res['message'] ?? 'Please upload a resume first.'),
+          backgroundColor: AppColors.error,
+        ),
       );
       widget.onNavigateToProfile?.call();
     } else if (res['conflict'] == true) {
       setState(() => _hasApplied = true);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You have already applied to this listing.'), backgroundColor: AppColors.lightPrimary),
+        const SnackBar(
+          content: Text('You have already applied to this listing.'),
+          backgroundColor: AppColors.lightPrimary,
+        ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res['message'] ?? 'Could not submit application.'), backgroundColor: AppColors.error),
+        SnackBar(
+          content: Text(res['message'] ?? 'Could not submit application.'),
+          backgroundColor: AppColors.error,
+        ),
       );
     }
   }
@@ -201,8 +228,11 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     final item = _detail ?? widget.initialData;
 
     final companyName = item?['company_name'] ?? 'Company';
-    final jobTitle = item?['interview_job'] ?? item?['drive_title'] ?? 'Company Placement Listing';
-    
+    final jobTitle =
+        item?['interview_job'] ??
+        item?['drive_title'] ??
+        'Company Placement Listing';
+
     final rawMin = item?['ctc_min'] ?? 6.0;
     final rawMax = item?['ctc_max'] ?? 12.0;
     final minFmt = _formatCtcValue(rawMin);
@@ -216,22 +246,31 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     }
 
     final isEligible = item?['is_eligible'] ?? true;
-    final pdfUrl = item?['attachment_pdf_url'] ?? item?['pdf_url'] ?? item?['attachment_url'];
+    final pdfUrl =
+        item?['attachment_pdf_url'] ??
+        item?['pdf_url'] ??
+        item?['attachment_url'];
     final description = item?['description'] ?? 'No description provided.';
-    final reqSkills = (item?['required_skills'] as List?) ?? ['Communication', 'Problem Solving'];
-    final selectionRounds = (item?['selection_process'] as List?) ?? [
-      {'round_number': 1, 'round_name': 'Aptitude Test'},
-      {'round_number': 2, 'round_name': 'Technical Round'},
-      {'round_number': 3, 'round_name': 'HR Round'},
-    ];
+    final reqSkills =
+        (item?['required_skills'] as List?) ??
+        ['Communication', 'Problem Solving'];
+    final selectionRounds =
+        (item?['selection_process'] as List?) ??
+        [
+          {'round_number': 1, 'round_name': 'Aptitude Test'},
+          {'round_number': 2, 'round_name': 'Technical Round'},
+          {'round_number': 3, 'round_name': 'HR Round'},
+        ];
     final bondDetails = item?['bond_time'] ?? item?['bond_details'] ?? '1 Year';
-    final scheduleDatetime = item?['interview_datetime'] ?? item?['schedule_datetime'] ?? 'To Be Scheduled';
-    final venue = item?['interview_venue'] ?? item?['location'] ?? 'Campus Auditorium';
+    final scheduleDatetime =
+        item?['interview_datetime'] ??
+        item?['schedule_datetime'] ??
+        'To Be Scheduled';
+    final venue =
+        item?['interview_venue'] ?? item?['location'] ?? 'Campus Auditorium';
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(companyName),
-      ),
+      appBar: AppBar(title: Text(companyName)),
       body: (_isLoading && _detail == null && widget.initialData == null)
           ? const DriveDetailSkeleton()
           : Column(
@@ -260,27 +299,36 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                                         color: AppColors.primaryLightBg,
                                         borderRadius: BorderRadius.circular(12),
                                       ),
-                                      child: const Icon(Icons.business_rounded, color: AppColors.lightPrimary, size: 28),
+                                      child: const Icon(
+                                        Icons.business_rounded,
+                                        color: AppColors.lightPrimary,
+                                        size: 28,
+                                      ),
                                     ),
                                     const SizedBox(width: 14),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             companyName,
-                                            style: theme.textTheme.titleMedium?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 18,
-                                            ),
+                                            style: theme.textTheme.titleMedium
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 18,
+                                                ),
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
                                             jobTitle,
-                                            style: theme.textTheme.bodyMedium?.copyWith(
-                                              color: isDark ? AppColors.darkPrimary : AppColors.lightPrimary,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                            style: theme.textTheme.bodyMedium
+                                                ?.copyWith(
+                                                  color: isDark
+                                                      ? AppColors.darkPrimary
+                                                      : AppColors.lightPrimary,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                           ),
                                         ],
                                       ),
@@ -292,26 +340,41 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                                 const SizedBox(height: 12),
 
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     Expanded(
                                       child: Text(
                                         ctcDisplay,
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(width: 8),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
                                       decoration: BoxDecoration(
-                                        color: isEligible ? AppColors.successLightBg : AppColors.warning.withValues(alpha: 0.15),
+                                        color: isEligible
+                                            ? AppColors.successLightBg
+                                            : AppColors.warning.withValues(
+                                                alpha: 0.15,
+                                              ),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Text(
-                                        isEligible ? '✔ Eligible' : '⚠ Not Eligible',
+                                        isEligible
+                                            ? '✔ Eligible'
+                                            : '⚠ Not Eligible',
                                         style: TextStyle(
-                                          color: isEligible ? AppColors.success : AppColors.warning,
+                                          color: isEligible
+                                              ? AppColors.success
+                                              : AppColors.warning,
                                           fontWeight: FontWeight.bold,
                                           fontSize: 11,
                                         ),
@@ -325,9 +388,13 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                         ),
                         const SizedBox(height: 16),
 
-
                         // Auto-Eligibility Criteria Section
-                        Text('Auto-Eligibility Criteria & Policy Requirements', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                        Text(
+                          'Auto-Eligibility Criteria & Policy Requirements',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         Card(
                           child: Padding(
@@ -337,19 +404,36 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                               children: [
                                 Row(
                                   children: [
-                                    const Icon(Icons.grade_rounded, size: 18, color: AppColors.lightPrimary),
+                                    const Icon(
+                                      Icons.grade_rounded,
+                                      size: 18,
+                                      color: AppColors.lightPrimary,
+                                    ),
                                     const SizedBox(width: 8),
-                                    const Text('Minimum CGPA Cutoff:', style: TextStyle(fontSize: 12, color: AppColors.lightTextSecondary)),
+                                    const Text(
+                                      'Minimum CGPA Cutoff:',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.lightTextSecondary,
+                                      ),
+                                    ),
                                     const Spacer(),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 3,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: AppColors.primaryLightBg,
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
                                         '${item?['cgpa_criteria'] ?? item?['min_cgpa'] ?? 6.0}',
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.lightPrimary),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                          color: AppColors.lightPrimary,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -358,28 +442,64 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                                 const Divider(height: 1),
                                 const SizedBox(height: 10),
 
-                                const Text('Eligible Academic Programs:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                const Text(
+                                  'Eligible Academic Programs:',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                                 const SizedBox(height: 6),
                                 Wrap(
                                   spacing: 6,
                                   runSpacing: 4,
-                                  children: ((item?['eligible_courses'] as List?) ?? ['BTECH_CSE', 'BCA']).map((course) {
-                                    return Chip(
-                                      label: Text(course.toString(), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-                                      backgroundColor: AppColors.primaryLightBg,
-                                      visualDensity: VisualDensity.compact,
-                                    );
-                                  }).toList(),
+                                  children:
+                                      ((item?['eligible_courses'] as List?) ??
+                                              ['BTECH_CSE', 'BCA'])
+                                          .map((course) {
+                                            return Chip(
+                                              label: Text(
+                                                course.toString(),
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              backgroundColor:
+                                                  AppColors.primaryLightBg,
+                                              visualDensity:
+                                                  VisualDensity.compact,
+                                            );
+                                          })
+                                          .toList(),
                                 ),
                                 const SizedBox(height: 10),
                                 const Divider(height: 1),
                                 const SizedBox(height: 10),
 
-                                const Text('Policy Requirements Check:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                const Text(
+                                  'Policy Requirements Check:',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                                 const SizedBox(height: 6),
-                                _buildPolicyRow('Placement Cell Access', (item?['placement_policy_flags']?['requires_placement_access'] ?? true)),
-                                _buildPolicyRow('Academic Placement Eligibility', (item?['placement_policy_flags']?['requires_placement_eligible'] ?? true)),
-                                _buildPolicyRow('Full-Time Job Interest Opt-in', (item?['placement_policy_flags']?['requires_job_interest'] ?? true)),
+                                _buildPolicyRow(
+                                  'Placement Cell Access',
+                                  (item?['placement_policy_flags']?['requires_placement_access'] ??
+                                      true),
+                                ),
+                                _buildPolicyRow(
+                                  'Academic Placement Eligibility',
+                                  (item?['placement_policy_flags']?['requires_placement_eligible'] ??
+                                      true),
+                                ),
+                                _buildPolicyRow(
+                                  'Full-Time Job Interest Opt-in',
+                                  (item?['placement_policy_flags']?['requires_job_interest'] ??
+                                      true),
+                                ),
                               ],
                             ),
                           ),
@@ -388,26 +508,48 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
 
                         // Selection Process Rounds Stepper
                         if (selectionRounds.isNotEmpty) ...[
-                          Text('Selection Process Rounds', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                          Text(
+                            'Selection Process Rounds',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           Card(
                             child: Padding(
                               padding: const EdgeInsets.all(14),
                               child: Column(
                                 children: [
-                                  for (int i = 0; i < selectionRounds.length; i++) ...[
+                                  for (
+                                    int i = 0;
+                                    i < selectionRounds.length;
+                                    i++
+                                  ) ...[
                                     Row(
                                       children: [
                                         CircleAvatar(
                                           radius: 13,
-                                          backgroundColor: AppColors.lightPrimary,
-                                          child: Text('${i + 1}', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                                          backgroundColor:
+                                              AppColors.lightPrimary,
+                                          child: Text(
+                                            '${i + 1}',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
                                         ),
                                         const SizedBox(width: 10),
                                         Expanded(
                                           child: Text(
-                                            (selectionRounds[i] as Map)['round_name'] ?? 'Round ${i + 1}',
-                                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                            (selectionRounds[i]
+                                                    as Map)['round_name'] ??
+                                                'Round ${i + 1}',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 13,
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -416,10 +558,17 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                                       const Align(
                                         alignment: Alignment.centerLeft,
                                         child: Padding(
-                                          padding: EdgeInsets.only(left: 12, top: 4, bottom: 4),
+                                          padding: EdgeInsets.only(
+                                            left: 12,
+                                            top: 4,
+                                            bottom: 4,
+                                          ),
                                           child: SizedBox(
                                             height: 14,
-                                            child: VerticalDivider(thickness: 2, color: AppColors.lightPrimary),
+                                            child: VerticalDivider(
+                                              thickness: 2,
+                                              color: AppColors.lightPrimary,
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -432,18 +581,35 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                         ],
 
                         // Listing Schedule & Requirements
-                        Text('Interview Schedule & Venue', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                        Text(
+                          'Interview Schedule & Venue',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         Card(
                           child: Padding(
                             padding: const EdgeInsets.all(14),
                             child: Column(
                               children: [
-                                _buildDetailRow(Icons.calendar_month_rounded, 'Date & Time', scheduleDatetime),
+                                _buildDetailRow(
+                                  Icons.calendar_month_rounded,
+                                  'Date & Time',
+                                  scheduleDatetime,
+                                ),
                                 const Divider(height: 16),
-                                _buildDetailRow(Icons.location_on_rounded, 'Venue / Platform', venue),
+                                _buildDetailRow(
+                                  Icons.location_on_rounded,
+                                  'Venue / Platform',
+                                  venue,
+                                ),
                                 const Divider(height: 16),
-                                _buildDetailRow(Icons.verified_rounded, 'Service Bond', bondDetails),
+                                _buildDetailRow(
+                                  Icons.verified_rounded,
+                                  'Service Bond',
+                                  bondDetails,
+                                ),
                               ],
                             ),
                           ),
@@ -452,14 +618,22 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
 
                         // Required Skills Chips
                         if (reqSkills.isNotEmpty) ...[
-                          Text('Required Skills', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                          Text(
+                            'Required Skills',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           const SizedBox(height: 6),
                           Wrap(
                             spacing: 6,
                             runSpacing: 4,
                             children: reqSkills.map((sk) {
                               return Chip(
-                                label: Text(sk.toString(), style: const TextStyle(fontSize: 11)),
+                                label: Text(
+                                  sk.toString(),
+                                  style: const TextStyle(fontSize: 11),
+                                ),
                                 backgroundColor: AppColors.primaryLightBg,
                                 visualDensity: VisualDensity.compact,
                               );
@@ -468,21 +642,36 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                           const SizedBox(height: 16),
                         ],
 
+                        // Resume ATS Doctor & Keyword Gap Analyzer
+                        _buildAtsDoctorCard(theme, isDark),
+                        const SizedBox(height: 16),
+
                         // PDF Attachment Section
                         if (pdfUrl != null && pdfUrl.toString().isNotEmpty) ...[
-                          Text('Job Brochure PDF Attachment', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                          Text(
+                            'Job Brochure PDF Attachment',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           DeferredPdfViewerCard(
                             pdfUrl: pdfUrl.toString(),
                             title: 'Job Overview & Brochure (PDF)',
-                            subtitle: 'Tap to view official job description document',
+                            subtitle:
+                                'Tap to view official job description document',
                             icon: Icons.picture_as_pdf_rounded,
                           ),
                           const SizedBox(height: 16),
                         ],
 
                         // Job Description
-                        Text('Job Description', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                        Text(
+                          'Job Description',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         SizedBox(
                           width: double.infinity,
@@ -491,7 +680,9 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                               padding: const EdgeInsets.all(16),
                               child: Text(
                                 description.toString(),
-                                style: theme.textTheme.bodyMedium?.copyWith(height: 1.5),
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  height: 1.5,
+                                ),
                               ),
                             ),
                           ),
@@ -505,17 +696,23 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                    color: isDark
+                        ? AppColors.darkSurface
+                        : AppColors.lightSurface,
                     border: Border(
                       top: BorderSide(
-                        color: isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant,
+                        color: isDark
+                            ? AppColors.darkOutlineVariant
+                            : AppColors.lightOutlineVariant,
                       ),
                     ),
                   ),
                   child: SafeArea(
                     top: false,
                     child: ElevatedButton(
-                      onPressed: (_hasApplied || _isApplying) ? null : _handleApply,
+                      onPressed: (_hasApplied || _isApplying)
+                          ? null
+                          : _handleApply,
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size.fromHeight(48),
                         backgroundColor: _hasApplied ? AppColors.success : null,
@@ -524,11 +721,17 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                           ? const SizedBox(
                               height: 20,
                               width: 20,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
                             )
                           : Text(
                               _hasApplied ? '✔ Applied' : 'Apply Now',
-                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                     ),
                   ),
@@ -548,7 +751,11 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
           const SizedBox(width: 10),
           Text(
             label,
-            style: const TextStyle(fontSize: 12, color: AppColors.lightTextSecondary, fontWeight: FontWeight.w500),
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.lightTextSecondary,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -569,16 +776,22 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
       child: Row(
         children: [
           Icon(
-            isRequired ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+            isRequired
+                ? Icons.check_circle_rounded
+                : Icons.info_outline_rounded,
             size: 14,
-            color: isRequired ? AppColors.success : AppColors.lightTextSecondary,
+            color: isRequired
+                ? AppColors.success
+                : AppColors.lightTextSecondary,
           ),
           const SizedBox(width: 6),
           Text(
             label,
             style: TextStyle(
               fontSize: 11,
-              color: isRequired ? AppColors.success : AppColors.lightTextSecondary,
+              color: isRequired
+                  ? AppColors.success
+                  : AppColors.lightTextSecondary,
               fontWeight: isRequired ? FontWeight.bold : FontWeight.normal,
             ),
           ),
@@ -587,8 +800,287 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
             isRequired ? 'Required' : 'Optional',
             style: TextStyle(
               fontSize: 10,
-              color: isRequired ? AppColors.success : AppColors.lightTextSecondary,
+              color: isRequired
+                  ? AppColors.success
+                  : AppColors.lightTextSecondary,
               fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAtsDoctorCard(ThemeData theme, bool isDark) {
+    if (_isLoadingAts) {
+      return Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: const Padding(
+          padding: EdgeInsets.all(16),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: 14),
+              Text(
+                'Screening resume with ATS Doctor...',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_atsAnalysis == null) {
+      return const SizedBox.shrink();
+    }
+
+    final score = (_atsAnalysis!['ats_score'] as num?)?.toInt() ?? 0;
+    final fitTier = _atsAnalysis!['fit_tier']?.toString() ?? 'MODERATE MATCH';
+    final matchedSkills =
+        (_atsAnalysis!['matched_skills'] as List?)?.cast<String>() ?? [];
+    final missingSkills =
+        (_atsAnalysis!['missing_skills'] as List?)?.cast<String>() ?? [];
+    final bulletVerbs =
+        (_atsAnalysis!['bullet_action_verbs'] as List?)?.cast<String>() ?? [];
+    final hasMetrics = _atsAnalysis!['has_quantifiable_metrics'] == true;
+    final metricCount = (_atsAnalysis!['metric_count'] as num?)?.toInt() ?? 0;
+    final formatHealth =
+        _atsAnalysis!['format_health'] as Map<String, dynamic>?;
+    final formatScore = (formatHealth?['format_score'] as num?)?.toInt() ?? 0;
+    final suggestions =
+        (_atsAnalysis!['suggestions'] as List?)?.cast<String>() ?? [];
+
+    Color tierColor;
+    if (score >= 80) {
+      tierColor = AppColors.success;
+    } else if (score >= 60) {
+      tierColor = isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
+    } else if (score >= 40) {
+      tierColor = AppColors.warning;
+    } else {
+      tierColor = AppColors.error;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(
+              Icons.health_and_safety_rounded,
+              color: AppColors.lightPrimary,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Resume ATS Doctor & Fit',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: tierColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '$score% · $fitTier',
+                style: TextStyle(
+                  color: tierColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Card(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Progress Bar
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: (score / 100.0).clamp(0.0, 1.0),
+                    minHeight: 8,
+                    backgroundColor: isDark
+                        ? AppColors.darkOutlineVariant
+                        : AppColors.lightOutlineVariant,
+                    valueColor: AlwaysStoppedAnimation<Color>(tierColor),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Health Badges Row
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    _buildAtsHealthBadge(
+                      label: 'Format: $formatScore/100',
+                      isGood: formatScore >= 80,
+                    ),
+                    _buildAtsHealthBadge(
+                      label: hasMetrics
+                          ? 'Metrics ($metricCount)'
+                          : 'No Metrics',
+                      isGood: hasMetrics,
+                    ),
+                    _buildAtsHealthBadge(
+                      label: bulletVerbs.isNotEmpty
+                          ? 'Action Verbs (${bulletVerbs.length})'
+                          : 'Few Verbs',
+                      isGood: bulletVerbs.isNotEmpty,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+
+                // Matched Skills
+                if (matchedSkills.isNotEmpty) ...[
+                  const Text(
+                    'Matched Keywords:',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: matchedSkills.map((s) {
+                      return Chip(
+                        avatar: const Icon(
+                          Icons.check,
+                          size: 14,
+                          color: AppColors.success,
+                        ),
+                        label: Text(
+                          s,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.success,
+                          ),
+                        ),
+                        backgroundColor: AppColors.successLightBg,
+                        visualDensity: VisualDensity.compact,
+                        side: BorderSide.none,
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+
+                // Missing Skills Gap
+                if (missingSkills.isNotEmpty) ...[
+                  const Text(
+                    'Missing Job Keywords (Add to Resume):',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: missingSkills.map((s) {
+                      return Chip(
+                        avatar: const Icon(
+                          Icons.add_circle_outline,
+                          size: 14,
+                          color: AppColors.warning,
+                        ),
+                        label: Text(
+                          s,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.warning,
+                          ),
+                        ),
+                        backgroundColor: AppColors.warning.withValues(
+                          alpha: 0.12,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                        side: BorderSide.none,
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+
+                // Suggestions / Recommendations
+                if (suggestions.isNotEmpty) ...[
+                  const Text(
+                    'Actionable Recommendations:',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  for (final sug in suggestions)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            '• ',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              sug,
+                              style: const TextStyle(fontSize: 12, height: 1.3),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAtsHealthBadge({required String label, required bool isGood}) {
+    final color = isGood ? AppColors.success : AppColors.warning;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isGood ? Icons.check_circle_outline : Icons.info_outline,
+            size: 13,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
             ),
           ),
         ],

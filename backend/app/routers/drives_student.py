@@ -20,6 +20,7 @@ from app.dependencies import get_optional_current_user, require_role
 from app.eligibility import compute_eligibility
 from app.models import AuditLogModel, PaginatedResponse, DriveLeanResponse, RecommendedDriveItem
 from app.services.skill_matcher import skill_matcher_engine
+from app.services.resume_ats_doctor import ResumeAtsDoctor
 from app.routers.auth import limiter
 
 logger = logging.getLogger("talentloq.drives_student")
@@ -421,6 +422,39 @@ async def get_placement_drive_detail(
             drive["has_applied"] = True
             drive["my_application_status"] = my_application.get("status", "applied")
     return drive
+
+@router.get("/{drive_id}/ats-check", status_code=status.HTTP_200_OK)
+async def get_drive_ats_check(
+    drive_id: str,
+    token_payload: dict = Depends(require_role("student")),
+):
+    """
+    GET /drives/{drive_id}/ats-check — deterministic ATS score and keyword gap analysis.
+    100% local, sub-millisecond execution, zero external API cost.
+    """
+    sid = str(token_payload.get("sub", ""))
+    student = (
+        await students_collection.find_one({"student_id": sid})
+        or await students_collection.find_one({"user_id": sid})
+    )
+    if not student:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student profile not found.")
+
+    drive = (
+        await drives_collection.find_one({"drive_id": drive_id})
+        or await drives_collection.find_one({"listing_id": drive_id})
+        or await company_listings_collection.find_one({"listing_id": drive_id})
+        or await company_listings_collection.find_one({"drive_id": drive_id})
+    )
+    if not drive:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Placement drive not found.")
+
+    return ResumeAtsDoctor.analyze_resume_fit(
+        resume_text=student.get("resume_text", ""),
+        student_skills=student.get("skills", []),
+        projects=student.get("projects", []),
+        drive_doc=drive,
+    )
 
 def is_deadline_passed(deadline_str: Optional[str]) -> bool:
     if not deadline_str:

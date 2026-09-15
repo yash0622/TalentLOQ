@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 from httpx import AsyncClient
 from app.main import app
-from app.config import settings, Settings
+from app.config import settings
 from app.jwt_utils import create_access_token
 from app.middleware import check_ip_in_cidrs
 

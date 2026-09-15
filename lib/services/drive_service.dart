@@ -8,7 +8,10 @@ class DriveService {
   final ApiClient _apiClient = ApiClient.instance;
 
   // 1. Create Placement Drive (Multipart FormData)
-  Future<bool> createDrive(Map<String, dynamic> data, String? pdfFilePath) async {
+  Future<bool> createDrive(
+    Map<String, dynamic> data,
+    String? pdfFilePath,
+  ) async {
     try {
       final mapData = Map<String, dynamic>.from(data);
 
@@ -34,7 +37,10 @@ class DriveService {
   }
 
   // 2. Edit Placement Drive
-  Future<bool> editDrive(String driveId, Map<String, dynamic> updateData) async {
+  Future<bool> editDrive(
+    String driveId,
+    Map<String, dynamic> updateData,
+  ) async {
     try {
       final response = await _apiClient.dio.patch(
         '/recruiter/drives/$driveId',
@@ -50,7 +56,10 @@ class DriveService {
   }
 
   // 3. Publish Placement Drive
-  Future<bool> publishDrive(String driveId, {String targetAudience = "all"}) async {
+  Future<bool> publishDrive(
+    String driveId, {
+    String targetAudience = "all",
+  }) async {
     try {
       final response = await _apiClient.dio.post(
         '/recruiter/drives/$driveId/publish?target_audience=$targetAudience',
@@ -69,7 +78,8 @@ class DriveService {
     try {
       final response = await _apiClient.dio.get('/recruiter/drives');
       if (response.statusCode == 200) {
-        if (response.data is Map<String, dynamic> && response.data['items'] != null) {
+        if (response.data is Map<String, dynamic> &&
+            response.data['items'] != null) {
           return response.data['items'] as List<dynamic>;
         } else if (response.data is List) {
           return response.data as List<dynamic>;
@@ -79,9 +89,14 @@ class DriveService {
     return [];
   }
 
-  Future<PaginatedResponse<Map<String, dynamic>>> getRecruiterDrivesPaginated({int page = 1, int limit = 20}) async {
+  Future<PaginatedResponse<Map<String, dynamic>>> getRecruiterDrivesPaginated({
+    int page = 1,
+    int limit = 20,
+  }) async {
     try {
-      final response = await _apiClient.dio.get('/recruiter/drives?page=$page&limit=$limit');
+      final response = await _apiClient.dio.get(
+        '/recruiter/drives?page=$page&limit=$limit',
+      );
       if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
         return PaginatedResponse<Map<String, dynamic>>.fromJson(
           response.data as Map<String, dynamic>,
@@ -101,9 +116,12 @@ class DriveService {
   // 5. Fetch Applicants for a Drive
   Future<List<dynamic>> getDriveApplicants(String driveId) async {
     try {
-      final response = await _apiClient.dio.get('/recruiter/drives/$driveId/applicants');
+      final response = await _apiClient.dio.get(
+        '/recruiter/drives/$driveId/applicants',
+      );
       if (response.statusCode == 200) {
-        if (response.data is Map<String, dynamic> && response.data['items'] != null) {
+        if (response.data is Map<String, dynamic> &&
+            response.data['items'] != null) {
           return response.data['items'] as List<dynamic>;
         } else if (response.data is List) {
           return response.data as List<dynamic>;
@@ -113,9 +131,15 @@ class DriveService {
     return [];
   }
 
-  Future<PaginatedResponse<Map<String, dynamic>>> getDriveApplicantsPaginated(String driveId, {int page = 1, int limit = 20}) async {
+  Future<PaginatedResponse<Map<String, dynamic>>> getDriveApplicantsPaginated(
+    String driveId, {
+    int page = 1,
+    int limit = 20,
+  }) async {
     try {
-      final response = await _apiClient.dio.get('/recruiter/drives/$driveId/applicants?page=$page&limit=$limit');
+      final response = await _apiClient.dio.get(
+        '/recruiter/drives/$driveId/applicants?page=$page&limit=$limit',
+      );
       if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
         return PaginatedResponse<Map<String, dynamic>>.fromJson(
           response.data as Map<String, dynamic>,
@@ -178,13 +202,18 @@ class DriveService {
     try {
       final response = await _apiClient.dio.get('/drives');
       final listData = response.statusCode == 200
-          ? (response.data is Map<String, dynamic> ? response.data['items'] : response.data)
+          ? (response.data is Map<String, dynamic>
+                ? response.data['items']
+                : response.data)
           : null;
       if (listData is List) {
         for (var item in listData) {
           final id = (item['drive_id'] ?? item['listing_id'] ?? '').toString();
-          final company = (item['company_name'] ?? item['company'] ?? '').toString();
-          if (id.isNotEmpty && !seenIds.contains(id) && !ApplicationVisibilityState.instance.isApplied(id, company)) {
+          final company = (item['company_name'] ?? item['company'] ?? '')
+              .toString();
+          if (id.isNotEmpty &&
+              !seenIds.contains(id) &&
+              !ApplicationVisibilityState.instance.isApplied(id, company)) {
             seenIds.add(id);
             combined.add(item);
           }
@@ -195,9 +224,14 @@ class DriveService {
     return combined;
   }
 
-  Future<PaginatedResponse<Map<String, dynamic>>> getPublishedDrivesPaginated({int page = 1, int limit = 20}) async {
+  Future<PaginatedResponse<Map<String, dynamic>>> getPublishedDrivesPaginated({
+    int page = 1,
+    int limit = 20,
+  }) async {
     try {
-      final response = await _apiClient.dio.get('/drives?page=$page&limit=$limit');
+      final response = await _apiClient.dio.get(
+        '/drives?page=$page&limit=$limit',
+      );
       if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
         final paginated = PaginatedResponse<Map<String, dynamic>>.fromJson(
           response.data as Map<String, dynamic>,
@@ -205,7 +239,8 @@ class DriveService {
         );
         final filtered = paginated.items.where((item) {
           final id = (item['drive_id'] ?? item['listing_id'] ?? '').toString();
-          final company = (item['company_name'] ?? item['company'] ?? '').toString();
+          final company = (item['company_name'] ?? item['company'] ?? '')
+              .toString();
           return !ApplicationVisibilityState.instance.isApplied(id, company);
         }).toList();
         return PaginatedResponse<Map<String, dynamic>>(
@@ -227,9 +262,12 @@ class DriveService {
   }
 
   // 8b. Fetch Student Recommended Drives (Matched by verified skills)
-  Future<PaginatedResponse<Map<String, dynamic>>> getRecommendedDrivesPaginated({int page = 1, int limit = 20}) async {
+  Future<PaginatedResponse<Map<String, dynamic>>>
+  getRecommendedDrivesPaginated({int page = 1, int limit = 20}) async {
     try {
-      final response = await _apiClient.dio.get('/drives/recommended?page=$page&limit=$limit');
+      final response = await _apiClient.dio.get(
+        '/drives/recommended?page=$page&limit=$limit',
+      );
       if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
         final paginated = PaginatedResponse<Map<String, dynamic>>.fromJson(
           response.data as Map<String, dynamic>,
@@ -237,7 +275,8 @@ class DriveService {
         );
         final filtered = paginated.items.where((item) {
           final id = (item['drive_id'] ?? item['listing_id'] ?? '').toString();
-          final company = (item['company_name'] ?? item['company'] ?? '').toString();
+          final company = (item['company_name'] ?? item['company'] ?? '')
+              .toString();
           return !ApplicationVisibilityState.instance.isApplied(id, company);
         }).toList();
         return PaginatedResponse<Map<String, dynamic>>(
@@ -284,16 +323,22 @@ class DriveService {
       }
 
       if (response.statusCode == 201) {
-        final body = response.data is Map ? Map<String, dynamic>.from(response.data as Map) : <String, dynamic>{};
+        final body = response.data is Map
+            ? Map<String, dynamic>.from(response.data as Map)
+            : <String, dynamic>{};
         final application = body['application'];
         if (application is Map) {
-          ApplicationVisibilityState.instance.recordApplication(Map<String, dynamic>.from(application));
+          ApplicationVisibilityState.instance.recordApplication(
+            Map<String, dynamic>.from(application),
+          );
         }
         return {'success': true, 'data': response.data};
       }
     } on DioException catch (e) {
       final statusCode = e.response?.statusCode;
-      final detail = e.response?.data is Map ? e.response?.data['detail']?.toString() : null;
+      final detail = e.response?.data is Map
+          ? e.response?.data['detail']?.toString()
+          : null;
 
       if (statusCode == 400 && (detail?.contains('resume') ?? false)) {
         return {
@@ -311,7 +356,8 @@ class DriveService {
       }
       return {
         'success': false,
-        'message': detail ?? 'Could not submit application. (Status: $statusCode)',
+        'message':
+            detail ?? 'Could not submit application. (Status: $statusCode)',
       };
     } catch (_) {}
 
@@ -335,15 +381,22 @@ class DriveService {
   }
 
   // 12. Fetch Student's Applied Drives (Paginated, single query)
-  Future<PaginatedResponse<Map<String, dynamic>>> getMyApplicationsPaginated({int page = 1, int limit = 20}) async {
+  Future<PaginatedResponse<Map<String, dynamic>>> getMyApplicationsPaginated({
+    int page = 1,
+    int limit = 20,
+  }) async {
     try {
-      final response = await _apiClient.dio.get('/drives/my-applications?page=$page&limit=$limit');
+      final response = await _apiClient.dio.get(
+        '/drives/my-applications?page=$page&limit=$limit',
+      );
       if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
         final paginated = PaginatedResponse<Map<String, dynamic>>.fromJson(
           response.data as Map<String, dynamic>,
           (item) => Map<String, dynamic>.from(item as Map),
         );
-        ApplicationVisibilityState.instance.recordMultipleApplications(paginated.items);
+        ApplicationVisibilityState.instance.recordMultipleApplications(
+          paginated.items,
+        );
         return paginated;
       }
     } catch (_) {}
@@ -370,7 +423,9 @@ class DriveService {
   // 14. Mark Email Client Opened
   Future<bool> markEmailClientOpened(String driveId) async {
     try {
-      final response = await _apiClient.dio.post('/drives/$driveId/email-draft/mark-sent');
+      final response = await _apiClient.dio.post(
+        '/drives/$driveId/email-draft/mark-sent',
+      );
       return response.statusCode == 200;
     } catch (_) {
       return false;
@@ -378,7 +433,10 @@ class DriveService {
   }
 
   // 15. Fetch Smart AI Match Analysis & Interview Coach
-  Future<Map<String, dynamic>?> getDriveAIMatch(String driveId, {bool bypassCache = false}) async {
+  Future<Map<String, dynamic>?> getDriveAIMatch(
+    String driveId, {
+    bool bypassCache = false,
+  }) async {
     try {
       final response = await _apiClient.dio.get(
         '/drives/$driveId/ai-match${bypassCache ? "?bypass_cache=true" : ""}',
@@ -411,7 +469,9 @@ class DriveService {
   // 17. Accept Placement Offer (Student)
   Future<bool> acceptOffer(String driveId) async {
     try {
-      final response = await _apiClient.dio.post('/drives/$driveId/accept-offer');
+      final response = await _apiClient.dio.post(
+        '/drives/$driveId/accept-offer',
+      );
       return response.statusCode == 200;
     } catch (e) {
       debugPrint('[ACCEPT OFFER ERROR] $e');
@@ -445,5 +505,18 @@ class DriveService {
       debugPrint('[GET ANNOUNCEMENTS ERROR] $e');
     }
     return [];
+  }
+
+  // 20. Fetch Resume ATS Doctor & Keyword Gap Analysis (Local, 0 API Cost)
+  Future<Map<String, dynamic>?> getDriveAtsCheck(String driveId) async {
+    try {
+      final response = await _apiClient.dio.get('/drives/$driveId/ats-check');
+      if (response.statusCode == 200 && response.data is Map) {
+        return Map<String, dynamic>.from(response.data as Map);
+      }
+    } catch (e) {
+      debugPrint('[GET ATS CHECK ERROR] $e');
+    }
+    return null;
   }
 }
