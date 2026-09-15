@@ -46,6 +46,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    services:
+      mongodb:
+        image: mongo:6.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping: 1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -66,8 +77,11 @@ jobs:
       - name: Run Backend Pytest Suite
         working-directory: ./backend
         env:
+          MONGODB_URL: "mongodb://localhost:27017"
+          DATABASE_NAME: "talentloq_ci_test_db"
           JWT_SECRET: "ci_pipeline_dummy_test_secret_entropy_32_characters_minimum"
           ENCRYPTION_KEY: "Y2lfdGVzdF9rZXlfdGhhdF9pc18zMl9ieXRlc19mb3JfdGVzdGluZ18="
           FAST_TEST_MODE: "1"
+          SHOW_DEV_OTP: "false"
         run: |
           python -m pytest tests -q

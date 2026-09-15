@@ -59,7 +59,7 @@ void main() {
       expect(candidate.resumeUrl, isNull);
       expect(candidate.ugMarksheetUrl, isNull);
     });
-
+    
     test('Application model links Job and tracks application step progress', () {
       final job = Job(
         id: 'job_102',

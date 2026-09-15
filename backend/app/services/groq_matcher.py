@@ -83,6 +83,7 @@ class GroqMatcherService:
     Employs role-adaptive rubric weights, multi-round interview progression memory,
     interviewer answer benchmarks, and project artifact evidence mining.
     """
+    _MEMORY_CACHE: Dict[str, Dict[str, Any]] = {}
 
     SYSTEM_PROMPT = """You are an elite university placement director and technical interviewer.
 Analyze candidate student fit for the placement drive using the provided role-adaptive weights and round context.
@@ -260,15 +261,20 @@ Limit predicted_interview_questions to max 2. Limit critical_skill_gaps to max 3
         # 1. Check MongoDB Cache (Shared intelligence: works for both student and recruiter)
         cache_key = cls._compute_cache_key(student_id, drive_id, student_skills, req_skills, current_round, round_notes_hash)
         cache_col = get_ai_match_cache_collection()
-        if not bypass_cache and cache_col is not None:
-            try:
-                cached = await cache_col.find_one({"cache_key": cache_key})
-                if cached and "analysis" in cached:
-                    analysis_data = cached["analysis"]
-                    analysis_data["source"] = "cached"
-                    return SmartAIMatchResponse(**analysis_data)
-            except Exception as e:
-                logger.warning(f"Cache lookup failed for {cache_key}: {e}")
+        if not bypass_cache:
+            if cache_col is not None:
+                try:
+                    cached = await cache_col.find_one({"cache_key": cache_key})
+                    if cached and "analysis" in cached:
+                        analysis_data = cached["analysis"]
+                        analysis_data["source"] = "cached"
+                        return SmartAIMatchResponse(**analysis_data)
+                except Exception as e:
+                    logger.warning(f"Cache lookup failed for {cache_key}: {e}")
+            if cache_key in cls._MEMORY_CACHE:
+                mem_data = dict(cls._MEMORY_CACHE[cache_key])
+                mem_data["source"] = "cached"
+                return SmartAIMatchResponse(**mem_data)
 
         # 2. Local algorithmic match when external LLM is disallowed (Student side for 10,000 scale & zero cost)
         if not allow_external_llm:
@@ -311,15 +317,7 @@ Limit predicted_interview_questions to max 2. Limit critical_skill_gaps to max 3
                 weights=weights,
             )
             tier1_res.source = "tier1_heuristic_filter"
-            if cache_col is not None:
-                try:
-                    await cache_col.update_one(
-                        {"cache_key": cache_key},
-                        {"$set": {"analysis": tier1_res.model_dump(), "created_at": datetime.now(timezone.utc)}},
-                        upsert=True,
-                    )
-                except Exception as e:
-                    logger.debug("Failed to cache tier1 result: %s", e)
+            await cls._save_to_cache(cache_key, student_id, drive_id, tier1_res.model_dump())
             return tier1_res
 
         # 3. Call Free LLM Providers (Groq -> OpenRouter Free -> Mistral)
@@ -482,6 +480,7 @@ Placement Role:
 
     @classmethod
     async def _save_to_cache(cls, cache_key: str, student_id: str, drive_id: str, data: Dict[str, Any]) -> None:
+        cls._MEMORY_CACHE[cache_key] = data
         try:
             cache_col = get_ai_match_cache_collection()
             if cache_col is not None:

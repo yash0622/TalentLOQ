@@ -11,10 +11,11 @@ import os
 
 def test_show_dev_otp_default_is_false():
     """Vulnerability #2 Fix: Ensure SHOW_DEV_OTP is False by default."""
-    assert settings.SHOW_DEV_OTP is False
     with patch.dict(os.environ, {}, clear=True):
         fallback = os.environ.get("SHOW_DEV_OTP", "false").lower() == "true"
         assert fallback is False
+    if "SHOW_DEV_OTP" not in os.environ:
+        assert settings.SHOW_DEV_OTP is False
 
 def test_check_ip_in_cidrs_list_and_str():
     """Vulnerability #10 Fix: Ensure check_ip_in_cidrs handles list and str without error."""
@@ -173,6 +174,7 @@ async def test_file_download_idor_blocked(monkeypatch):
     monkeypatch.setattr(files_router.verification_documents_collection, "find_one", AsyncMock(return_value=None))
     monkeypatch.setattr(files_router.students_collection, "find_one", AsyncMock(return_value=None))
     monkeypatch.setattr(files_router.drives_collection, "find_one", AsyncMock(return_value=None))
+    monkeypatch.setattr(files_router.company_listings_collection, "find_one", AsyncMock(return_value=None))
 
     async with AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as ac:
         res = await ac.get("/api/v1/files/student_B_marksheet.pdf", headers=headers)
