@@ -47,7 +47,7 @@ class _TalentLOQAppState extends State<TalentLOQApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'TalentLOQ Modern Professional',
+      title: 'TalentLOQ',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

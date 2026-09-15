@@ -27,6 +27,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.routers import auth
 from app.routers.auth import limiter
@@ -76,13 +77,14 @@ app.add_middleware(SecurityHeadersMiddleware)
 # Attach GZip Response Compression Middleware (compresses responses >= 1KB)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# Slowapi state and exception handler
+# Slowapi state, middleware and exception handler
 app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS Configuration with Explicit Allowed Origins & Controlled Dev Tunnel Regex
+# CORS Configuration with Explicit Allowed Origins (ngrok URLs go in ALLOWED_ORIGINS env var)
 origins_list = [origin.strip() for origin in settings.ALLOWED_ORIGINS.split(",") if origin.strip()]
-dev_origin_regex = r"https?://(localhost|127\.0\.0\.1)(:[0-9]+)?|https://.*\.ngrok-free\.dev"
+dev_origin_regex = r"https?://(localhost|127\.0\.0\.1)(:[0-9]+)?"
 
 app.add_middleware(
     CORSMiddleware,
@@ -90,7 +92,7 @@ app.add_middleware(
     allow_origin_regex=dev_origin_regex,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Device-ID", "ngrok-skip-browser-warning"],
 )
 
 # Custom 422 Request Validation Error Handler (Log exact field validation failures)

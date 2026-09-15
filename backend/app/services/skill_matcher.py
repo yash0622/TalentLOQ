@@ -4,8 +4,32 @@ Uses spaCy's PhraseMatcher against a curated, bounded skills taxonomy.
 Zero external ML training, deterministic, offline, and sub-millisecond execution.
 """
 from typing import List, Set, Dict, Optional, Any
+import asyncio
+import logging
 import spacy
 from spacy.matcher import PhraseMatcher
+try:
+    import ahocorasick  # type: ignore
+except ImportError:
+    ahocorasick = None
+
+logger = logging.getLogger("talentloq.skill_matcher")
+
+_GLINER_MODEL = None
+
+def get_gliner_model():
+    """Lazily load lightweight GLiNER zero-shot entity extraction model."""
+    global _GLINER_MODEL
+    if _GLINER_MODEL is None:
+        try:
+            from gliner import GLiNER
+            # Loads lightweight 80M zero-shot NER model (~160MB)
+            _GLINER_MODEL = GLiNER.from_pretrained("urchade/gliner_small-v2.1")
+            logger.info("GLiNER zero-shot entity model loaded successfully.")
+        except Exception as e:
+            logger.debug(f"GLiNER not loaded (using fast dictionary path): {e}")
+            _GLINER_MODEL = False
+    return _GLINER_MODEL if _GLINER_MODEL is not False else None
 
 # Load lightweight spaCy core model once at module import
 nlp = spacy.load("en_core_web_sm")
@@ -171,33 +195,87 @@ CANONICAL_SKILL_EQUIVALENCE: Dict[str, List[str]] = {
 }
 
 class SkillMatcherEngine:
-    """PhraseMatcher engine for high-speed bounded skill extraction."""
+    """Aho-Corasick Trie & PhraseMatcher engine for high-speed bounded skill extraction."""
     def __init__(self, taxonomy: Dict[str, str] = SKILLS_TAXONOMY):
         self.taxonomy = taxonomy
+        self.automaton = None
+        if ahocorasick is not None:
+            self.automaton = ahocorasick.Automaton()
+            for alias, canonical in self.taxonomy.items():
+                self.automaton.add_word(alias.lower(), (len(alias), canonical))
+            self.automaton.make_automaton()
+
         self.matcher = PhraseMatcher(nlp.vocab, attr="LOWER")
         # Build patterns from taxonomy keys
         patterns = [nlp.make_doc(alias) for alias in self.taxonomy.keys()]
         self.matcher.add("SKILLS_TAXONOMY", patterns)
 
-    def extract_skills_from_text(self, text: Optional[str]) -> List[str]:
+    def extract_skills_from_text(self, text: Optional[str], use_ner: bool = True) -> List[str]:
         """
         Extracts and normalizes skills from unstructured text (drive description or resume)
         into their canonical representations.
+        1. Fast-path: Aho-Corasick automaton against SKILLS_TAXONOMY (sub-millisecond).
+        2. Neural zero-shot path: GLiNER entity extraction for unseen frameworks, tools, libraries.
         """
         if not text or not text.strip():
             return []
 
-        # Fast sub-millisecond tokenization without heavy neural pipelines (tagger, parser, ner)
-        doc = nlp.make_doc(text)
-        matches = self.matcher(doc)
-
         found_canonical: Set[str] = set()
-        for match_id, start, end in matches:
-            matched_text = doc[start:end].text.lower().strip()
-            if matched_text in self.taxonomy:
-                found_canonical.add(self.taxonomy[matched_text])
+
+        # Fast path: Aho-Corasick Trie Automaton (O(N) single-pass)
+        if self.automaton is not None:
+            lower_text = text.lower()
+            n = len(lower_text)
+            for end_idx, (word_len, canonical) in self.automaton.iter(lower_text):
+                start_idx = end_idx - word_len + 1
+                # Boundary check: ensure match is not an internal substring of another word
+                prev_char = lower_text[start_idx - 1] if start_idx > 0 else " "
+                next_char = lower_text[end_idx + 1] if end_idx + 1 < n else " "
+                if not (prev_char.isalnum() or next_char.isalnum()):
+                    found_canonical.add(canonical)
+        else:
+            # Fallback path: spaCy PhraseMatcher
+            doc = nlp.make_doc(text)
+            matches = self.matcher(doc)
+            for match_id, start, end in matches:
+                matched_text = doc[start:end].text.lower().strip()
+                if matched_text in self.taxonomy:
+                    found_canonical.add(self.taxonomy[matched_text])
+
+        # Neural Zero-Shot Entity Extraction (GLiNER) to catch novel/unseen tech skills & frameworks
+        if use_ner:
+            model = get_gliner_model()
+            if model is not None:
+                try:
+                    labels = [
+                        "programming language",
+                        "software framework",
+                        "database",
+                        "cloud platform",
+                        "developer tool",
+                        "technical skill"
+                    ]
+                    # Check first 2500 characters of resume text to maintain high throughput
+                    entities = model.predict_entities(text[:2500], labels, threshold=0.45)
+                    for ent in entities:
+                        raw_tok = ent.get("text", "").strip(" ,;()•-·\t\r")
+                        if len(raw_tok) < 2 or len(raw_tok) > 35 or raw_tok.isdigit():
+                            continue
+                        tok_lower = raw_tok.lower()
+                        # Map to canonical casing if already known
+                        if tok_lower in self.taxonomy:
+                            found_canonical.add(self.taxonomy[tok_lower])
+                        elif len(raw_tok.split()) <= 3:
+                            # Preserve novel tool/framework representation
+                            found_canonical.add(raw_tok)
+                except Exception as e:
+                    logger.debug(f"GLiNER zero-shot extraction notice: {e}")
 
         return sorted(list(found_canonical))
+
+    async def extract_skills_from_text_async(self, text: Optional[str], use_ner: bool = True) -> List[str]:
+        """Non-blocking async wrapper — offloads neural extraction to threadpool."""
+        return await asyncio.to_thread(self.extract_skills_from_text, text, use_ner)
 
     def get_equivalent_skills(self, skill: str) -> List[str]:
         canon = self.taxonomy.get(skill.lower().strip(), skill.strip())

@@ -60,6 +60,7 @@ class DocumentVerificationService:
         file: UploadFile,
         user_id: str,
         target_type: Optional[str] = None,  # RESUME, TENTH_MARKSHEET, TWELFTH_OR_DIPLOMA, UG_MARKSHEET
+        allow_external_ai: bool = False,
     ) -> DocumentVerificationResult:
         """
         Executes the full end-to-end verification pipeline on an uploaded academic document.
@@ -202,13 +203,13 @@ class DocumentVerificationService:
             local_parsed = ResumeParser.parse(extracted_text, profile_name=profile_name)
             parsed_fields = dict(local_parsed)
 
-            # Fast-path check: If local heuristic extracted high density of skills & name, skip Gemini
-            if len(parsed_fields.get("skills", [])) >= 8 and parsed_fields.get("student_name"):
-                logger.info("Fast-path engaged for Resume: %d skills identified locally", len(parsed_fields["skills"]))
-                extraction_method = "fastpath_ocr"
+            # Fast-path check: Use local GLiNER/OCR extraction; only invoke Gemini if allow_external_ai is True
+            if not allow_external_ai or (len(parsed_fields.get("skills", [])) >= 8 and parsed_fields.get("student_name")):
+                logger.info("Local GLiNER-OCR extraction engaged for Resume: %d skills identified", len(parsed_fields.get("skills", [])))
+                extraction_method = "local_gliner_ocr"
                 base_ocr_conf = 98.0
             else:
-                # 2. Try Gemini Flash AI Extraction
+                # 2. Try Gemini Flash AI Extraction (Recruiter/Admin reverification only)
                 ai_data = await asyncio.to_thread(
                     GeminiDocumentExtractor.extract_resume,
                     file_bytes=contents, filename=clean_filename, ocr_text=extracted_text
@@ -274,7 +275,7 @@ class DocumentVerificationService:
                     "subjects": local_parsed.get("subjects", []),
                     "marks_table_report": local_parsed.get("marks_report"),
                 }
-            else:
+            elif allow_external_ai:
                 ai_data = await asyncio.to_thread(
                     GeminiDocumentExtractor.extract_tenth_marksheet,
                     file_bytes=contents, filename=clean_filename, ocr_text=extracted_text
@@ -298,6 +299,9 @@ class DocumentVerificationService:
                         )
                 else:
                     parsed_fields = local_parsed
+            else:
+                parsed_fields = dict(local_parsed)
+                extraction_method = "local_table_ocr"
 
         elif detected_type in (DocumentTypeEnum.TWELFTH_MARKSHEET, DocumentTypeEnum.DIPLOMA_MARKSHEET):
             local_parsed = TwelfthDiplomaParser.parse(extracted_text, profile_name=profile_name)
@@ -331,7 +335,7 @@ class DocumentVerificationService:
                         "subjects": local_parsed.get("subjects", []),
                         "document_subtype": "TWELFTH_MARKSHEET",
                     }
-            else:
+            elif allow_external_ai:
                 ai_data = await asyncio.to_thread(
                     GeminiDocumentExtractor.extract_twelfth_or_diploma,
                     file_bytes=contents, filename=clean_filename, ocr_text=extracted_text
@@ -374,14 +378,21 @@ class DocumentVerificationService:
                         detected_type = DocumentTypeEnum.DIPLOMA_MARKSHEET
                     else:
                         detected_type = DocumentTypeEnum.TWELFTH_MARKSHEET
+            else:
+                parsed_fields = dict(local_parsed)
+                extraction_method = "local_table_ocr"
+                if local_parsed.get("document_subtype") == "DIPLOMA_MARKSHEET":
+                    detected_type = DocumentTypeEnum.DIPLOMA_MARKSHEET
+                else:
+                    detected_type = DocumentTypeEnum.TWELFTH_MARKSHEET
 
         elif detected_type == DocumentTypeEnum.UG_MARKSHEET:
             local_parsed = UGMarksheetParser.parse(extracted_text, profile_name=profile_name)
-            # Fast-path check: If CGPA, active backlogs, and enrollment number found locally
-            if local_parsed.get("cgpa") is not None and local_parsed.get("active_backlogs") is not None and local_parsed.get("enrollment_number"):
-                logger.info("Fast-path engaged for UG Marksheet: CGPA %s, Backlogs %s", local_parsed["cgpa"], local_parsed["active_backlogs"])
-                extraction_method = "fastpath_ocr"
-                base_ocr_conf = 98.0
+            # Fast-path check: If CGPA, active backlogs, and enrollment number found locally or external AI disallowed
+            if not allow_external_ai or (local_parsed.get("cgpa") is not None and local_parsed.get("active_backlogs") is not None and local_parsed.get("enrollment_number")):
+                logger.info("Local extraction engaged for UG Marksheet: CGPA %s, Backlogs %s", local_parsed.get("cgpa"), local_parsed.get("active_backlogs"))
+                extraction_method = "local_ug_ocr"
+                base_ocr_conf = 95.0
                 parsed_fields = dict(local_parsed)
             else:
                 ai_data = await asyncio.to_thread(
@@ -646,6 +657,13 @@ class DocumentVerificationService:
             update_fields["resume_id"] = grid_file_id
             update_fields["resume_filename"] = clean_filename
             update_fields["resume_uploaded_at"] = now_iso
+
+            # Pre-compute dense vector embedding for instant hybrid matching
+            from app.services.hybrid_matcher import get_text_embedding_async
+            emb_text = parsed_fields.get("raw_text") or ("Skills: " + ", ".join(parsed_fields.get("skills", [])))
+            res_vec = await get_text_embedding_async(emb_text)
+            if res_vec:
+                update_fields["resume_vector"] = res_vec
 
         elif doc_type == "TENTH_MARKSHEET":
             apply_field("tenth_percentage", parsed_fields.get("tenth_percentage"), "10th Marksheet Verified")

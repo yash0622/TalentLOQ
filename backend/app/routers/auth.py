@@ -1,5 +1,6 @@
 import io
 import re
+import hmac
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, Request, Depends, UploadFile, File, Header, status
@@ -18,6 +19,7 @@ from app.database import (
     chat_messages_collection,
     verification_documents_collection,
     grid_fs, get_grid_fs,
+    get_ai_match_cache_collection,
 )
 from app.models import (
     StudentRegisterRequest,
@@ -48,16 +50,16 @@ from app.jwt_utils import (
     create_access_token,
     create_refresh_token,
     create_temp_token,
-    create_device_token,
     decode_token,
 )
 from app.middleware import verify_recruiter_ip_restriction
 from app.upload_validator import validate_file_upload
-from app.encryption import encrypt_field, decrypt_field
+from app.encryption import encrypt_field
 from app.document_detection import extract_document_text, classify_document
 from app.dependencies import get_optional_current_user
 
-limiter = Limiter(key_func=get_remote_address)
+# Ponytail: default 120 req/min protects all endpoints from DDoS/flooding with zero boilerplate
+limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 def send_device_verification_email(email: str, verify_link: str) -> None:
@@ -157,7 +159,7 @@ async def register_student(data: StudentRegisterRequest, request: Request):
 # 2. Login Endpoint (With Recruiter IP Restriction & Device Binding)
 # ---------------------------------------------------------------------------
 @router.post("/login")
-@limiter.limit("60/minute")
+@limiter.limit("10/minute")
 async def login(
     data: LoginRequest,
     request: Request,
@@ -186,7 +188,7 @@ async def login(
     if not user_data:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Email is not registered. Please register your account first."
+            detail="Invalid email or password"
         )
 
     user = UserModel(**user_data)
@@ -235,7 +237,7 @@ async def login(
             
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect password"
+                detail="Invalid email or password"
             )
 
         # 4. Generate 6-digit OTP
@@ -290,7 +292,7 @@ async def login(
             
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect password"
+                detail="Invalid email or password"
             )
 
         await users_collection.update_one(
@@ -392,7 +394,7 @@ async def verify_otp(data: VerifyOTPRequest, request: Request):
     otp_hash_input = hash_token(data.otp)
     expires_at = otp_record["expires_at"].replace(tzinfo=timezone.utc) if otp_record["expires_at"].tzinfo is None else otp_record["expires_at"]
 
-    if now > expires_at or otp_record["otp_hash"] != otp_hash_input:
+    if now > expires_at or not hmac.compare_digest(otp_record["otp_hash"], otp_hash_input):
         audit = AuditLogModel(
             user_id=user.user_id,
             action="RECRUITER_OTP_VERIFY_FAILED",
@@ -461,7 +463,11 @@ async def refresh_token(data: RefreshTokenRequest):
     role = payload.get("role")
 
     stored_token = await refresh_tokens_collection.find_one({"token_id": token_id})
-    if not stored_token or stored_token.get("revoked") is True:
+    if (
+        not stored_token
+        or stored_token.get("revoked") is True
+        or not hmac.compare_digest(stored_token.get("token_hash", ""), hash_token(data.refresh_token))
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token has been revoked or is invalid"
@@ -601,6 +607,13 @@ async def upload_resume(
     if parsed_resume.get("languages"):
         update_data["languages"] = parsed_resume.get("languages")
 
+    # Pre-compute dense vector embedding for instant hybrid matching
+    from app.services.hybrid_matcher import get_text_embedding_async
+    emb_source = extracted_text if extracted_text else ("Skills: " + ", ".join(canonical_skills))
+    resume_vector = await get_text_embedding_async(emb_source)
+    if resume_vector:
+        update_data["resume_vector"] = resume_vector
+
     try:
         if user_id:
             await students_collection.update_many(
@@ -689,10 +702,23 @@ async def delete_resume(
             "technical_skills": [],
             "soft_skills": [],
             "languages": [],
+            "deployment_skills": [],
+            "internships": [],
+            "internship_count": 0,
+            "resume_vector": None,
             "documents": doc_summaries,
             "verified_fields": ver_fields,
         }}
     )
+    # Invalidate AI match cache for this student
+    try:
+        cache_col = get_ai_match_cache_collection()
+        if cache_col is not None:
+            await cache_col.delete_many({
+                "$or": [{"student_id": user_id}, {"user_id": user_id}]
+            })
+    except Exception:
+        pass
 
     return {"message": "Resume deleted successfully and removed from database."}
 
@@ -775,11 +801,11 @@ async def get_current_user_profile(
         "active_backlogs": int(active_backlogs),
         "closed_backlogs": int(closed_backlogs),
         "skills": skills,
-        "technical_skills": student_doc.get("technical_skills", []) if student_doc else [],
-        "soft_skills": student_doc.get("soft_skills", []) if student_doc else [],
-        "deployment_skills": student_doc.get("deployment_skills", []) if student_doc else [],
-        "internships": student_doc.get("internships", []) if student_doc else [],
-        "internship_count": int(student_doc.get("internship_count") or len(student_doc.get("internships", []))) if student_doc else 0,
+        "technical_skills": (student_doc.get("technical_skills", []) if has_resume else []) if student_doc else [],
+        "soft_skills": (student_doc.get("soft_skills", []) if has_resume else []) if student_doc else [],
+        "deployment_skills": (student_doc.get("deployment_skills", []) if has_resume else []) if student_doc else [],
+        "internships": (student_doc.get("internships", []) if has_resume else []) if student_doc else [],
+        "internship_count": (int(student_doc.get("internship_count") or len(student_doc.get("internships", []))) if has_resume else 0) if student_doc else 0,
         "languages": student_doc.get("languages", []) if student_doc else [],
         "has_resume": has_resume,
         "resume_filename": resume_filename,
@@ -926,5 +952,3 @@ async def get_user_notifications(
         chats = []
 
     return {"notifications": notifs, "messages": chats}
-
-

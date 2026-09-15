@@ -1,12 +1,10 @@
-import 'dart:io';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:open_filex/open_filex.dart';
 import '../../models/models.dart';
-import '../../network/api_client.dart';
 import '../../services/recruiter_service.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/document_viewer_helper.dart';
 import '../../widgets/app_avatar.dart';
+import '../../widgets/document_verification_modal.dart';
 import 'offer_setup_modal.dart';
 
 class CandidateDetailScreen extends StatefulWidget {
@@ -52,7 +50,9 @@ class _CandidateDetailScreenState extends State<CandidateDetailScreen> {
         });
         return;
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[FETCH ACADEMIC ERROR] $e');
+    }
     if (mounted) {
       setState(() => _isLoadingDocs = false);
     }
@@ -80,56 +80,16 @@ class _CandidateDetailScreenState extends State<CandidateDetailScreen> {
   }
 
   Future<void> _viewDocument(String? fileUrl, String docTitle) async {
-    if (fileUrl == null || fileUrl.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$docTitle is not uploaded yet.'),
-          backgroundColor: AppColors.warning,
-        ),
-      );
-      return;
-    }
+    final filename = docTitle.toLowerCase().contains('undergraduate')
+        ? (_ugDocument?['filename']?.toString())
+        : (_resumeDocument?['filename']?.toString());
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Opening $docTitle...'),
-        duration: const Duration(milliseconds: 1200),
-      ),
+    await DocumentViewerHelper.viewDocument(
+      context,
+      fileUrl: fileUrl,
+      docTitle: docTitle,
+      filename: filename,
     );
-
-    try {
-      final dio = ApiClient.instance.dio;
-      final tempDir = Directory.systemTemp;
-      final cleanName = docTitle.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
-      final targetFile = File('${tempDir.path}/${cleanName}_${DateTime.now().millisecondsSinceEpoch}.pdf');
-
-      String endpoint = fileUrl.trim();
-      if (!endpoint.startsWith('http') && !endpoint.startsWith('/')) {
-        endpoint = '/$endpoint';
-      }
-
-      final response = await dio.get<List<int>>(
-        endpoint,
-        options: Options(responseType: ResponseType.bytes),
-      );
-
-      if (response.statusCode == 200 && response.data != null && response.data!.isNotEmpty) {
-        await targetFile.writeAsBytes(response.data!);
-        await OpenFilex.open(targetFile.path);
-        return;
-      }
-    } catch (e) {
-      debugPrint('[DOC VIEW ERROR] $e');
-    }
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not open $docTitle. File may not be available on server.'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-    }
   }
 
   Widget _buildDocumentCard({
@@ -144,13 +104,19 @@ class _CandidateDetailScreenState extends State<CandidateDetailScreen> {
     final hasDoc = docData != null || (fallbackUrl != null && fallbackUrl.isNotEmpty);
     final fileUrl = docData?['file_url']?.toString() ?? fallbackUrl;
     final filename = docData?['filename']?.toString() ?? (hasDoc ? '$title.pdf' : 'Not uploaded');
+    final docId = docData?['document_id']?.toString() ?? (hasDoc ? 'doc_${title.toLowerCase().replaceAll(' ', '_')}' : null);
+    final status = docData?['processing_status']?.toString() ?? (hasDoc ? 'VERIFIED' : 'MISSING');
+    final isPending = status == 'MANUAL_REVIEW' || status == 'REVIEW_REQUIRED';
 
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
         side: BorderSide(
-          color: isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant,
+          color: isPending
+              ? AppColors.warning.withValues(alpha: 0.5)
+              : (isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant),
+          width: isPending ? 1.5 : 1.0,
         ),
       ),
       child: InkWell(
@@ -164,10 +130,16 @@ class _CandidateDetailScreenState extends State<CandidateDetailScreen> {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: AppColors.lightPrimary.withValues(alpha: 0.1),
+                  color: isPending
+                      ? AppColors.warning.withValues(alpha: 0.15)
+                      : AppColors.lightPrimary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: AppColors.lightPrimary, size: 22),
+                child: Icon(
+                  isPending ? Icons.rate_review_rounded : icon,
+                  color: isPending ? AppColors.warning : AppColors.lightPrimary,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -180,35 +152,98 @@ class _CandidateDetailScreenState extends State<CandidateDetailScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      hasDoc ? filename : 'Document not uploaded yet',
+                      isPending
+                          ? 'Queued for Coordinator Review'
+                          : (hasDoc ? filename : 'Document not uploaded yet'),
                       style: TextStyle(
                         fontSize: 11,
-                        color: hasDoc
-                            ? (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary)
-                            : AppColors.warning,
+                        color: isPending
+                            ? AppColors.warning
+                            : (hasDoc
+                                ? (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary)
+                                : AppColors.warning),
+                        fontWeight: isPending ? FontWeight.w600 : FontWeight.normal,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-              if (hasDoc) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.successLightBg,
-                    borderRadius: BorderRadius.circular(8),
+              if (isPending && docId != null) ...[
+                InkWell(
+                  onTap: () async {
+                    final changed = await DocumentVerificationModal.show(
+                      context,
+                      documentId: docId,
+                      documentTitle: title,
+                      studentName: widget.candidate.name,
+                      studentId: widget.candidate.id,
+                      filename: filename,
+                      fileUrl: fileUrl,
+                      initialData: docData?['extracted_data'] as Map<String, dynamic>?,
+                    );
+                    if (changed == true) {
+                      _fetchAcademicAndDocs();
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.warning, width: 1.2),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.auto_awesome_rounded, color: AppColors.warning, size: 13),
+                        SizedBox(width: 4),
+                        Text(
+                          'AI Verify',
+                          style: TextStyle(color: AppColors.warning, fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
                   ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.verified_rounded, color: AppColors.success, size: 12),
-                      SizedBox(width: 4),
-                      Text(
-                        'Verified',
-                        style: TextStyle(color: AppColors.success, fontSize: 10, fontWeight: FontWeight.bold),
-                      ),
-                    ],
+                ),
+                const SizedBox(width: 6),
+                const Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.lightTextSecondary),
+              ] else if (hasDoc) ...[
+                InkWell(
+                  onTap: docId != null
+                      ? () async {
+                          final changed = await DocumentVerificationModal.show(
+                            context,
+                            documentId: docId,
+                            documentTitle: title,
+                            studentName: widget.candidate.name,
+                            studentId: widget.candidate.id,
+                            filename: filename,
+                            fileUrl: fileUrl,
+                            initialData: docData?['extracted_data'] as Map<String, dynamic>?,
+                          );
+                          if (changed == true) {
+                            _fetchAcademicAndDocs();
+                          }
+                        }
+                      : null,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.successLightBg,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.verified_rounded, color: AppColors.success, size: 12),
+                        SizedBox(width: 4),
+                        Text(
+                          'Verified',
+                          style: TextStyle(color: AppColors.success, fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(width: 6),

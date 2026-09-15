@@ -138,12 +138,13 @@ def send_otp_email(email: str, otp: str) -> None:
     """
     Sends OTP email to the user via SMTP if configured, or logs to console for local testing.
     """
-    msg = f"[OTP SERVICE] Sent OTP to {email}: {otp} (Expires in {settings.TEMP_TOKEN_EXPIRE_MINUTES} mins)"
+    msg = f"[OTP SERVICE] Sent OTP to {email} (Expires in {settings.TEMP_TOKEN_EXPIRE_MINUTES} mins)"
     logger.info(msg)
-    print("=" * 70)
-    print(f"  OTP CODE FOR {email}: {otp}")
-    print(msg)
-    print("=" * 70)
+    if settings.SHOW_DEV_OTP:
+        print("=" * 70)
+        print(f"  OTP CODE FOR {email}: {otp}")
+        print(msg)
+        print("=" * 70)
 
     if settings.SMTP_USER and settings.SMTP_PASSWORD:
         try:

@@ -72,7 +72,7 @@ class SmartAIMatchResponse(BaseModel):
     predicted_interview_questions: List[PredictedInterviewQuestion] = Field(default_factory=list)
     recruiter_cheat_sheet: RecruiterScreeningCheatSheet
     student_prep_checklist: List[str] = Field(default_factory=list, description="48-hour actionable prep steps for the student")
-    source: str = Field("groq_ai", description="'groq_ai' | 'cached' | 'heuristic_fallback' | 'tier1_heuristic_filter'")
+    source: str = Field("groq_ai", description="'groq_ai' | 'cached' | 'heuristic_fallback' | 'tier1_heuristic_filter' | 'local_algorithmic_match'")
     model_used: Optional[str] = None
     tokens_used: Optional[Dict[str, int]] = Field(None, description="Prompt, completion, and total tokens consumed")
 
@@ -217,11 +217,13 @@ Limit predicted_interview_questions to max 2. Limit critical_skill_gaps to max 3
         current_round: int = 1,
         round_history: Optional[List[Dict[str, Any]]] = None,
         bypass_cache: bool = False,
+        allow_external_llm: bool = True,
     ) -> SmartAIMatchResponse:
         """
         Main entry point for multi-dimensional AI Match analysis.
-        Checks MongoDB cache first. On miss, calls Groq API with fallback models.
-        If all Groq calls fail or key is missing, uses calibrated heuristic fallback.
+        Checks MongoDB cache first. If allow_external_llm is False (Student side),
+        computes calibrated local match instantly without calling external APIs.
+        On recruiter side (allow_external_llm=True), calls Groq API with fallback models.
         """
         student_id = str(student_doc.get("student_id") or student_doc.get("user_id") or "unknown_student")
         drive_id = str(drive_doc.get("drive_id") or drive_doc.get("listing_id") or "unknown_drive")
@@ -255,7 +257,7 @@ Limit predicted_interview_questions to max 2. Limit critical_skill_gaps to max 3
             ])
         round_notes_hash = hashlib.md5(prev_notes_summary.encode()).hexdigest()[:8] if prev_notes_summary else ""
 
-        # 1. Check MongoDB Cache
+        # 1. Check MongoDB Cache (Shared intelligence: works for both student and recruiter)
         cache_key = cls._compute_cache_key(student_id, drive_id, student_skills, req_skills, current_round, round_notes_hash)
         cache_col = get_ai_match_cache_collection()
         if not bypass_cache and cache_col is not None:
@@ -268,7 +270,30 @@ Limit predicted_interview_questions to max 2. Limit critical_skill_gaps to max 3
             except Exception as e:
                 logger.warning(f"Cache lookup failed for {cache_key}: {e}")
 
-        # 2. Tier 1 Algorithmic Gatekeeper (Fast-path for extreme skill mismatch)
+        # 2. Local algorithmic match when external LLM is disallowed (Student side for 10,000 scale & zero cost)
+        if not allow_external_llm:
+            local_res = cls._compute_heuristic_fallback(
+                student_skills=student_skills,
+                deployment_skills=deployment_skills,
+                internships=internships,
+                projects=projects,
+                req_skills=req_skills,
+                company_name=company_name,
+                drive_title=drive_title,
+                current_round=current_round,
+                round_history=round_history,
+                role_archetype=role_archetype,
+                weights=weights,
+            )
+            local_res.source = "local_algorithmic_match"
+            if cache_col is not None:
+                try:
+                    await cls._save_to_cache(cache_key, student_id, drive_id, local_res.model_dump())
+                except Exception as e:
+                    logger.debug("Failed to cache local algorithmic result: %s", e)
+            return local_res
+
+        # 3. Tier 1 Algorithmic Gatekeeper (Fast-path for extreme skill mismatch)
         overlap_info = skill_matcher_engine.compute_skill_overlap(student_skills, req_skills)
         if overlap_info["overlap_ratio"] < 0.15 and len(student_skills) > 0 and len(req_skills) >= 2:
             logger.info("Tier 1 fast-filter engaged for student=%s, drive=%s: overlap=%.2f", student_id, drive_id, overlap_info["overlap_ratio"])
@@ -672,6 +697,4 @@ Placement Role:
             source="heuristic_fallback",
             model_used=None,
         )
-
-
 groq_matcher_service = GroqMatcherService()

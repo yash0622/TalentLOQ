@@ -30,6 +30,7 @@ from app.database import (
     verification_audits_collection,
     support_tickets_collection,
     grid_fs,
+    get_ai_match_cache_collection,
 )
 from app.document_detection import (
     DocumentVerificationService,
@@ -319,6 +320,10 @@ async def delete_document(
         set_fields["coding_languages"] = []
         set_fields["spoken_languages"] = []
         set_fields["social_links"] = {}
+        set_fields["deployment_skills"] = []
+        set_fields["internships"] = []
+        set_fields["internship_count"] = 0
+        set_fields["resume_vector"] = None
         for plat in ["linkedin", "github", "leetcode", "hackerrank", "codeforces", "kaggle", "geeksforgeeks", "twitter", "portfolio"]:
             set_fields[f"{plat}_url"] = None
             verified_fields.pop(f"{plat}_url", None)
@@ -329,6 +334,8 @@ async def delete_document(
         verified_fields.pop("coding_languages", None)
         verified_fields.pop("spoken_languages", None)
         verified_fields.pop("social_links", None)
+        verified_fields.pop("deployment_skills", None)
+        verified_fields.pop("internships", None)
         doc_summaries.pop("resume", None)
 
     set_fields["verified_fields"] = verified_fields
@@ -338,6 +345,16 @@ async def delete_document(
         {"$or": [{"user_id": user_id}, {"student_id": user_id}, {"email": user_id}]},
         {"$set": set_fields}
     )
+
+    if doc_type == "RESUME":
+        try:
+            cache_col = get_ai_match_cache_collection()
+            if cache_col is not None:
+                await cache_col.delete_many({
+                    "$or": [{"student_id": user_id}, {"user_id": user_id}]
+                })
+        except Exception:
+            pass
 
     return {
         "message": f"{doc_type or 'Document'} removed and verified profile data cleared successfully.",

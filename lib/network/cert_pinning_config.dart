@@ -20,9 +20,18 @@ class CertPinningConfig {
 
   /// Custom HttpClient badCertificateCallback for validating cert fingerprint
   static bool validateCertificate(X509Certificate cert, String host, int port) {
-    if (kDebugMode && (host == 'localhost' || host == '127.0.0.1' || host == '10.0.2.2')) {
-      // Allow local development connection
-      return true;
+    if (kDebugMode) {
+      // Allow local development connections, LAN IPs, and ngrok development tunnels
+      if (host == 'localhost' ||
+          host == '127.0.0.1' ||
+          host == '10.0.2.2' ||
+          host.endsWith('ngrok-free.dev') ||
+          host.endsWith('ngrok.app') ||
+          host.endsWith('ngrok.io') ||
+          host.startsWith('10.') ||
+          host.startsWith('192.168.')) {
+        return true;
+      }
     }
 
     // Compare SHA-256 fingerprint of the certificate DER bytes

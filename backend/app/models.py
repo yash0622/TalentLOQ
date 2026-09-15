@@ -661,6 +661,9 @@ class MatchingStudentItem(BaseModel):
     total_required: int = 0
     resume_url: Optional[str] = None
     has_resume: bool = False
+    match_percentage: int = 0
+    fit_tier: str = "MODERATE"
+    matched_deployment_skills: List[str] = Field(default_factory=list)
 
 class RecommendedDriveItem(BaseModel):
     """
@@ -682,6 +685,10 @@ class RecommendedDriveItem(BaseModel):
     match_count: int = 0
     total_required: int = 0
     match_summary: str = ""
+    match_percentage: int = 0
+    fit_tier: str = "MODERATE"
+    missing_high_impact_skills: List[str] = Field(default_factory=list)
+    projected_score_boost: int = 0
 
 class RecruiterDriveLeanResponse(BaseModel):
     """

@@ -159,10 +159,11 @@ class TokenStorageService {
     return {'fileName': fileName, 'filePath': filePath};
   }
 
-  /// Clear Resume
+  /// Clear Resume and associated skill cache
   Future<void> clearResume() async {
     await _storage.delete(key: 'profile_resume_name');
     await _storage.delete(key: 'profile_resume_path');
+    await _storage.delete(key: 'profile_skills');
   }
 
   /// Clear Student Profile Data

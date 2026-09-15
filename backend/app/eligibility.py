@@ -182,3 +182,82 @@ def compute_eligibility(student: Dict[str, Any], drive: Dict[str, Any]) -> bool:
                 return False
 
     return True
+
+
+def evaluate_eligibility_gate(student: Dict[str, Any], drive: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Deterministic academic eligibility gate evaluator.
+    Evaluates student academic profile against drive cutoff criteria.
+    Returns boolean status, passed checks, and disqualifying reasons.
+    """
+    if not student or not drive:
+        return {"is_eligible": False, "passed": [], "disqualifications": ["Missing student or drive profile"]}
+
+    passed = []
+    disqualifications = []
+
+    # 1. Course Match
+    eligible_courses = drive.get("eligible_courses") or ["ALL"]
+    verified_fields = student.get("verified_fields") or {}
+    student_terms = [
+        student.get("branch"),
+        student.get("course"),
+        student.get("degree"),
+        student.get("education"),
+        verified_fields.get("branch", {}).get("value") if isinstance(verified_fields.get("branch"), dict) else verified_fields.get("branch"),
+        verified_fields.get("course", {}).get("value") if isinstance(verified_fields.get("course"), dict) else verified_fields.get("course"),
+    ]
+    if _matches_course(student_terms, eligible_courses):
+        passed.append(f"Course '{student.get('branch') or student.get('course') or 'General'}' matches drive eligibility")
+    else:
+        disqualifications.append(f"Course does not match required courses: {eligible_courses}")
+
+    # 2. CGPA Cutoff
+    drive_min_cgpa = float(drive.get("min_cgpa") or drive.get("cgpa_criteria") or 0.0)
+    student_cgpa = float(student.get("CGPA") or student.get("cgpa") or 0.0)
+    if student_cgpa >= drive_min_cgpa:
+        passed.append(f"CGPA {student_cgpa:.2f} meets minimum {drive_min_cgpa:.2f}")
+    else:
+        disqualifications.append(f"CGPA {student_cgpa:.2f} is below required minimum {drive_min_cgpa:.2f}")
+
+    # 3. Active Backlogs
+    max_backlogs = drive.get("max_backlogs")
+    student_backlogs = int(student.get("active_backlogs") or 0)
+    if max_backlogs is not None:
+        try:
+            if student_backlogs <= int(max_backlogs):
+                passed.append(f"Backlogs ({student_backlogs}) within limit ({max_backlogs})")
+            else:
+                disqualifications.append(f"Active backlogs ({student_backlogs}) exceeds limit ({max_backlogs})")
+        except (ValueError, TypeError):
+            pass
+    elif drive.get("allow_backlogs") is False and student_backlogs > 0:
+        disqualifications.append(f"Drive does not allow backlogs, candidate has {student_backlogs}")
+    else:
+        passed.append("Backlog criteria satisfied")
+
+    # 4. 10th & 12th Cutoffs
+    drive_min_10 = drive.get("min_tenth_percentage") or drive.get("tenth_cutoff") or drive.get("min_10th")
+    if drive_min_10 is not None:
+        student_10 = float(student.get("tenth_percentage") or 0.0)
+        if student_10 >= float(drive_min_10) or student_10 == 0:
+            passed.append(f"10th Grade ({student_10}%) meets cutoff ({drive_min_10}%)")
+        else:
+            disqualifications.append(f"10th Grade ({student_10}%) below cutoff ({drive_min_10}%)")
+
+    drive_min_12 = drive.get("min_twelfth_percentage") or drive.get("twelfth_cutoff") or drive.get("min_12th")
+    if drive_min_12 is not None:
+        student_12 = float(student.get("twelfth_percentage") or 0.0)
+        student_dip = float(student.get("diploma_cgpa") or 0.0) * 9.5
+        eff_sec = student_12 if student_12 > 0 else student_dip
+        if eff_sec >= float(drive_min_12) or eff_sec == 0:
+            passed.append(f"12th/Diploma ({eff_sec:.1f}%) meets cutoff ({drive_min_12}%)")
+        else:
+            disqualifications.append(f"12th/Diploma ({eff_sec:.1f}%) below cutoff ({drive_min_12}%)")
+
+    return {
+        "is_eligible": len(disqualifications) == 0,
+        "passed": passed,
+        "disqualifications": disqualifications,
+    }
+

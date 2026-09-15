@@ -1,4 +1,5 @@
 import os
+import asyncio
 import logging
 from typing import Optional, Dict, Any, List
 from dotenv import load_dotenv
@@ -7,7 +8,6 @@ load_dotenv()
 
 logger = logging.getLogger("talentloq.llm")
 
-# Verified 100% Free Models
 FREE_GROQ_MODELS = ["llama-3.1-8b-instant", "qwen/qwen3.8-27b", "groq/compound-mini"]
 FREE_OPENROUTER_MODELS = [
     "qwen/qwen-2.5-coder-32b-instruct:free",
@@ -17,12 +17,15 @@ FREE_OPENROUTER_MODELS = [
 ]
 FREE_MISTRAL_MODELS = ["mistral-small-latest", "open-mistral-7b"]
 FREE_GEMINI_MODELS = ["gemini-2.0-flash-lite", "gemini-flash-latest"]
+FREE_HUGGINGFACE_MODELS = [
+    "meta-llama/Llama-3.2-3B-Instruct",
+    "meta-llama/Llama-3.1-8B-Instruct",
+    "Qwen/Qwen2.5-7B-Instruct",
+    "mistralai/Mistral-7B-Instruct-v0.3",
+    "google/gemma-2-2b-it",
+]
 
 class LLMService:
-    """
-    Unified Multi-Provider Free-Tier LLM Service for TalentLOQ.
-    Configured exclusively with verified free-tier models with automatic failover.
-    """
     _instance = None
 
     def __new__(cls):
@@ -36,6 +39,7 @@ class LLMService:
         self.openrouter_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
         self.gemini_key = os.environ.get("GEMINI_API_KEY", os.environ.get("GOOGLE_API_KEY", "")).strip()
         self.mistral_key = os.environ.get("MISTRAL_API_KEY", "").strip()
+        self.hf_key = os.environ.get("HUGGINGFACE_API_KEY", "").strip()
 
         # 1. Groq (Free Tier)
         self.groq_client = None
@@ -77,6 +81,16 @@ class LLMService:
             except Exception as e:
                 logger.warning(f"Could not initialize Gemini client: {e}")
 
+        # 5. Hugging Face (Serverless Free Inference)
+        self.hf_client = None
+        if self.hf_key and not self.hf_key.startswith("your_"):
+            try:
+                from huggingface_hub import InferenceClient
+                self.hf_client = InferenceClient(api_key=self.hf_key)
+                logger.info("Hugging Face free serverless client initialized.")
+            except Exception as e:
+                logger.warning(f"Could not initialize Hugging Face client: {e}")
+
     @staticmethod
     def _print_token_usage(provider: str, model: str, prompt_tokens: int, completion_tokens: int, total_tokens: int) -> Dict[str, int]:
         print(
@@ -114,7 +128,9 @@ class LLMService:
                     if system_prompt:
                         messages.append({"role": "system", "content": system_prompt})
                     messages.append({"role": "user", "content": prompt})
-                    res = self.groq_client.chat.completions.create(
+                    # Ponytail: offload blocking sync SDK call to worker thread
+                    res = await asyncio.to_thread(
+                        self.groq_client.chat.completions.create,
                         model=model_name,
                         messages=messages,
                         max_tokens=max_tokens,
@@ -146,7 +162,9 @@ class LLMService:
                     if system_prompt:
                         messages.append({"role": "system", "content": system_prompt})
                     messages.append({"role": "user", "content": prompt})
-                    res = self.openrouter_client.chat.completions.create(
+                    # Ponytail: offload blocking sync SDK call to worker thread
+                    res = await asyncio.to_thread(
+                        self.openrouter_client.chat.completions.create,
                         model=model_name,
                         messages=messages,
                         max_tokens=max_tokens,
@@ -178,7 +196,9 @@ class LLMService:
                     if system_prompt:
                         messages.append({"role": "system", "content": system_prompt})
                     messages.append({"role": "user", "content": prompt})
-                    res = self.mistral_client.chat.complete(
+                    # Ponytail: offload blocking sync SDK call to worker thread
+                    res = await asyncio.to_thread(
+                        self.mistral_client.chat.complete,
                         model=model_name,
                         messages=messages,
                         max_tokens=max_tokens,
@@ -207,7 +227,9 @@ class LLMService:
             for model_name in FREE_GEMINI_MODELS:
                 try:
                     full_content = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
-                    res = self.gemini_client.models.generate_content(
+                    # Ponytail: offload blocking sync SDK call to worker thread
+                    res = await asyncio.to_thread(
+                        self.gemini_client.models.generate_content,
                         model=model_name,
                         contents=full_content,
                     )
@@ -229,6 +251,39 @@ class LLMService:
                 except Exception as e:
                     logger.warning(f"Gemini {model_name} failed: {e}")
                     errors.append(f"Gemini ({model_name}): {e}")
+
+        # 5. Try Hugging Face Free Serverless Models
+        if self.hf_client:
+            for model_name in FREE_HUGGINGFACE_MODELS:
+                try:
+                    messages = []
+                    if system_prompt:
+                        messages.append({"role": "system", "content": system_prompt})
+                    messages.append({"role": "user", "content": prompt})
+                    res = await asyncio.to_thread(
+                        self.hf_client.chat.completions.create,
+                        model=model_name,
+                        messages=messages,
+                        max_tokens=max_tokens,
+                    )
+                    text = res.choices[0].message.content.strip()
+                    usage = getattr(res, "usage", None)
+                    p_tok = int(getattr(usage, "prompt_tokens", 0) or 0)
+                    c_tok = int(getattr(usage, "completion_tokens", 0) or 0)
+                    t_tok = int(getattr(usage, "total_tokens", 0) or (p_tok + c_tok))
+                    tokens_dict = self._print_token_usage("huggingface", model_name, p_tok, c_tok, t_tok)
+
+                    return {
+                        "text": text,
+                        "provider": "huggingface",
+                        "model": model_name,
+                        "is_free": True,
+                        "fallback_used": True,
+                        "tokens_used": tokens_dict,
+                    }
+                except Exception as e:
+                    logger.warning(f"Hugging Face {model_name} failed: {e}")
+                    errors.append(f"Hugging Face ({model_name}): {e}")
 
         return {
             "text": "All free AI models are currently unavailable.",

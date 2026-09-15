@@ -29,9 +29,58 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 import time
 
+def _describe_endpoint(method: str, path: str) -> str:
+    """Returns human-readable description of what action/feature is being executed."""
+    p = path.rstrip("/")
+    if p == "/auth/me":
+        return "Fetch Student Profile & Academic State"
+    if p == "/auth/login":
+        return "User Login & Verification"
+    if p == "/auth/register":
+        return "Student Account Registration"
+    if p == "/auth/verify-otp":
+        return "Two-Factor OTP Verification"
+    if p == "/auth/refresh":
+        return "Silent Token Refresh"
+    if p == "/auth/logout":
+        return "User Session Logout"
+    if p == "/auth/resume":
+        return "Resume Deletion / Clear" if method == "DELETE" else "Resume Access"
+    if p == "/documents/upload":
+        return "Document Upload -> RapidOCR & Mark/Skill Parsing"
+    if p == "/documents/profile/verification-state":
+        return "Check Document Verification State"
+    if p == "/documents" and method == "GET":
+        return "List User Uploaded Documents in GridFS"
+    if p.startswith("/documents/") and method == "DELETE":
+        return "Delete Document & Purge Extracted Data"
+    if "/ai-match" in p:
+        return "Student Drive AI Match & Prep Checklist"
+    if "/ai-insight" in p:
+        return "Recruiter 30s Candidate Screening Insight"
+    if "/apply" in p:
+        return "Submit Drive Application"
+    if "my-applications" in p or p.endswith("/applications"):
+        return "Fetch Student Application History"
+    if p.startswith("/drives/student") or p == "/drives":
+        return "Browse Placement Drives & Eligibility Gate"
+    if p.startswith("/recruiter/candidates"):
+        return "Review Candidates & AI Match Scores"
+    if p.startswith("/recruiter/drives"):
+        return "Manage Recruiter Placement Drives"
+    if p.startswith("/chat"):
+        return "Chat & In-App Messaging"
+    if p.startswith("/interviews"):
+        return "Interview Scheduling & Outcomes"
+    if p.startswith("/announcements"):
+        return "Campus Placement Announcements"
+    if p in ["", "/health"]:
+        return "Health Check"
+    return "API Request"
+
 class ApiMetricsLoggingMiddleware(BaseHTTPMiddleware):
     """
-    Logs API method, path, response status code, and latency in terminal with color highlights.
+    Logs API method, path, response status code, latency, and feature description in terminal.
     """
     async def dispatch(self, request: Request, call_next):
         start_time = time.perf_counter()
@@ -40,11 +89,14 @@ class ApiMetricsLoggingMiddleware(BaseHTTPMiddleware):
 
         status = response.status_code
         color = "\033[92m" if status < 400 else "\033[93m" if status < 500 else "\033[91m"
+        cyan = "\033[96m"
         reset = "\033[0m"
 
-        # Log to terminal
+        desc = _describe_endpoint(request.method, request.url.path)
+
+        # Log to terminal with human-readable feature description
         print(
-            f"[API CALL] {request.method:<6} {request.url.path:<35} -> {color}{status}{reset} ({duration_ms:.1f}ms)",
+            f"[API CALL] {request.method:<6} {request.url.path:<38} -> {color}{status}{reset} ({duration_ms:>6.1f}ms) | {cyan}{desc}{reset}",
             flush=True
         )
         return response

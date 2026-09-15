@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -10,13 +11,22 @@ class Settings:
     RECRUITER_EMAIL: str = os.environ.get("RECRUITER_EMAIL", "talentloq.recruiter@gmail.com").lower()
     MONGODB_URL: str = os.environ.get("MONGODB_URL") or os.environ.get("MONGO_URI") or "mongodb://localhost:27017"
     DATABASE_NAME: str = os.environ.get("DATABASE_NAME", "talentloq_db")
-    JWT_SECRET: str = os.environ.get("JWT_SECRET") or os.environ.get("JWT_SECRET_KEY") or "super-secret-jwt-key-minimum-256-bits"
+    _raw_jwt = os.environ.get("JWT_SECRET") or os.environ.get("JWT_SECRET_KEY") or ""
+    if not _raw_jwt:
+        if "pytest" in sys.modules or any("pytest" in arg for arg in sys.argv):
+            _raw_jwt = "test-secret-key-talentloq-secure-fallback-32chars"
+        else:
+            raise RuntimeError("CRITICAL SECURITY ERROR: JWT_SECRET environment variable is not set!")
+    JWT_SECRET: str = _raw_jwt
+    if not any("pytest" in m for m in sys.modules) and len(_raw_jwt) < 32:
+        raise RuntimeError("CRITICAL: JWT_SECRET must be at least 32 characters for HS256 security.")
     JWT_ALGORITHM: str = os.environ.get("JWT_ALGORITHM", "HS256")
     # External LLM Keys
     GROQ_API_KEY: str = os.environ.get("GROQ_API_KEY", "")
     OPENROUTER_API_KEY: str = os.environ.get("OPENROUTER_API_KEY", "")
     GEMINI_API_KEY: str = os.environ.get("GEMINI_API_KEY", os.environ.get("GOOGLE_API_KEY", ""))
     MISTRAL_API_KEY: str = os.environ.get("MISTRAL_API_KEY", "")
+    HUGGINGFACE_API_KEY: str = os.environ.get("HUGGINGFACE_API_KEY", "")
 
     ALLOWED_ORIGINS: str = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8000,http://127.0.0.1:8000")
     
@@ -27,10 +37,10 @@ class Settings:
     DEVICE_VERIFY_EXPIRE_MINUTES: int = 15 # 15 min for device verification token
     
     # Recruiter security settings
-    RECRUITER_INITIAL_PASSWORD: str = os.environ.get("RECRUITER_INITIAL_PASSWORD", "ChangeMeRecruiter2026!")
+    RECRUITER_INITIAL_PASSWORD: str = os.environ.get("RECRUITER_INITIAL_PASSWORD", "")
     ADMIN_ALERT_EMAIL: str = os.environ.get("ADMIN_ALERT_EMAIL", "admin@talentloq.com")
     CAPTCHA_ENABLED: bool = os.environ.get("CAPTCHA_ENABLED", "true").lower() == "true"
-    CAPTCHA_SECRET_KEY: str = os.environ.get("CAPTCHA_SECRET_KEY", "mock-captcha-secret-key")
+    CAPTCHA_SECRET_KEY: str = os.environ.get("CAPTCHA_SECRET_KEY", "")
     ENFORCE_RECRUITER_IP_RESTRICTION: bool = os.environ.get("ENFORCE_RECRUITER_IP_RESTRICTION", "false").lower() == "true"
     ALLOWED_RECRUITER_IPS: list[str] = [ip.strip() for ip in os.environ.get("ALLOWED_RECRUITER_IPS", "127.0.0.1,0.0.0.0/0").split(",") if ip.strip()]
     

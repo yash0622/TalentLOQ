@@ -431,6 +431,10 @@ class ResumeParser(BaseParser):
         # Reject academic degrees leaking into skills
         if re.search(r'\b(?:b\.?tech|m\.?tech|bca|mca|b\.?sc|m\.?sc|b\.?e|mba|bba|diploma)\b', lower):
             return False
+        # Reject section header titles leaking into skills
+        section_headers = ("professional experience", "work experience", "technical skills", "projects", "education", "certifications", "publications", "experience", "profile", "summary")
+        if lower in section_headers:
+            return False
         # Phrases of 4+ words that are not recognized canonical skills are noise
         if len(token.split()) >= 4:
             return False
@@ -443,6 +447,12 @@ class ResumeParser(BaseParser):
         text_lower = text.lower()
 
         name = cls.extract_name_from_lines(lines, profile_name=profile_name)
+
+        email_m = re.search(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', text)
+        email = email_m.group(0).strip() if email_m else None
+
+        phone_m = re.search(r'(?:\+?91[\s-]?)?[6-9]\d{9}', text)
+        phone = phone_m.group(0).strip() if phone_m else None
 
         tech_skills_found = set()
         for raw_token, canonical in CANONICAL_SKILLS_MAP.items():
@@ -495,6 +505,16 @@ class ResumeParser(BaseParser):
                                 soft_skills_found.add(f_soft)
                             elif cls._is_valid_skill_token(base_tok):
                                 tech_skills_found.add(base_tok)
+
+        # Neural Zero-Shot Entity Extraction (GLiNER) integration to catch novel skills
+        try:
+            from app.services.skill_matcher import skill_matcher_engine
+            neural_skills = skill_matcher_engine.extract_skills_from_text(text, use_ner=True)
+            for ns in neural_skills:
+                if cls._is_valid_skill_token(ns):
+                    tech_skills_found.add(ns)
+        except Exception:
+            pass
 
         # Known Spoken Languages
         languages_found = set()
@@ -595,7 +615,7 @@ class ResumeParser(BaseParser):
 
         # Parse distinct internship blocks by scanning role patterns and duration patterns
         entry_patterns = re.finditer(
-            r'(?:(?:^|\n)\s*([A-Za-z0-9\s,\.&]{3,45}?)\s+(?:at|@|[-–|•])\s+([A-Za-z0-9\s,\.&]{2,45}?)\s*(?:\n|\(|\||\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d{4})\b))',
+            r'(?:(?:^|\n)\s*([A-Za-z0-9\s—–\.\&]{3,50}?)\s*(?:,|\sat\s|\s@\s|\s[-–|•]\s)\s*([A-Za-z0-9\s\.\&]{3,60}?)\s*(?:\n|\(|\||\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d{4})\b))',
             search_exp_text,
             re.IGNORECASE
         )
@@ -612,11 +632,14 @@ class ResumeParser(BaseParser):
                 comp_clean = re.sub(r'[^A-Za-z0-9\s]', '', comp).strip()
                 if len(comp_clean) >= 2 and comp_clean.lower() not in seen_companies and not any(ign in comp_clean.lower() for ign in ["experience", "education", "project", "university"]):
                     seen_companies.add(comp_clean.lower())
+                    snippet = search_exp_text[ep.start():ep.end()+50]
+                    dur_m = re.search(r'\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b(?:\s*[-–—]\s*(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))?\s*\d{4}(?:\s*[-–—]\s*(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s*)?\d{4}|\s*[-–—]\s*present)?', snippet, re.IGNORECASE)
+                    duration = dur_m.group(0).strip() if dur_m else "Reported in Resume"
                     internships.append({
-                        "company_name": comp.title(),
-                        "role_title": role.title(),
-                        "duration": "Reported in Resume",
-                        "description": f"{role.title()} at {comp.title()}"
+                        "company_name": comp.strip().title(),
+                        "role_title": role.strip().title(),
+                        "duration": duration,
+                        "description": f"{role.strip().title()} at {comp.strip().title()}"
                     })
 
         # Fallback count: Scan for occurrences of "intern" / "internship" with date ranges or distinct companies
@@ -644,8 +667,20 @@ class ResumeParser(BaseParser):
             except Exception:
                 pass
 
+        # Filter out soft skills and spoken languages from technical_skills
+        tech_skills_found = {
+            s for s in tech_skills_found
+            if s not in soft_skills_found
+            and s not in KNOWN_LANGUAGES
+            and s.lower() not in CANONICAL_SOFT_SKILLS_MAP
+            and not any(s.lower() == l.lower() for l in KNOWN_LANGUAGES)
+            and not any(s.lower() == sk.lower() for sk in soft_skills_found)
+        }
+
         result = {
             "candidate_name": name,
+            "email": email,
+            "phone": phone,
             "skills": sorted(list(tech_skills_found.union(soft_skills_found))),
             "technical_skills": sorted(list(tech_skills_found)),
             "soft_skills": sorted(list(soft_skills_found)),

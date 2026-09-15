@@ -101,6 +101,7 @@ class _CompanyPortalScreenState extends State<CompanyPortalScreen> with SingleTi
     final matchVal = double.tryParse((item['match_score'] ?? 90).toString()) ?? 90.0;
     final skillsList = List<String>.from(item['skills'] ?? ['Problem Solving', 'Core CS']);
     final resume = (item['resume_link'] ?? '').toString();
+    final ugUrl = (item['ug_marksheet_url'] ?? item['ug_document_url'])?.toString();
 
     return Candidate(
       id: studentId,
@@ -117,6 +118,7 @@ class _CompanyPortalScreenState extends State<CompanyPortalScreen> with SingleTi
       validationStatus: (item['validation_status'] ?? 'pending').toString(),
       cgpa: cgpaVal,
       resumeUrl: resume.isNotEmpty ? resume : null,
+      ugMarksheetUrl: (ugUrl != null && ugUrl.isNotEmpty) ? ugUrl : null,
     );
   }
 

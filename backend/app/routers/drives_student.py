@@ -20,7 +20,6 @@ from app.dependencies import get_optional_current_user, require_role
 from app.eligibility import compute_eligibility
 from app.models import AuditLogModel, PaginatedResponse, DriveLeanResponse, RecommendedDriveItem
 from app.services.skill_matcher import skill_matcher_engine
-from app.services.groq_matcher import GroqMatcherService, SmartAIMatchResponse
 from app.routers.auth import limiter
 
 logger = logging.getLogger("talentloq.drives_student")
@@ -84,9 +83,6 @@ async def list_published_placement_drives(
 
     try:
         total_count = await drives_collection.count_documents(filter_query)
-        if total_count == 0:
-            filter_query = {}
-            total_count = await drives_collection.count_documents(filter_query)
     except Exception:
         total_count = None
 
@@ -235,6 +231,12 @@ async def get_recommended_drives_for_student(
     if not student_skills:
         return PaginatedResponse(items=[], page=page, limit=limit, total_count=0, has_more=False)
 
+    from app.services.hybrid_matcher import compute_hybrid_match_score
+    student_resume_vec = student.get("resume_vector")
+    student_dep_skills = student.get("deployment_skills", [])
+    student_internships = student.get("internships", [])
+    student_resume_text = student.get("resume_text", "")
+
     # Fetch active drives
     cursor = drives_collection.find({"status": {"$ne": "closed"}}).sort("created_at", -1)
     all_drives = await cursor.to_list(length=500)
@@ -259,6 +261,15 @@ async def get_recommended_drives_for_student(
 
             is_eligible = compute_eligibility(student, drive)
 
+            # Fast deterministic scoring for high-performance paginated list view
+            raw_match_pct = int(round((overlap["match_count"] / max(overlap["total_required"], 1)) * 100))
+            match_percentage = min(100, max(20, raw_match_pct))
+            fit_tier = "EXCELLENT" if match_percentage >= 80 else ("STRONG" if match_percentage >= 60 else "MODERATE")
+
+            missing_top = overlap["missing_skills"][:3]
+            boost_per_skill = min(12, int(round(40 / max(len(req_skills), 1))))
+            projected_boost = min(len(missing_top) * boost_per_skill, 30)
+
             recommended_items.append(
                 RecommendedDriveItem(
                     drive_id=str(drive.get("drive_id", "")),
@@ -277,11 +288,15 @@ async def get_recommended_drives_for_student(
                     match_count=overlap["match_count"],
                     total_required=overlap["total_required"],
                     match_summary=summary,
+                    match_percentage=match_percentage,
+                    fit_tier=fit_tier,
+                    missing_high_impact_skills=missing_top,
+                    projected_score_boost=projected_boost,
                 )
             )
 
-    # Sort descending by match_count, then min_cgpa
-    recommended_items.sort(key=lambda x: (x.match_count, x.min_cgpa), reverse=True)
+    # Sort descending by (match_percentage DESC, is_eligible DESC, min_cgpa DESC)
+    recommended_items.sort(key=lambda x: (x.match_percentage, x.is_eligible, x.min_cgpa), reverse=True)
 
     total_count = len(recommended_items)
     start_idx = (page - 1) * limit
@@ -295,6 +310,75 @@ async def get_recommended_drives_for_student(
         total_count=total_count,
         has_more=has_more,
     )
+
+
+@router.get("/skill-gap/roadmap", status_code=status.HTTP_200_OK)
+async def get_student_skill_gap_roadmap(
+    token_payload: dict = Depends(require_role("student")),
+):
+    """
+    GET /drives/skill-gap/roadmap
+    Aggregates active placement drives and identifies the highest-leverage missing skills
+    for the student, calculating projected match increases and unlocked drive counts.
+    """
+    sid = str(token_payload.get("sub", ""))
+    student = (
+        await students_collection.find_one({"student_id": sid})
+        or await students_collection.find_one({"user_id": sid})
+    )
+    if not student:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student profile not found.")
+
+    student_skills = set(s.lower() for s in (student.get("skills") or []))
+
+    cursor = drives_collection.find({"status": {"$ne": "closed"}})
+    drives = await cursor.to_list(length=200)
+
+    from collections import Counter
+    missing_skill_counter = Counter()
+    unlocked_drive_counter = Counter()
+    total_active_drives = len(drives)
+    currently_matching_drives = 0
+
+    for d in drives:
+        req = [s.strip() for s in (d.get("extracted_required_skills") or d.get("required_skills") or []) if s.strip()]
+        if not req:
+            continue
+        req_lower = set(s.lower() for s in req)
+        matched = req_lower.intersection(student_skills)
+        missing = req_lower.difference(student_skills)
+
+        if len(matched) > 0:
+            currently_matching_drives += 1
+
+        for m in missing:
+            c_skill = m.title()
+            missing_skill_counter[c_skill] += 1
+            if len(matched) == 0:
+                unlocked_drive_counter[c_skill] += 1
+
+    top_missing = []
+    for skill, freq in missing_skill_counter.most_common(5):
+        top_missing.append({
+            "skill": skill,
+            "required_by_drives_count": freq,
+            "unlocks_additional_drives": unlocked_drive_counter.get(skill, 0),
+            "estimated_match_boost_pct": min(freq * 4, 25),
+        })
+
+    rec_msg = (
+        f"Learning '{top_missing[0]['skill']}' would improve your profile for {top_missing[0]['required_by_drives_count']} campus drives."
+        if top_missing else "Your skill profile matches all currently published drives!"
+    )
+
+    return {
+        "student_skills": sorted(student.get("skills") or []),
+        "total_active_drives": total_active_drives,
+        "currently_matching_drives": currently_matching_drives,
+        "top_leverage_skills": top_missing,
+        "recommendation": rec_msg,
+    }
+
 
 @router.get("/{drive_id}", status_code=status.HTTP_200_OK)
 async def get_placement_drive_detail(
@@ -615,7 +699,7 @@ async def mark_email_client_opened(
     }
 
 
-@router.get("/{drive_id}/ai-match", status_code=status.HTTP_200_OK, response_model=SmartAIMatchResponse)
+@router.get("/{drive_id}/ai-match", status_code=status.HTTP_404_NOT_FOUND)
 async def get_student_drive_ai_match(
     drive_id: str,
     bypass_cache: bool = Query(False, description="Force re-computation with Groq"),
@@ -623,60 +707,11 @@ async def get_student_drive_ai_match(
 ):
     """
     GET /drives/{drive_id}/ai-match
-    Computes a smart, 4-pillar recruitment intelligence match using Groq AI.
-    Includes semantic equivalences, project evidence mining, skill gaps,
-    and 3 predicted technical interview questions with 48h prep checklist.
+    Deprecated / disabled on student side to prevent external LLM calls.
     """
-    student_id = token_payload["sub"]
-    student_doc = (
-        await students_collection.find_one({"student_id": student_id})
-        or await students_collection.find_one({"user_id": student_id})
-        or await students_collection.find_one({"email": student_id})
-        or await users_collection.find_one({"user_id": student_id})
-        or await users_collection.find_one({"email": student_id})
-    )
-    if student_doc and "skills" not in student_doc:
-        linked_student = await students_collection.find_one({
-            "$or": [
-                {"user_id": student_doc.get("user_id")},
-                {"email": student_doc.get("email")},
-            ]
-        })
-        if linked_student:
-            student_doc = linked_student
-
-    if not student_doc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student profile not found.")
-
-    drive = await drives_collection.find_one({"drive_id": drive_id})
-    if not drive:
-        drive = await drives_collection.find_one({"listing_id": drive_id})
-    if not drive:
-        drive = await company_listings_collection.find_one({"listing_id": drive_id})
-    if not drive:
-        drive = await company_listings_collection.find_one({"drive_id": drive_id})
-    if not drive:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Placement drive not found.")
-
-    # Retrieve application context for multi-round progression
-    student_id = str(student_doc.get("student_id") or student_doc.get("user_id") or "")
-    app = await applications_collection.find_one({
-        "$or": [
-            {"drive_id": drive_id, "student_id": student_id},
-            {"listing_id": drive_id, "student_id": student_id},
-            {"drive_id": drive_id, "user_id": student_id},
-            {"listing_id": drive_id, "user_id": student_id},
-        ]
-    })
-    current_round = int(app.get("current_round", 1)) if app else 1
-    round_history = app.get("round_history", []) if app else []
-
-    return await GroqMatcherService.analyze_match(
-        student_doc=student_doc,
-        drive_doc=drive,
-        current_round=current_round,
-        round_history=round_history,
-        bypass_cache=bypass_cache,
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Interview question synthesis is disabled for student accounts."
     )
 
 

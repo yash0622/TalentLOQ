@@ -1,7 +1,10 @@
 import asyncio
+import logging
 import motor.motor_asyncio
 from pymongo import MongoClient
 from app.config import settings
+
+logger = logging.getLogger("talentloq.database")
 
 # Async Motor Client for FastAPI Endpoints
 async_client = motor.motor_asyncio.AsyncIOMotorClient(settings.MONGODB_URL)
@@ -125,8 +128,8 @@ async def init_db_indexes():
         await chat_messages_collection.create_index("recipient_id")
     except (asyncio.CancelledError, KeyboardInterrupt):
         pass
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Failed to initialize database indexes: {e}")
 
 def get_sync_db():
     return sync_db

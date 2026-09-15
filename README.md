@@ -19,7 +19,7 @@ Traditional university hiring processes suffer from communication delays, lack o
 * **Scheduled Campus Interviews Hub:** Real-time scheduling, tracking, and outcome logging across Aptitude, Technical, and HR interview rounds.
 * **Direct Candidate Messaging:** Recruiter-to-student in-app chat and selection round advancement notices.
 * **Embedded Resume Vault:** Integrated native PDF viewer for uploaded student resumes.
-* **Enterprise Security Suite:** AES-256 GCM field-level encryption, short-lived JWT access tokens, OTP 2FA, TLS certificate pinning, and audit trails.
+* **Enterprise Security Suite:** Fernet field-level encryption (AES-128-CBC + HMAC-SHA256), short-lived JWT access tokens, OTP 2FA, TLS certificate pinning, and audit trails.
 * **Production-Grade Containerization:** Multi-stage Docker builds, Docker Compose orchestration, and scalable Kubernetes (`k8s/`) deployment manifests with Kustomize.
 
 ---
@@ -47,7 +47,7 @@ Traditional university hiring processes suffer from communication delays, lack o
 * **API Metrics Profiler:** Built-in middleware logging method, endpoint path, HTTP status, and millisecond latency for all REST calls.
 
 ### 🔒 Security, Compliance & System Resilience
-* **AES-256 GCM Field Encryption:** Encrypts sensitive academic data (CGPA, backlogs, contact info) at rest in MongoDB.
+* **Field-Level Encryption (Fernet):** Encrypts sensitive academic data (CGPA, backlogs, contact info) at rest in MongoDB using Fernet (AES-128-CBC with HMAC-SHA256 authentication).
 * **Multi-Factor Authentication (OTP 2FA):** Email-based OTP verification for sensitive login attempts and password resets.
 * **Device Fingerprinting:** Captures unique `X-Device-ID` headers to detect and block untrusted device logins.
 * **Rate Limiting & Threat Prevention:** `slowapi` rate-limiting middleware to guard authentication endpoints against brute-force attacks.
@@ -95,7 +95,7 @@ flowchart TD
     subgraph Gateway ["2. Security Gateway & API Layer (FastAPI)"]
         API["FastAPI REST Endpoints"]
         Auth["JWT & OTP Auth Engine"]
-        AES["AES-256 GCM Encryption Engine"]
+        AES["Fernet Field Encryption Engine"]
         Limiter["SlowAPI Rate Limiter"]
         Observability["API Metrics & Token Telemetry"]
         AI_Engine["Placement Intelligence Agents"]
@@ -144,7 +144,7 @@ TalentLOQ/
 │   │   ├── config.py              # Application settings & environment configuration
 │   │   ├── database.py            # MongoDB Motor client & GridFS initialization
 │   │   ├── dependencies.py        # Authentication & Role-Based Access Control (RBAC)
-│   │   ├── encryption.py          # AES-256 GCM field encryption implementation
+│   │   ├── encryption.py          # Fernet field encryption implementation
 │   │   ├── jwt_utils.py           # Short-lived access & refresh token utilities
 │   │   ├── main.py                # FastAPI entry point, Windows event loop safeguard, & middlewares
 │   │   ├── middleware.py          # SecurityHeadersMiddleware & ApiMetricsLoggingMiddleware

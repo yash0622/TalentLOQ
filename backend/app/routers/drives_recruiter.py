@@ -242,6 +242,13 @@ async def create_placement_drive(
     drive_doc["created_at"] = drive_doc["created_at"].isoformat()
     drive_doc["updated_at"] = drive_doc["updated_at"].isoformat()
 
+    # Pre-compute dense vector for instant recruiter matching
+    from app.services.hybrid_matcher import get_text_embedding_async
+    jd_summary = f"{drive_title}\n{description}\nRequired Skills: {', '.join(combined_req_skills)}"
+    jd_vec = await get_text_embedding_async(jd_summary)
+    if jd_vec:
+        drive_doc["jd_vector"] = jd_vec
+
     await drives_collection.insert_one(drive_doc)
 
     client_ip = request.client.host if request.client else "127.0.0.1"
@@ -295,6 +302,16 @@ async def edit_placement_drive(
             schedule_changed = True
 
     if update_fields:
+        if any(k in update_fields for k in ["description", "required_skills", "drive_title"]):
+            from app.services.hybrid_matcher import get_text_embedding_async
+            d_title = update_fields.get("drive_title") or drive.get("drive_title", "")
+            d_desc = update_fields.get("description") or drive.get("description", "")
+            d_skills = update_fields.get("required_skills") or drive.get("required_skills", [])
+            jd_summary = f"{d_title}\n{d_desc}\nRequired Skills: {', '.join(d_skills)}"
+            jd_vec = await get_text_embedding_async(jd_summary)
+            if jd_vec:
+                update_fields["jd_vector"] = jd_vec
+
         update_fields["updated_at"] = datetime.now(timezone.utc).isoformat()
         await drives_collection.update_one({"drive_id": drive_id}, {"$set": update_fields})
 
@@ -401,7 +418,7 @@ async def list_recruiter_placement_drives(
                 },
             }},
         ])
-        for row in await count_cursor.to_list(length=None):
+        for row in await count_cursor.to_list(length=5000):
             application_counts[row["_id"]] = row
 
     items = []
@@ -826,6 +843,19 @@ async def get_matching_students_for_drive(
         u_list = await u_cursor.to_list(length=len(missing_user_ids) + 1)
         user_email_map = {u["user_id"]: u.get("email", "") for u in u_list if "user_id" in u and u.get("email")}
 
+    from app.services.hybrid_matcher import compute_hybrid_match_score, get_text_embedding_async
+
+    jd_vector = drive.get("jd_vector")
+    drive_desc = drive.get("description", "")
+    if not jd_vector and (drive_desc or required_skills):
+        jd_summary = f"{drive.get('drive_title', '')}\n{drive_desc}\nRequired Skills: {', '.join(required_skills)}"
+        jd_vector = await get_text_embedding_async(jd_summary)
+        if jd_vector:
+            try:
+                await drives_collection.update_one({"drive_id": drive_id}, {"$set": {"jd_vector": jd_vector}})
+            except RuntimeError:
+                pass  # event-loop mismatch in test; vector still used in-memory
+
     matched_items: List[MatchingStudentItem] = []
     for cand in candidates:
         cand_skills = cand.get("skills", [])
@@ -837,6 +867,18 @@ async def get_matching_students_for_drive(
 
         cgpa_val = float(cand.get("CGPA") or cand.get("cgpa") or 0.0)
         email = cand.get("email") or user_email_map.get(cand.get("user_id"))
+
+        # Two-stage calibrated hybrid scoring
+        ai_res = compute_hybrid_match_score(
+            resume_text=cand.get("resume_text"),
+            job_description=drive_desc,
+            candidate_skills=cand_skills,
+            job_skills=required_skills,
+            resume_vector=cand.get("resume_vector"),
+            job_vector=jd_vector,
+            candidate_deployment_skills=cand.get("deployment_skills", []),
+            candidate_internships=cand.get("internships", []),
+        )
 
         matched_items.append(
             MatchingStudentItem(
@@ -852,11 +894,14 @@ async def get_matching_students_for_drive(
                 total_required=overlap["total_required"],
                 resume_url=cand.get("resume_url"),
                 has_resume=bool(cand.get("has_resume") or cand.get("resume_url")),
+                match_percentage=ai_res["match_percentage"],
+                fit_tier=ai_res["fit_tier"],
+                matched_deployment_skills=ai_res["matched_deployment_skills"],
             )
         )
 
-    # Sort descending by (match_count DESC, cgpa DESC)
-    matched_items.sort(key=lambda x: (x.match_count, x.cgpa), reverse=True)
+    # Sort descending by (match_percentage DESC, match_count DESC, cgpa DESC)
+    matched_items.sort(key=lambda x: (x.match_percentage, x.match_count, x.cgpa), reverse=True)
 
     total_count = len(matched_items)
     start_idx = (page - 1) * limit
@@ -1015,5 +1060,6 @@ async def get_applicant_ai_insight(
         current_round=current_round,
         round_history=round_history,
         bypass_cache=bypass_cache,
+        allow_external_llm=True,  # Full Groq LLM intelligence enabled for recruiter candidate screening
     )
 

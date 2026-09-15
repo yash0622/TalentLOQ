@@ -86,14 +86,23 @@ class ApiClient {
   }
 
   String _getBaseUrl() {
-    // 1. Check compile-time environment variable: --dart-define=API_URL=https://...
     const envUrl = String.fromEnvironment('API_URL');
     if (envUrl.isNotEmpty) {
       return envUrl;
     }
 
-    // 2. Active Cloud ngrok tunnel for reliable real-device connectivity without adb reverse drops
-    return 'https://unrecorded-unpretended-loretta.ngrok-free.dev';
+    // In local debug mode, provide seamless local development loopback
+    if (kDebugMode) {
+      if (kIsWeb) {
+        return 'http://127.0.0.1:8000';
+      }
+      // PC local Wi-Fi IP allows both physical devices and emulators on the local network to connect
+      return 'http://10.205.31.179:8000';
+    }
+
+    throw StateError(
+      'API_URL not set. Pass --dart-define=API_URL=https://your-backend-url at build time.',
+    );
   }
 
   Future<bool> attemptSilentRefresh() async {
@@ -117,7 +126,8 @@ class ApiClient {
         }
       }
       return false;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[ApiClient] Silent refresh failed: $e');
       return false;
     }
   }

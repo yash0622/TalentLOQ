@@ -6,7 +6,7 @@
 - **Main Features**:
   - **Student Portal**: Academic & profile management, resume PDF upload & native file viewing, placement job marketplace, application status tracking, broadcast announcements feed, and interview scheduling.
   - **Recruiter & Placement Officer Portal**: Job & internship drive management (Parser Agent auto-structuring), Candidate Review & Validation Dashboard (Matcher Agent skill gaps & student approval gate), Interview Scheduling & Outcome Logging (Selection Notifications), Cohort Analytics, Broadcast Announcements, Support Tickets, and Academic Record visibility.
-  - **Security & Compliance**: Role-based access control (Student vs Recruiter), TLS Certificate Pinning, Device Fingerprinting (`X-Device-ID`), OTP verification, Rate Limiting (`slowapi`), AES-256 field encryption, audit logging, and recruiter single-account constraint.
+  - **Security & Compliance**: Role-based access control (Student vs Recruiter), TLS Certificate Pinning, Device Fingerprinting (`X-Device-ID`), OTP verification, Rate Limiting (`slowapi`), Fernet field encryption, audit logging, and recruiter single-account constraint.
 - **Current Development Status**: Feature complete for Core Auth, Student Profile, Placement Marketplace, Resume Viewer, Recruiter & Placement Officer Portal suite, Security Middleware, and Admin Audit services. All dummy/ghost placeholder data removed; connected to live MongoDB backend.
 
 ---
@@ -38,7 +38,7 @@ telentloq/
 │   │   ├── config.py                 # Pydantic environment configuration
 │   │   ├── database.py               # Motor async & PyMongo connection & indexes
 │   │   ├── dependencies.py           # Dependency injection (Auth, Roles, Re-auth)
-│   │   ├── encryption.py             # AES-256 GCM field encryption utilities
+│   │   ├── encryption.py             # Fernet field encryption utilities
 │   │   ├── jwt_utils.py              # JWT encoding/decoding & token creation
 │   │   ├── middleware.py             # Security headers & IP restrictions
 │   │   ├── models.py                 # Pydantic schemas & MongoDB models
@@ -215,7 +215,7 @@ telentloq/
 - `RECRUITER_EMAIL`: Primary reserved recruiter email.
 - `RECRUITER_IP_ALLOWLIST`: Comma-separated allowed IPs for recruiter logins.
 - `ALLOWED_ORIGINS`: Origins allowed for CORS.
-- `ENCRYPTION_KEY`: Secret key for AES-256 field encryption.
+- `FIELD_ENCRYPTION_KEY`: Secret key for Fernet field encryption.
 
 ### Build Configuration
 - **Android `compileSdk`**: Updated to `36` in `android/app/build.gradle.kts`.

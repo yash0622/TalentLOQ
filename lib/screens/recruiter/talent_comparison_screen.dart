@@ -1,10 +1,7 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:dio/dio.dart';
-import 'package:open_filex/open_filex.dart';
-import '../../network/api_client.dart';
 import '../../services/recruiter_service.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/document_viewer_helper.dart';
 import '../../widgets/app_avatar.dart';
 
 class TalentComparisonScreen extends StatefulWidget {
@@ -104,41 +101,12 @@ class _TalentComparisonScreenState extends State<TalentComparisonScreen> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Opening resume document...'), duration: Duration(milliseconds: 1200)),
+    await DocumentViewerHelper.viewDocument(
+      context,
+      fileUrl: resumeLink,
+      docTitle: '$name\'s Resume',
+      filename: '${name.replaceAll(' ', '_')}_resume.pdf',
     );
-
-    try {
-      final dio = ApiClient.instance.dio;
-      String endpoint = resumeLink;
-      if (!resumeLink.startsWith('http')) {
-        endpoint = resumeLink.startsWith('/') ? resumeLink : '/$resumeLink';
-      }
-
-      final tempDir = Directory.systemTemp;
-      final safeName = '${name.replaceAll(' ', '_')}_resume.pdf';
-      final tempPdf = File('${tempDir.path}/$safeName');
-
-      final response = await dio.get<List<int>>(
-        endpoint,
-        options: Options(
-          responseType: ResponseType.bytes,
-          headers: {'ngrok-skip-browser-warning': 'true'},
-        ),
-      );
-
-      if (response.statusCode == 200 && response.data != null && response.data!.isNotEmpty) {
-        await tempPdf.writeAsBytes(response.data!);
-        await OpenFilex.open(tempPdf.path);
-        return;
-      }
-    } catch (_) {}
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open resume file.')),
-      );
-    }
   }
 
   @override

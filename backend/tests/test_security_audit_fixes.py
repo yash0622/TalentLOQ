@@ -51,7 +51,7 @@ async def test_backdoor_password_rejected(monkeypatch):
             "password": "ChangeMeRecruiter2026!"
         })
         assert res.status_code == 401
-        assert "Incorrect password" in res.text
+        assert "Invalid email or password" in res.text
 
         # Attempt with second backdoor string
         res2 = await ac.post("/auth/login", json={
@@ -59,7 +59,7 @@ async def test_backdoor_password_rejected(monkeypatch):
             "password": "telentloq@authentication"
         })
         assert res2.status_code == 401
-        assert "Incorrect password" in res2.text
+        assert "Invalid email or password" in res2.text
 
 @pytest.mark.asyncio
 async def test_student_registration_domain_restriction(monkeypatch):

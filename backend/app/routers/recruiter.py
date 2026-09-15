@@ -19,6 +19,7 @@ from app.database import (
     support_tickets_collection,
     audit_logs_collection,
     verification_documents_collection,
+    notifications_collection,
     grid_fs,
 )
 from app.notifications import notify_on_publish, notify_on_schedule_change
@@ -44,6 +45,8 @@ from app.models import (
     sanitize_string,
 )
 from app.dependencies import require_role, require_recent_reauth
+from app.services.hybrid_matcher import compute_hybrid_match_score
+from app.services.placement_forecaster import forecast_placement_likelihood
 
 logger = logging.getLogger("talentloq.recruiter")
 
@@ -311,8 +314,51 @@ async def list_validation_applicants(
         if hasattr(applied_at, "isoformat"):
             applied_at = applied_at.isoformat()
 
-        # Calculate a realistic match score if missing
-        match_score = a.get("match_score", 92)
+        # Hybrid AI Match Score
+        required_skills = drive.get("required_skills") or drive.get("skills") or ["Problem Solving", "Core CS"]
+        if isinstance(required_skills, str):
+            required_skills = [s.strip() for s in required_skills.split(",") if s.strip()]
+        if not isinstance(skills, list):
+            candidate_skills = [str(skills)]
+        else:
+            candidate_skills = [str(s) for s in skills]
+
+        resume_text = a.get("resume_text") or student.get("resume_text") or student.get("summary") or ""
+        job_desc = drive.get("job_description") or drive.get("description") or drive.get("responsibilities") or ""
+
+        ai_match = compute_hybrid_match_score(
+            resume_text=resume_text,
+            job_description=job_desc,
+            job_skills=required_skills,
+            candidate_skills=candidate_skills,
+        )
+        match_score = ai_match.get("match_score") or ai_match.get("match_percentage") or a.get("match_score", 88)
+
+        # Placement Forecaster
+        clean_cgpa = 8.0
+        try:
+            clean_cgpa = float(cgpa)
+        except Exception:
+            pass
+
+        p_forecast = forecast_placement_likelihood({
+            "cgpa": clean_cgpa,
+            "tenth_percentage": float(student.get("tenth_percentage", 80.0) or 80.0),
+            "twelfth_percentage": float(student.get("twelfth_percentage", 80.0) or 80.0),
+            "skill_match_pct": float(match_score),
+            "num_skills": len(candidate_skills),
+            "resume_score": float(match_score),
+            "backlogs": int(student.get("backlogs", 0) or 0),
+            "projects_count": len(student.get("projects", [])) or 2,
+        })
+
+        # Extract student UG marksheet url if available
+        st_docs = student.get("documents")
+        if not isinstance(st_docs, dict):
+            st_docs = {}
+        ug_raw = st_docs.get("ug_marksheet") or st_docs.get("ug")
+        ug_info = ug_raw if isinstance(ug_raw, dict) else {}
+        ug_file_url = ug_info.get("file_url") or student.get("ug_marksheet_url") or ""
 
         results.append({
             "app_id": app_id_str,
@@ -326,9 +372,13 @@ async def list_validation_applicants(
             "cgpa": cgpa,
             "course": course,
             "education": course,
-            "skills": skills,
+            "skills": candidate_skills,
             "match_score": match_score,
+            "ai_match_details": ai_match,
+            "placement_forecast": p_forecast,
             "resume_link": resume_link,
+            "ug_marksheet_url": ug_file_url,
+            "ug_document_url": ug_file_url,
             "validation_status": v_status,
             "final_outcome": f_outcome,
             "current_round": a.get("current_round", 1),
@@ -762,27 +812,69 @@ async def get_student_academic_record(
     """
     View student academic record (Current CGPA, backlog records, verified UG result and resume) for recruiter review.
     """
-    student = await students_collection.find_one({
-        "$or": [{"student_id": student_id}, {"user_id": student_id}, {"email": student_id}]
-    })
+    # Comprehensive Student Resolution: Check student_id, user_id, email, Mongo _id, or application_id
+    or_queries = [
+        {"student_id": student_id},
+        {"user_id": student_id},
+        {"email": student_id},
+    ]
+    if ObjectId.is_valid(student_id):
+        or_queries.append({"_id": ObjectId(student_id)})
+
+    student = await students_collection.find_one({"$or": or_queries})
+
+    # If not found directly, student_id may be an application_id (app_id) passed from recruiter dashboard
     if not student:
-        user = await users_collection.find_one({
-            "$or": [{"user_id": student_id}, {"email": student_id}]
-        })
+        app_queries = [{"app_id": student_id}]
+        if ObjectId.is_valid(student_id):
+            app_queries.append({"_id": ObjectId(student_id)})
+        app_doc = await applications_collection.find_one({"$or": app_queries})
+        if app_doc:
+            app_sid = app_doc.get("student_id") or app_doc.get("user_id")
+            if app_sid:
+                sq = [
+                    {"student_id": app_sid},
+                    {"user_id": app_sid},
+                    {"email": app_sid},
+                ]
+                if ObjectId.is_valid(app_sid):
+                    sq.append({"_id": ObjectId(app_sid)})
+                student = await students_collection.find_one({"$or": sq})
+
+    if not student:
+        user_queries = [
+            {"user_id": student_id},
+            {"email": student_id},
+        ]
+        if ObjectId.is_valid(student_id):
+            user_queries.append({"_id": ObjectId(student_id)})
+        user = await users_collection.find_one({"$or": user_queries})
         if user:
-            student = {
-                "student_id": user.get("user_id", student_id),
-                "full_name": user.get("full_name", "Student Candidate"),
-                "email": user.get("email", ""),
-                "CGPA": 7.13,
-                "active_backlogs": 0,
-            }
+            student = await students_collection.find_one({
+                "$or": [
+                    {"user_id": str(user.get("_id"))},
+                    {"user_id": user.get("user_id")},
+                    {"email": user.get("email")}
+                ]
+            })
+            if not student:
+                student = {
+                    "student_id": user.get("user_id", student_id),
+                    "full_name": user.get("full_name", "Student Candidate"),
+                    "email": user.get("email", ""),
+                    "CGPA": None,
+                    "cgpa": None,
+                    "active_backlogs": None,
+                    "closed_backlogs": None,
+                    "is_profile_incomplete": True,
+                }
         else:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student record not found")
 
-    cgpa = student.get("CGPA") or student.get("cgpa") or 8.0
+    raw_cgpa = student.get("CGPA") if student.get("CGPA") is not None else student.get("cgpa")
+    cgpa = float(raw_cgpa) if raw_cgpa is not None else None
 
-    # Retrieve only undergraduate result document and resume document
+    # Retrieve undergraduate result document and resume document
     ug_doc = None
     resume_doc = None
 
@@ -793,6 +885,7 @@ async def get_student_academic_record(
             {"student_id": student.get("student_id")},
             {"user_id": student.get("user_id")},
             {"student_id": student.get("email")},
+            {"user_id": str(student.get("_id"))},
         ]
     }).to_list(50)
 
@@ -802,34 +895,88 @@ async def get_student_academic_record(
             ug_doc = {
                 "document_id": d.get("document_id"),
                 "filename": d.get("filename", "Undergraduate Result.pdf"),
-                "file_url": d.get("file_url") or f"/api/v1/files/document/{d.get('document_id')}",
+                "file_url": d.get("file_url") or (f"/api/v1/files/{d.get('grid_file_id')}" if d.get("grid_file_id") else f"/api/v1/files/document/{d.get('document_id')}"),
                 "status": d.get("processing_status", "verified"),
+                "processing_status": d.get("processing_status", "verified"),
+                "extracted_data": d.get("extracted_data"),
             }
         elif "RESUME" in dtype:
             resume_doc = {
                 "document_id": d.get("document_id"),
                 "filename": d.get("filename", "Resume.pdf"),
-                "file_url": d.get("file_url") or student.get("resume_url") or f"/api/v1/files/document/{d.get('document_id')}",
+                "file_url": d.get("file_url") or student.get("resume_url") or (f"/api/v1/files/{d.get('grid_file_id')}" if d.get("grid_file_id") else f"/api/v1/files/document/{d.get('document_id')}"),
                 "status": d.get("processing_status", "verified"),
+                "processing_status": d.get("processing_status", "verified"),
+                "extracted_data": d.get("extracted_data"),
             }
 
-    if not resume_doc and (student.get("resume_url") or student.get("has_resume")):
-        resume_doc = {
-            "document_id": "resume",
-            "filename": f"{student.get('full_name', 'Student')}_Resume.pdf",
-            "file_url": student.get("resume_url"),
-            "status": "verified",
-        }
+    # Fallback to embedded canonical profile documents
+    st_docs = student.get("documents")
+    if not isinstance(st_docs, dict):
+        st_docs = {}
+    if not ug_doc:
+        ug_st = st_docs.get("ug_marksheet") or st_docs.get("ug")
+        if isinstance(ug_st, dict):
+            ug_doc = {
+                "document_id": ug_st.get("document_id") or "doc_ug_marksheet",
+                "filename": ug_st.get("filename", "Undergraduate Result.pdf"),
+                "file_url": ug_st.get("file_url") or (f"/api/v1/files/{ug_st.get('grid_file_id')}" if ug_st.get("grid_file_id") else None),
+                "status": ug_st.get("status", "VERIFIED"),
+                "processing_status": ug_st.get("status", "VERIFIED"),
+                "extracted_data": ug_st.get("extracted_data"),
+            }
+        elif student.get("ug_marksheet_url"):
+            ug_doc = {
+                "document_id": "doc_ug_marksheet",
+                "filename": "Undergraduate Result.pdf",
+                "file_url": student.get("ug_marksheet_url"),
+                "status": "VERIFIED",
+                "processing_status": "VERIFIED",
+            }
+
+    if not resume_doc:
+        res_st = st_docs.get("resume")
+        if isinstance(res_st, dict):
+            resume_doc = {
+                "document_id": res_st.get("document_id") or "doc_resume",
+                "filename": res_st.get("filename", f"{student.get('full_name', 'Student')}_Resume.pdf"),
+                "file_url": res_st.get("file_url") or student.get("resume_url"),
+                "status": res_st.get("status", "VERIFIED"),
+                "processing_status": res_st.get("status", "VERIFIED"),
+                "extracted_data": res_st.get("extracted_data"),
+            }
+        elif student.get("resume_url") or student.get("has_resume"):
+            resume_doc = {
+                "document_id": "resume",
+                "filename": f"{student.get('full_name', 'Student')}_Resume.pdf",
+                "file_url": student.get("resume_url"),
+                "status": "verified",
+                "processing_status": "VERIFIED",
+            }
+
+    raw_active = student.get("active_backlogs")
+    active_backlogs = int(raw_active) if raw_active is not None else None
+    raw_closed = student.get("closed_backlogs")
+    closed_backlogs = int(raw_closed) if raw_closed is not None else None
+
+    is_incomplete = bool(student.get("is_profile_incomplete")) or (active_backlogs is None) or (cgpa is None)
+    if is_incomplete:
+        eligibility_status = "Incomplete Profile / Academic Verification Required"
+    elif active_backlogs == 0:
+        eligibility_status = "Eligible for Placement Drives"
+    else:
+        eligibility_status = "Pending Backlog Clearances"
 
     return {
-        "student_id": student_id,
+        "student_id": str(student.get("student_id") or student.get("user_id") or student.get("_id") or student_id),
         "full_name": student.get("full_name", "Student Candidate"),
         "education": student.get("education", "B.Tech CSE"),
         "current_cgpa": cgpa,
-        "active_backlogs": student.get("active_backlogs", 0),
-        "closed_backlogs": student.get("closed_backlogs", 0),
+        "active_backlogs": active_backlogs,
+        "closed_backlogs": closed_backlogs,
         "skills": student.get("skills", []),
-        "eligibility_status": "Eligible for Placement Drives" if student.get("active_backlogs", 0) == 0 else "Pending Backlog Clearances",
+        "is_profile_incomplete": is_incomplete,
+        "eligibility_status": eligibility_status,
         "ug_document": ug_doc,
         "resume_document": resume_doc,
     }
@@ -1178,4 +1325,258 @@ async def get_recruiter_stats(
         total_active_drives=final_count,
         total_offers_made=total_offers_made,
     )
+
+
+# =========================================================================
+# RECRUITER HUMAN-IN-THE-LOOP (HITL) DOCUMENT VERIFICATION ENDPOINTS
+# =========================================================================
+from pydantic import BaseModel
+
+class DocumentApproveRequest(BaseModel):
+    extracted_fields: Dict[str, Any]
+    notes: Optional[str] = None
+
+class DocumentRejectRequest(BaseModel):
+    reason: str
+
+@router.get("/documents/pending-review")
+async def get_pending_review_documents(
+    token_payload: dict = Depends(require_role("recruiter")),
+):
+    """
+    GET /recruiter/documents/pending-review
+    Returns all academic documents queued for manual coordinator review (MANUAL_REVIEW / REVIEW_REQUIRED).
+    Enriched with candidate profile info.
+    """
+    cursor = verification_documents_collection.find({
+        "processing_status": {"$in": ["MANUAL_REVIEW", "REVIEW_REQUIRED"]}
+    }).sort("uploaded_at", -1)
+    docs = await cursor.to_list(length=100)
+
+    results = []
+    for doc in docs:
+        sid = doc.get("student_id") or doc.get("user_id")
+        student = None
+        if sid:
+            student = await students_collection.find_one({
+                "$or": [{"student_id": sid}, {"user_id": sid}, {"email": sid}]
+            })
+            if not student:
+                student = await users_collection.find_one({"$or": [{"user_id": sid}, {"email": sid}]})
+
+        results.append({
+            "document_id": doc.get("document_id"),
+            "student_id": sid,
+            "student_name": (student.get("full_name") if student else None) or "Candidate",
+            "email": (student.get("email") if student else None) or "",
+            "university": (student.get("university") if student else "GSFC University"),
+            "document_type": doc.get("document_type") or doc.get("target_type") or "DOCUMENT",
+            "target_type": doc.get("target_type"),
+            "filename": doc.get("filename", "document.pdf"),
+            "file_url": doc.get("file_url", ""),
+            "processing_status": doc.get("processing_status"),
+            "ocr_confidence": doc.get("ocr_confidence", 0.0),
+            "validation_errors": doc.get("validation_errors", []),
+            "warnings": doc.get("warnings", []),
+            "uploaded_at": doc.get("uploaded_at"),
+            "extracted_data": doc.get("extracted_data", {}),
+        })
+
+    return {"pending_documents": results, "total_count": len(results)}
+
+
+@router.post("/documents/{document_id}/ai-extract")
+async def ai_extract_document_for_recruiter(
+    document_id: str,
+    token_payload: dict = Depends(require_role("recruiter")),
+):
+    """
+    POST /recruiter/documents/{document_id}/ai-extract
+    Triggers Gemini Multimodal Vision from recruiter side to extract academic fields
+    from a problematic or manual-review document stored in GridFS.
+    """
+    from bson import ObjectId
+    import asyncio
+    from app.document_detection.gemini_extractor import GeminiDocumentExtractor
+
+    doc = await verification_documents_collection.find_one({"document_id": document_id})
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
+
+    grid_file_id = doc.get("grid_file_id")
+    if not grid_file_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Document file binary not found in storage.")
+
+    try:
+        grid_out = await grid_fs.open_download_stream(ObjectId(grid_file_id))
+        file_bytes = await grid_out.read()
+    except Exception as e:
+        logger.error(f"Failed to read GridFS file {grid_file_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Storage read error: {e}")
+
+    filename = doc.get("filename", "document.pdf")
+    doc_type = (doc.get("target_type") or doc.get("document_type") or "").upper()
+
+    ai_data = None
+    try:
+        if "TENTH" in doc_type:
+            ai_data = await asyncio.to_thread(
+                GeminiDocumentExtractor.extract_tenth_marksheet,
+                file_bytes=file_bytes, filename=filename
+            )
+        elif "TWELFTH" in doc_type or "DIPLOMA" in doc_type:
+            ai_data = await asyncio.to_thread(
+                GeminiDocumentExtractor.extract_twelfth_or_diploma,
+                file_bytes=file_bytes, filename=filename
+            )
+        elif "UG" in doc_type:
+            ai_data = await asyncio.to_thread(
+                GeminiDocumentExtractor.extract_ug_marksheet,
+                file_bytes=file_bytes, filename=filename
+            )
+        elif "RESUME" in doc_type:
+            ai_data = await asyncio.to_thread(
+                GeminiDocumentExtractor.extract_resume,
+                file_bytes=file_bytes, filename=filename
+            )
+        else:
+            ai_data = await asyncio.to_thread(
+                GeminiDocumentExtractor.extract_ug_marksheet,
+                file_bytes=file_bytes, filename=filename
+            )
+    except Exception as e:
+        logger.error(f"Gemini AI Vision extraction failed: {e}")
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"AI Vision extraction error: {e}")
+
+    if not ai_data:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="AI Vision could not reliably decode document text.")
+
+    return {
+        "document_id": document_id,
+        "document_type": doc_type,
+        "filename": filename,
+        "extracted_fields": ai_data,
+        "extraction_method": "gemini_multimodal_vision",
+    }
+
+
+@router.post("/documents/{document_id}/approve")
+async def approve_document_and_sync_profile(
+    document_id: str,
+    payload: DocumentApproveRequest,
+    token_payload: dict = Depends(require_role("recruiter")),
+):
+    """
+    POST /recruiter/documents/{document_id}/approve
+    Approves the manual review document, saves confirmed fields, updates student profile,
+    and logs immutable audit entry.
+    """
+    from app.document_detection.service import DocumentVerificationService
+
+    doc = await verification_documents_collection.find_one({"document_id": document_id})
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
+
+    student_id = doc.get("student_id")
+    user_id = doc.get("user_id") or student_id
+    recruiter_id = token_payload.get("sub", "recruiter")
+    now_iso = datetime.now(timezone.utc).isoformat()
+    doc_type = doc.get("target_type") or doc.get("document_type") or "UG_MARKSHEET"
+
+    student_doc = await students_collection.find_one({
+        "$or": [{"student_id": student_id}, {"user_id": user_id}, {"email": student_id}]
+    })
+
+    # 1. Update verification_documents record
+    await verification_documents_collection.update_one(
+        {"document_id": document_id},
+        {"$set": {
+            "processing_status": "VERIFIED",
+            "extracted_data": payload.extracted_fields,
+            "verified_at": now_iso,
+            "verified_by": recruiter_id,
+            "reviewer_notes": payload.notes or "Approved by Recruiter via Human-in-the-Loop Review",
+            "extraction_method": "gemini_vision_recruiter_assisted",
+        }}
+    )
+
+    # 2. Synchronize Canonical Student Profile
+    if student_doc:
+        await DocumentVerificationService._sync_verified_profile(
+            student_doc=student_doc,
+            student_id=student_doc.get("student_id", student_id),
+            user_id=student_doc.get("user_id", user_id),
+            document_id=document_id,
+            doc_type=doc_type,
+            parsed_fields=payload.extracted_fields,
+            clean_filename=doc.get("filename", "document.pdf"),
+            file_url=doc.get("file_url", ""),
+            grid_file_id=doc.get("grid_file_id", ""),
+            confidences={"ocr": 99.0, "extraction": 99.0, "validation": 100.0},
+            extraction_method="gemini_vision_recruiter_assisted",
+        )
+
+    # 3. Notify student
+    await notifications_collection.insert_one({
+        "notification_id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "title": "Academic Document Verified",
+        "message": f"Your {doc_type.replace('_', ' ').title()} has been verified by the placement coordinator.",
+        "type": "DOCUMENT_VERIFIED",
+        "read": False,
+        "created_at": now_iso,
+    })
+
+    return {
+        "message": "Document successfully approved and student profile synchronized.",
+        "document_id": document_id,
+        "status": "VERIFIED",
+        "verified_by": recruiter_id,
+    }
+
+
+@router.post("/documents/{document_id}/reject")
+async def reject_document(
+    document_id: str,
+    payload: DocumentRejectRequest,
+    token_payload: dict = Depends(require_role("recruiter")),
+):
+    """
+    POST /recruiter/documents/{document_id}/reject
+    Rejects the document and notifies candidate with feedback.
+    """
+    doc = await verification_documents_collection.find_one({"document_id": document_id})
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
+
+    recruiter_id = token_payload.get("sub", "recruiter")
+    now_iso = datetime.now(timezone.utc).isoformat()
+    user_id = doc.get("user_id") or doc.get("student_id")
+    doc_type = doc.get("target_type") or doc.get("document_type") or "document"
+
+    await verification_documents_collection.update_one(
+        {"document_id": document_id},
+        {"$set": {
+            "processing_status": "REJECTED",
+            "rejection_reason": payload.reason,
+            "rejected_at": now_iso,
+            "rejected_by": recruiter_id,
+        }}
+    )
+
+    await notifications_collection.insert_one({
+        "notification_id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "title": f"Document Verification Update: {doc_type.replace('_', ' ').title()}",
+        "message": f"Your uploaded document was rejected: {payload.reason}. Please re-upload a clear copy.",
+        "type": "DOCUMENT_REJECTED",
+        "read": False,
+        "created_at": now_iso,
+    })
+
+    return {
+        "message": "Document rejected and candidate notified.",
+        "document_id": document_id,
+        "status": "REJECTED",
+    }
 

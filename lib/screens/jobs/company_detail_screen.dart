@@ -4,7 +4,6 @@ import '../../services/application_visibility_state.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/pdf_viewer_widget.dart';
 import '../../widgets/skeleton_widgets.dart';
-import '../../widgets/ai_match_coach_card.dart';
 
 class CompanyDetailScreen extends StatefulWidget {
   final String listingId;
@@ -326,9 +325,6 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Smart AI Match & Interview Coach Card
-                        AIMatchCoachCard(driveId: widget.listingId),
-                        const SizedBox(height: 16),
 
                         // Auto-Eligibility Criteria Section
                         Text('Auto-Eligibility Criteria & Policy Requirements', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
@@ -488,12 +484,15 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                         // Job Description
                         Text('Job Description', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 8),
-                        Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Text(
-                              description.toString(),
-                              style: theme.textTheme.bodyMedium?.copyWith(height: 1.5),
+                        SizedBox(
+                          width: double.infinity,
+                          child: Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Text(
+                                description.toString(),
+                                style: theme.textTheme.bodyMedium?.copyWith(height: 1.5),
+                              ),
                             ),
                           ),
                         ),

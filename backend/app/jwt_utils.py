@@ -64,6 +64,21 @@ def create_device_token(user_id: str, device_id: str) -> str:
     }
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
+def create_download_token(user_id: str, role: str, file_id: Optional[str] = None, expires_in_seconds: int = 300) -> str:
+    now = datetime.now(timezone.utc)
+    expire = now + timedelta(seconds=expires_in_seconds)
+    payload: Dict[str, Any] = {
+        "sub": user_id,
+        "role": role,
+        "type": "download",
+        "scope": "file_download",
+        "iat": int(now.timestamp()),
+        "exp": expire,
+    }
+    if file_id:
+        payload["file_id"] = file_id
+    return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+
 def decode_token(token: str, expected_type: Optional[str] = None) -> Dict[str, Any]:
     try:
         payload = jwt.decode(

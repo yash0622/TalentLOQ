@@ -55,6 +55,32 @@ try:
 except ImportError:
     Image = None
 
+_RAPID_OCR = None
+def get_rapid_ocr():
+    """Lazily initialize RapidOCR engine (Paddle PP-OCRv4 ONNX model)."""
+    global _RAPID_OCR
+    if _RAPID_OCR is None:
+        try:
+            from rapidocr_onnxruntime import RapidOCR
+            _RAPID_OCR = RapidOCR()
+        except Exception as e:
+            print(f"[DocumentExtractor] RapidOCR init notice: {e}")
+            _RAPID_OCR = False
+    return _RAPID_OCR if _RAPID_OCR is not False else None
+
+_EASY_OCR_READER = None
+def get_easy_ocr():
+    """Lazily initialize EasyOCR reader."""
+    global _EASY_OCR_READER
+    if _EASY_OCR_READER is None:
+        try:
+            import easyocr
+            _EASY_OCR_READER = easyocr.Reader(['en'], gpu=False)
+        except Exception as e:
+            print(f"[DocumentExtractor] EasyOCR init notice: {e}")
+            _EASY_OCR_READER = False
+    return _EASY_OCR_READER if _EASY_OCR_READER is not False else None
+
 
 class TextExtractionResult(tuple):
     """
@@ -153,21 +179,72 @@ def _reconstruct_spatial_layout_from_data(data: Dict[str, List[Any]]) -> str:
 
 
 def _ocr_image_bytes(image_bytes: bytes) -> str:
-    """Runs high-speed OCR on raw image bytes using Tesseract (spatial layout-aware) with EasyOCR fallback."""
-    # 1. Primary: Tesseract OCR with Spatial Bounding-Box Layout Reconstruction (< 0.5s)
+    """Runs high-speed OCR on raw image bytes using RapidOCR (PP-OCRv4 ONNX), EasyOCR, or Tesseract."""
+    # 1. Primary: RapidOCR (Paddle PP-OCRv4 ONNX) - Fast, table & marksheet layout aware
+    rapid_ocr = get_rapid_ocr()
+    if rapid_ocr is not None:
+        try:
+            result, _ = rapid_ocr(image_bytes)
+            if result:
+                # Group text boxes by Y coordinate into structured lines
+                # result item: [ [ [x1,y1], [x2,y2], [x3,y3], [x4,y4] ], text, score ]
+                boxes = []
+                for item in result:
+                    poly, text, score = item[0], item[1], item[2]
+                    if text and text.strip():
+                        y_mid = (poly[0][1] + poly[2][1]) / 2.0
+                        x_left = poly[0][0]
+                        boxes.append((y_mid, x_left, text.strip()))
+                
+                boxes.sort(key=lambda b: (b[0], b[1]))
+                lines = []
+                current_line = []
+                current_y = None
+                for b in boxes:
+                    if current_y is None or abs(b[0] - current_y) < 18:
+                        current_line.append(b)
+                        current_y = b[0] if current_y is None else (current_y + b[0]) / 2.0
+                    else:
+                        current_line.sort(key=lambda x: x[1])
+                        lines.append("    ".join([x[2] for x in current_line]))
+                        current_line = [b]
+                        current_y = b[0]
+                if current_line:
+                    current_line.sort(key=lambda x: x[1])
+                    lines.append("    ".join([x[2] for x in current_line]))
+
+                extracted = "\n".join(lines).strip()
+                if extracted and len(extracted) > 10:
+                    return extracted
+        except Exception as e:
+            print(f"[DocumentExtractor] RapidOCR execution notice: {e}")
+
+    # 2. Secondary: EasyOCR Fallback
+    easy_ocr = get_easy_ocr()
+    if easy_ocr is not None:
+        try:
+            import numpy as np
+            if Image:
+                img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+                np_img = np.array(img)
+                easy_res = easy_ocr.readtext(np_img, detail=0)
+                if easy_res:
+                    return "\n".join(easy_res).strip()
+        except Exception as e:
+            print(f"[DocumentExtractor] EasyOCR execution notice: {e}")
+
+    # 3. Tertiary: Tesseract OCR with Spatial Bounding-Box Layout Reconstruction
     if pytesseract and Image:
         try:
             img = Image.open(io.BytesIO(image_bytes))
             if img.mode not in ('L', 'RGB'):
                 img = img.convert('RGB')
-            # Downscale large camera photos if dimension > 1500px for instant OCR
             max_dim = max(img.size)
             if max_dim > 1500:
                 scale = 1500.0 / max_dim
                 new_size = (int(img.width * scale), int(img.height * scale))
                 img = img.resize(new_size, Image.Resampling.BILINEAR)
 
-            # Try spatial layout reconstruction via image_to_data
             try:
                 data = pytesseract.image_to_data(img, lang='eng', output_type=pytesseract.Output.DICT)
                 spatial_text = _reconstruct_spatial_layout_from_data(data)

@@ -65,6 +65,8 @@ graphify-out/
 .graphify_cache/
 datasets/
 backend/datasets/
+backend/static/uploads/drv-*.pdf
+backend/static/uploads/*.tmp
 
 # Agent & IDE meta
 .gemini/

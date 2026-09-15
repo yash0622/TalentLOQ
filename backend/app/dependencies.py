@@ -54,7 +54,7 @@ def require_roles(allowed_roles: list[str]):
         if token_role not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access forbidden. Allowed roles: {allowed_roles}, got '{token_role}'"
+                detail="Access forbidden: insufficient permissions"
             )
         return token_payload
     return roles_checker

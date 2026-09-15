@@ -463,4 +463,66 @@ class RecruiterService {
       return false;
     }
   }
+
+  // 16. Fetch Documents Pending Manual/Coordinator Review
+  Future<List<Map<String, dynamic>>> getPendingReviewDocuments() async {
+    try {
+      final response = await _apiClient.dio.get('/recruiter/documents/pending-review');
+      if (response.statusCode == 200 && response.data is Map) {
+        final list = (response.data['pending_documents'] as List?) ?? [];
+        return list.cast<Map<String, dynamic>>();
+      }
+    } catch (e) {
+      debugPrint('[GET PENDING REVIEW DOCS ERROR] $e');
+    }
+    return [];
+  }
+
+  // 17. Trigger Recruiter-Side Gemini Multimodal Vision Extraction
+  Future<Map<String, dynamic>?> aiExtractDocument(String documentId) async {
+    try {
+      final response = await _apiClient.dio.post('/recruiter/documents/$documentId/ai-extract');
+      if (response.statusCode == 200 && response.data is Map) {
+        return Map<String, dynamic>.from(response.data as Map);
+      }
+    } catch (e) {
+      debugPrint('[AI EXTRACT DOC ERROR] $e');
+    }
+    return null;
+  }
+
+  // 18. Approve Document & Synchronize Student Canonical Profile
+  Future<bool> approveDocument(
+    String documentId,
+    Map<String, dynamic> extractedFields, {
+    String? notes,
+  }) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/recruiter/documents/$documentId/approve',
+        data: {
+          'extracted_fields': extractedFields,
+          'notes': notes,
+        },
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('[APPROVE DOC ERROR] $e');
+      return false;
+    }
+  }
+
+  // 19. Reject Problematic Document & Request Re-upload
+  Future<bool> rejectDocument(String documentId, String reason) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/recruiter/documents/$documentId/reject',
+        data: {'reason': reason},
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('[REJECT DOC ERROR] $e');
+      return false;
+    }
+  }
 }
