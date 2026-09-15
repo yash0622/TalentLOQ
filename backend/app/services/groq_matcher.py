@@ -463,6 +463,10 @@ Placement Role:
             req_skills=req_skills,
             company_name=company_name,
             drive_title=drive_title,
+            current_round=current_round,
+            round_history=round_history,
+            role_archetype=role_archetype,
+            weights=weights,
         )
 
         cache_col = get_ai_match_cache_collection()
