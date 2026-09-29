@@ -39,6 +39,27 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
           c.partnerName.contains('UCI Placement') ||
           c.lastMessage.contains('UCI Placement'));
 
+      // Ensure AI Bot is permanently available at the top
+      final aiBotIndex = MockData.conversations.indexWhere((c) => c.id == 'ai_bot' || c.partnerName == 'AI Bot');
+      if (aiBotIndex == -1) {
+        MockData.conversations.insert(
+          0,
+          Conversation(
+            id: 'ai_bot',
+            partnerName: 'AI Bot',
+            partnerRole: 'Placement Assistant',
+            avatarUrl: '',
+            lastMessage: 'Tell me your target domains, skills, and salary in plain English!',
+            time: 'Always Active',
+            unreadCount: 0,
+            isOnline: true,
+          ),
+        );
+      } else if (aiBotIndex > 0) {
+        final botConv = MockData.conversations.removeAt(aiBotIndex);
+        MockData.conversations.insert(0, botConv);
+      }
+
       // 1. Process backend notifications & direct messages
       for (var item in [...notifs, ...chats]) {
         if (item is! Map) continue;
@@ -393,6 +414,8 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                     ),
                     itemBuilder: (context, index) {
                       final conv = filteredConversations[index];
+                      final isAiBot = conv.id == 'ai_bot' || conv.partnerName == 'AI Bot';
+
                       return ListTile(
                         onTap: () {
                           setState(() {
@@ -401,40 +424,86 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                           widget.onSelectConversation(conv);
                         },
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                        leading: Stack(
-                          children: [
-                            AppAvatar(
-                              radius: 24,
-                              imageUrl: conv.avatarUrl,
-                              fallbackText: conv.partnerName,
-                            ),
-                            if (conv.isOnline)
-                              Positioned(
-                                right: 0,
-                                bottom: 0,
-                                child: Container(
-                                  width: 12,
-                                  height: 12,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.success,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: isDark ? AppColors.darkSurface : Colors.white,
-                                      width: 2,
+                        leading: isAiBot
+                            ? Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF6366F1).withValues(alpha: 0.35),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
                                     ),
+                                  ],
+                                ),
+                                child: const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 24),
+                              )
+                            : Stack(
+                                children: [
+                                  AppAvatar(
+                                    radius: 24,
+                                    imageUrl: conv.avatarUrl,
+                                    fallbackText: conv.partnerName,
+                                  ),
+                                  if (conv.isOnline)
+                                    Positioned(
+                                      right: 0,
+                                      bottom: 0,
+                                      child: Container(
+                                        width: 12,
+                                        height: 12,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.success,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: isDark ? AppColors.darkSurface : Colors.white,
+                                            width: 2,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                        title: Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                conv.partnerName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: conv.unreadCount > 0 || isAiBot ? FontWeight.bold : FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            if (isAiBot) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.lightPrimary.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  'AI ASSISTANT',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.lightPrimary,
+                                    letterSpacing: 0.5,
                                   ),
                                 ),
                               ),
+                            ],
                           ],
-                        ),
-                        title: Text(
-                          conv.partnerName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: conv.unreadCount > 0 ? FontWeight.bold : FontWeight.w600,
-                            fontSize: 14,
-                          ),
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

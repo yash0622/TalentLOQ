@@ -632,48 +632,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
                               // Automatic Document Verification Notice
                               if (_isSignUp) ...[
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 12,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(
-                                      0xFF4F46E5,
-                                    ).withValues(alpha: isDark ? 0.15 : 0.08),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: const Color(
-                                        0xFF4F46E5,
-                                      ).withValues(alpha: 0.25),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Icon(
-                                        Icons.verified_user_outlined,
-                                        size: 20,
-                                        color: Color(0xFF4F46E5),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Text(
-                                          'Academic credentials (Degree, CGPA, backlogs & skills) are verified automatically via document upload after signing in.',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: isDark
-                                                ? const Color(0xFFCBD5E1)
-                                                : const Color(0xFF475569),
-                                            height: 1.35,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 14),
                               ],
 
                               const SizedBox(height: 10),

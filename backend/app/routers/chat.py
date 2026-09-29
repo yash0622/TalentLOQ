@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from app.database import chat_messages_collection, students_collection
 from app.dependencies import get_current_user
+from app.security import sanitize_text
 
 logger = logging.getLogger("talentloq.chat")
 
@@ -76,21 +77,56 @@ async def list_user_conversations(
     conversations = []
     async for doc in cursor:
         conv_id = doc["_id"]
-        other_user_id = doc["recipient_id"] if doc["sender_id"] == user_id else doc["sender_id"]
-        other_user_name = doc["recipient_name"] if doc["sender_id"] == user_id else doc["sender_name"]
+        is_bot_thread = str(conv_id).endswith("_ai_bot") or conv_id == "ai_bot"
+        other_user_id = "ai_bot" if is_bot_thread else (doc["recipient_id"] if doc["sender_id"] == user_id else doc["sender_id"])
+        display_name = "AI Bot" if is_bot_thread else (doc["recipient_name"] if doc["sender_id"] == user_id else doc["sender_name"]) or "Chat"
         last_time = doc.get("last_message_time", "")
         time_str = last_time.isoformat() if hasattr(last_time, "isoformat") else str(last_time)
+        last_text = doc.get("last_message", "")
+        unread = doc.get("unread_count", 0)
 
         conversations.append({
-            "id": conv_id,
-            "name": other_user_name or "Chat",
-            "lastMessage": doc.get("last_message", ""),
+            "id": "ai_bot" if is_bot_thread else conv_id,
+            "name": display_name,
+            "candidate_name": display_name,
+            "last_message": last_text,
+            "lastMessage": last_text,
             "time": time_str,
-            "unreadCount": doc.get("unread_count", 0),
+            "last_message_time": time_str,
+            "unread_count": unread,
+            "unreadCount": unread,
             "other_user_id": other_user_id,
         })
 
     return {"count": len(conversations), "conversations": conversations}
+
+@router.get("/ai-agent/criteria")
+async def get_agent_criteria(
+    user_payload: dict = Depends(get_current_user),
+):
+    """
+    Get active parsed AI placement agent criteria for the authenticated student.
+    """
+    user_id = user_payload.get("sub", "")
+    student = await students_collection.find_one({
+        "$or": [{"user_id": user_id}, {"student_id": user_id}]
+    })
+    prefs = (student.get("career_preferences") if student else {}) or {}
+    raw_auto = prefs.get("auto_apply_enabled")
+    if raw_auto is None:
+        raw_auto = prefs.get("autonomous_apply_enabled", False)
+    auto_enabled = bool(raw_auto)
+    last_inst = prefs.get("raw_instruction") or prefs.get("last_instruction") or ""
+
+    return {
+        "target_roles": prefs.get("target_roles", []),
+        "preferred_domains": prefs.get("preferred_domains", []),
+        "min_ctc_lpa": prefs.get("min_ctc_lpa"),
+        "max_ctc_lpa": prefs.get("max_ctc_lpa"),
+        "autonomous_apply_enabled": auto_enabled,
+        "last_instruction": last_inst,
+        "updated_at": prefs.get("updated_at", ""),
+    }
 
 @router.get("/conversations/{conversation_id}/messages")
 async def get_conversation_messages(
@@ -104,35 +140,50 @@ async def get_conversation_messages(
     user_id = user_payload.get("sub", "")
     role = user_payload.get("role", "student")
 
-    # Verify participant authorization (admin bypass allowed)
-    if role != "admin":
-        is_participant = await chat_messages_collection.find_one({
-            "conversation_id": conversation_id,
-            "$or": [{"sender_id": user_id}, {"recipient_id": user_id}],
-        })
-        if not is_participant:
-            # Check student_id alias if applicable
-            student_doc = await students_collection.find_one({
-                "$or": [{"user_id": user_id}, {"student_id": user_id}]
+    is_ai_bot = (conversation_id == "ai_bot" or conversation_id == "ai-bot" or conversation_id.endswith("_ai_bot"))
+    if is_ai_bot:
+        target_conv_id = f"conv_{user_id}_ai_bot"
+        query = {
+            "$or": [
+                {"conversation_id": target_conv_id},
+                {"conversation_id": "ai_bot", "sender_id": user_id},
+                {"conversation_id": "ai_bot", "recipient_id": user_id},
+            ]
+        }
+    else:
+        target_conv_id = conversation_id
+        # Verify participant authorization (admin bypass allowed)
+        if role != "admin":
+            is_participant = await chat_messages_collection.find_one({
+                "conversation_id": target_conv_id,
+                "$or": [{"sender_id": user_id}, {"recipient_id": user_id}],
             })
-            alt_id = student_doc.get("student_id") if student_doc else None
-            if alt_id and alt_id != user_id:
-                is_participant = await chat_messages_collection.find_one({
-                    "conversation_id": conversation_id,
-                    "$or": [{"sender_id": alt_id}, {"recipient_id": alt_id}],
-                })
             if not is_participant:
-                # If thread exists with other users, reject with 403 Forbidden
-                any_msg = await chat_messages_collection.find_one({"conversation_id": conversation_id})
-                if any_msg:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="Access denied to this conversation thread."
-                    )
-                return {"conversation_id": conversation_id, "count": 0, "messages": []}
+                # Check student_id alias if applicable
+                student_doc = await students_collection.find_one({
+                    "$or": [{"user_id": user_id}, {"student_id": user_id}]
+                })
+                alt_id = student_doc.get("student_id") if student_doc else None
+                if alt_id and alt_id != user_id:
+                    is_participant = await chat_messages_collection.find_one({
+                        "conversation_id": target_conv_id,
+                        "$or": [{"sender_id": alt_id}, {"recipient_id": alt_id}],
+                    })
+                if not is_participant:
+                    # If thread exists with other users, reject with 403 Forbidden
+                    any_msg = await chat_messages_collection.find_one({"conversation_id": target_conv_id})
+                    if any_msg:
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Access denied to this conversation thread."
+                        )
+                    return {"conversation_id": target_conv_id, "count": 0, "messages": []}
 
-    cursor = chat_messages_collection.find({"conversation_id": conversation_id}).sort("created_at", 1).limit(limit)
+        query = {"conversation_id": target_conv_id}
+
+    cursor = chat_messages_collection.find(query).sort("created_at", -1).limit(limit)
     raw_msgs = await cursor.to_list(length=limit)
+    raw_msgs.reverse()
 
     messages = []
     for m in raw_msgs:
@@ -146,7 +197,7 @@ async def get_conversation_messages(
             "is_me": m.get("sender_id") == user_id,
         })
 
-    return {"conversation_id": conversation_id, "count": len(messages), "messages": messages}
+    return {"conversation_id": target_conv_id, "count": len(messages), "messages": messages}
 
 @router.post("/messages", status_code=status.HTTP_201_CREATED)
 async def send_chat_message(
@@ -159,9 +210,22 @@ async def send_chat_message(
     user_id = user_payload.get("sub", "")
     role = user_payload.get("role", "student")
 
-    conv_id = data.conversation_id
-    if conv_id and role != "admin":
-        # Check if conversation already exists between others
+    # 1. Normalize conversation ID
+    is_bot = (
+        data.recipient_id == "ai_bot"
+        or data.conversation_id == "ai_bot"
+        or (data.conversation_id and data.conversation_id.endswith("_ai_bot"))
+    )
+    if is_bot:
+        conv_id = f"conv_{user_id}_ai_bot"
+    elif data.conversation_id:
+        conv_id = data.conversation_id
+    else:
+        participants = sorted([user_id, data.recipient_id])
+        conv_id = f"conv_{participants[0]}_{participants[1]}"
+
+    # 2. Check participant access only for non-bot conversations
+    if not is_bot and role != "admin" and data.conversation_id:
         thread_sample = await chat_messages_collection.find_one({"conversation_id": conv_id})
         if thread_sample:
             is_member = await chat_messages_collection.find_one({
@@ -185,11 +249,12 @@ async def send_chat_message(
     else:
         sender_name = "Campus Recruiter"
 
-    conv_id = data.conversation_id
-    if not conv_id:
-        # Create deterministic conversation ID for pair
-        participants = sorted([user_id, data.recipient_id])
-        conv_id = f"conv_{participants[0]}_{participants[1]}"
+    clean_text = sanitize_text(data.text)
+    if not clean_text:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Message content cannot be empty after sanitization."
+        )
 
     msg_id = f"msg_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
@@ -201,18 +266,22 @@ async def send_chat_message(
         "sender_name": sender_name,
         "recipient_id": data.recipient_id,
         "recipient_name": data.recipient_name or ("Student" if role == "recruiter" else "Recruiter"),
-        "text": data.text,
+        "text": clean_text,
         "created_at": now,
     }
 
     await chat_messages_collection.insert_one(msg_doc)
+
+    if is_bot:
+        from app.services.ai_bot_assistant import ai_bot_assistant
+        await ai_bot_assistant.process_student_message(user_id, clean_text, conv_id)
 
     return {
         "id": msg_id,
         "conversation_id": conv_id,
         "sender_id": user_id,
         "sender_name": sender_name,
-        "text": data.text,
+        "text": clean_text,
         "time": now.isoformat(),
         "is_me": True,
     }

@@ -26,6 +26,22 @@ class ChatService {
         }).toList();
 
         if (convs.isNotEmpty) {
+          final hasAiBot = convs.any((c) => c.id == 'ai_bot' || c.partnerName == 'AI Bot');
+          if (!hasAiBot) {
+            convs.insert(
+              0,
+              Conversation(
+                id: 'ai_bot',
+                partnerName: 'AI Bot',
+                partnerRole: 'Placement Assistant',
+                avatarUrl: '',
+                lastMessage: 'Tell me your target domains, skills, and salary in plain English!',
+                time: 'Always Active',
+                unreadCount: 0,
+                isOnline: true,
+              ),
+            );
+          }
           MockData.conversations.clear();
           MockData.conversations.addAll(convs);
           return convs;
@@ -89,10 +105,10 @@ class ChatService {
 
         final targetConvId = conversationId ?? m['conversation_id'];
         if (targetConvId != null) {
-          if (!MockData.conversationMessages.containsKey(targetConvId)) {
-            MockData.conversationMessages[targetConvId] = [];
+          final list = MockData.conversationMessages.putIfAbsent(targetConvId, () => []);
+          if (list.isEmpty || list.last.text != text || !list.last.isMe) {
+            list.add(newMsg);
           }
-          MockData.conversationMessages[targetConvId]!.add(newMsg);
         }
 
         return newMsg;
@@ -108,11 +124,22 @@ class ChatService {
       isMe: true,
     );
     if (conversationId != null) {
-      if (!MockData.conversationMessages.containsKey(conversationId)) {
-        MockData.conversationMessages[conversationId] = [];
+      final list = MockData.conversationMessages.putIfAbsent(conversationId, () => []);
+      if (list.isEmpty || list.last.text != text || !list.last.isMe) {
+        list.add(fallbackMsg);
       }
-      MockData.conversationMessages[conversationId]!.add(fallbackMsg);
     }
     return fallbackMsg;
+  }
+
+  /// Get active AI placement agent criteria for student
+  Future<Map<String, dynamic>?> getAiBotCriteria() async {
+    try {
+      final response = await _apiClient.dio.get('/chat/ai-agent/criteria');
+      if (response.statusCode == 200 && response.data is Map) {
+        return Map<String, dynamic>.from(response.data as Map);
+      }
+    } catch (_) {}
+    return null;
   }
 }

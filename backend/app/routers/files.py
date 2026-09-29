@@ -14,7 +14,9 @@ from app.database import (
     students_collection,
     drives_collection,
     company_listings_collection,
+    audit_logs_collection,
 )
+from app.models import AuditLogModel
 from app.jwt_utils import decode_token, create_download_token
 
 logger = logging.getLogger("talentloq.files")
@@ -317,6 +319,18 @@ async def get_file_by_id(
 
     # Sanitize filename to prevent header injection, CRLF splitting, or attribute alteration
     safe_filename = re.sub(r'[\r\n"\\/;\x00-\x1f\x7f-\x9f]', '_', filename).strip() or "document.pdf"
+
+    # Audit document access
+    try:
+        audit = AuditLogModel(
+            user_id=str(user_payload.get("sub", "anonymous")),
+            action="DOCUMENT_DOWNLOAD",
+            ip="127.0.0.1",
+            device=f"file:{safe_filename}",
+        )
+        await audit_logs_collection.insert_one(audit.model_dump())
+    except Exception:
+        pass
 
     return Response(
         content=content,

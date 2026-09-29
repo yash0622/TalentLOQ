@@ -28,6 +28,9 @@ from app.models import (
     VerifyDeviceRequest,
     RefreshTokenRequest,
     LogoutRequest,
+    PasswordChangeRequest,
+    CareerPreferencesUpdateRequest,
+    DEFAULT_CAREER_PREFERENCES,
     UserModel,
     StudentModel,
     AuditLogModel,
@@ -56,7 +59,7 @@ from app.middleware import verify_recruiter_ip_restriction
 from app.upload_validator import validate_file_upload
 from app.encryption import encrypt_field
 from app.document_detection import extract_document_text, classify_document
-from app.dependencies import get_optional_current_user
+from app.dependencies import get_optional_current_user, require_role, get_current_user
 
 # Ponytail: default 120 req/min protects all endpoints from DDoS/flooding with zero boilerplate
 limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
@@ -519,6 +522,59 @@ async def logout(data: LogoutRequest):
         pass
 
     return {"message": "Logged out successfully"}
+ 
+ 
+@router.post("/change-password")
+async def change_password(
+    data: PasswordChangeRequest,
+    request: Request,
+    user_payload: dict = Depends(get_current_user),
+):
+    """
+    Allows an authenticated user to update their password.
+    Enforces current password verification, bcrypt hashing of new password,
+    resets must_change_password, revokes all user refresh tokens, and writes audit entry.
+    """
+    user_id = user_payload.get("sub")
+    user_doc = await users_collection.find_one({"user_id": user_id})
+    if not user_doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    if not verify_password(data.old_password, user_doc.get("password_hash", "")):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Incorrect current password"
+        )
+
+    new_hash = hash_password(data.new_password)
+    await users_collection.update_one(
+        {"user_id": user_id},
+        {"$set": {"password_hash": new_hash, "must_change_password": False}}
+    )
+
+    # Invalidate all active refresh tokens for session security
+    await refresh_tokens_collection.update_many(
+        {"user_id": user_id},
+        {"$set": {"revoked": True}}
+    )
+
+    try:
+        client_ip = request.client.host if request.client else "127.0.0.1"
+        user_agent = request.headers.get("user-agent", "unknown")
+        audit = AuditLogModel(
+            user_id=user_id,
+            action="PASSWORD_CHANGE_SUCCESS",
+            ip=client_ip,
+            device=user_agent,
+        )
+        await audit_logs_collection.insert_one(audit.model_dump())
+    except Exception:
+        pass
+
+    return {"message": "Password changed successfully. Please log in with your new password."}
 
 
 from pathlib import Path
@@ -585,14 +641,20 @@ async def upload_resume(
         except Exception:
             pass
 
-    # 4. Extract verified skills and update student document in MongoDB 'students' collection
+    # 4. Extract verified technical skills and update student document in MongoDB 'students' collection
     from app.document_detection.parsers import ResumeParser
-    from app.services.skill_matcher import skill_matcher_engine
+    from app.services.skill_matcher import skill_matcher_engine, is_soft_skill, is_spoken_language
     parsed_resume = ResumeParser.parse(extracted_text)
-    parsed_skills = parsed_resume.get("skills", [])
-    direct_extracted = skill_matcher_engine.extract_skills_from_text(extracted_text)
-    normalized_parsed = [skill_matcher_engine.taxonomy.get(s.lower(), s.strip()) for s in parsed_skills if s and s.strip()]
-    canonical_skills = sorted(list(set(normalized_parsed + direct_extracted)))
+    parsed_tech = parsed_resume.get("technical_skills") or parsed_resume.get("skills", [])
+    direct_extracted = skill_matcher_engine.extract_skills_from_text(extracted_text, use_ner=True, technical_only=True)
+
+    # Strictly isolate technical skills: filter out any soft skills or spoken languages
+    combined_tech = set(parsed_tech).union(direct_extracted)
+    canonical_tech_skills = sorted(list({
+        skill_matcher_engine.taxonomy.get(s.lower(), s.strip())
+        for s in combined_tech
+        if s and s.strip() and not is_soft_skill(s) and not is_spoken_language(s)
+    }))
 
     update_data = {
         "has_resume": True,
@@ -602,14 +664,34 @@ async def upload_resume(
         "resume_uploaded_at": datetime.now(timezone.utc).isoformat(),
         "resume_confidence": classification.confidence,
     }
-    if canonical_skills:
-        update_data["skills"] = canonical_skills
+    if canonical_tech_skills:
+        update_data["skills"] = canonical_tech_skills
+        update_data["technical_skills"] = canonical_tech_skills
+    if parsed_resume.get("soft_skills"):
+        update_data["soft_skills"] = parsed_resume.get("soft_skills")
+    if parsed_resume.get("deployment_skills"):
+        update_data["deployment_skills"] = parsed_resume.get("deployment_skills")
+    if parsed_resume.get("programming_languages"):
+        update_data["programming_languages"] = parsed_resume.get("programming_languages")
+        update_data["coding_languages"] = parsed_resume.get("programming_languages")
     if parsed_resume.get("languages"):
         update_data["languages"] = parsed_resume.get("languages")
+        update_data["spoken_languages"] = parsed_resume.get("languages")
+    if parsed_resume.get("social_links"):
+        update_data["social_links"] = parsed_resume.get("social_links")
+        for plat, url in parsed_resume.get("social_links", {}).items():
+            update_data[f"{plat}_url"] = url
+    if parsed_resume.get("internships"):
+        update_data["internships"] = parsed_resume.get("internships")
+        update_data["internship_count"] = parsed_resume.get("internship_count", len(parsed_resume.get("internships", [])))
+    if parsed_resume.get("phone"):
+        raw_p = str(parsed_resume.get("phone")).strip()
+        update_data["phone_number"] = raw_p
+        update_data["encrypted_phone"] = encrypt_field(raw_p)
 
     # Pre-compute dense vector embedding for instant hybrid matching
     from app.services.hybrid_matcher import get_text_embedding_async
-    emb_source = extracted_text if extracted_text else ("Skills: " + ", ".join(canonical_skills))
+    emb_source = extracted_text if extracted_text else ("Skills: " + ", ".join(canonical_tech_skills))
     resume_vector = await get_text_embedding_async(emb_source)
     if resume_vector:
         update_data["resume_vector"] = resume_vector
@@ -768,7 +850,6 @@ async def get_current_user_profile(
         cgpa = student_doc.get("CGPA") or student_doc.get("cgpa") or 0.0
         active_backlogs = student_doc.get("active_backlogs") or 0
         closed_backlogs = student_doc.get("closed_backlogs") or 0
-        skills = student_doc.get("skills") or []
         has_resume = bool(student_doc.get("has_resume", False))
         resume_filename = student_doc.get("resume_filename")
         resume_url = student_doc.get("resume_url")
@@ -781,6 +862,11 @@ async def get_current_user_profile(
             has_resume = False
             resume_filename = None
             resume_url = None
+
+        # Strictly isolate technical skills in profile
+        from app.services.skill_matcher import is_soft_skill, is_spoken_language
+        raw_skills = student_doc.get("technical_skills") or student_doc.get("skills") or []
+        skills = [s for s in raw_skills if not is_soft_skill(s) and not is_spoken_language(s)]
     else:
         education = ""
         cgpa = 0.0
@@ -790,6 +876,17 @@ async def get_current_user_profile(
         has_resume = False
         resume_filename = None
         resume_url = None
+
+    resume_score = student_doc.get("resume_score") if student_doc else None
+    if resume_score is None and has_resume:
+        from app.services.resume_ats_doctor import ResumeAtsDoctor
+        resume_text = (student_doc.get("resume_text") or student_doc.get("summary") or "") if student_doc else ""
+        score_data = ResumeAtsDoctor.calculate_standalone_resume_score(
+            resume_text=resume_text,
+            student_skills=skills,
+            projects=student_doc.get("projects", []) if student_doc else [],
+        )
+        resume_score = score_data["score"]
 
     return {
         "user_id": uid,
@@ -801,13 +898,14 @@ async def get_current_user_profile(
         "active_backlogs": int(active_backlogs),
         "closed_backlogs": int(closed_backlogs),
         "skills": skills,
-        "technical_skills": (student_doc.get("technical_skills", []) if has_resume else []) if student_doc else [],
+        "technical_skills": (skills if has_resume else []),
         "soft_skills": (student_doc.get("soft_skills", []) if has_resume else []) if student_doc else [],
         "deployment_skills": (student_doc.get("deployment_skills", []) if has_resume else []) if student_doc else [],
         "internships": (student_doc.get("internships", []) if has_resume else []) if student_doc else [],
         "internship_count": (int(student_doc.get("internship_count") or len(student_doc.get("internships", []))) if has_resume else 0) if student_doc else 0,
         "languages": student_doc.get("languages", []) if student_doc else [],
         "has_resume": has_resume,
+        "resume_score": resume_score,
         "resume_filename": resume_filename,
         "resume_url": resume_url,
         "tenth_percentage": student_doc.get("tenth_percentage") if student_doc else None,
@@ -832,15 +930,50 @@ async def get_current_user_profile(
     }
 
 
+@router.get("/resume-score")
+async def get_my_resume_score(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_bearer_optional),
+):
+    """
+    Returns the student's standalone resume ATS / quality score and breakdown.
+    100% offline, zero API cost.
+    """
+    user_id = None
+    if credentials and credentials.credentials:
+        try:
+            payload = decode_token(credentials.credentials, expected_type="access")
+            user_id = payload.get("sub")
+        except Exception:
+            pass
+
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
+
+    student_doc = await students_collection.find_one({
+        "$or": [{"user_id": user_id}, {"student_id": user_id}, {"email": user_id}]
+    })
+    if not student_doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+
+    from app.services.resume_ats_doctor import ResumeAtsDoctor
+    resume_text = student_doc.get("resume_text") or student_doc.get("summary") or ""
+    return ResumeAtsDoctor.calculate_standalone_resume_score(
+        resume_text=resume_text,
+        student_skills=student_doc.get("skills", []),
+        projects=student_doc.get("projects", []),
+    )
+
+
 @router.put("/me")
 async def update_current_user_profile(
     data: Dict[str, Any],
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_bearer_optional),
 ):
     """
     Updates the student profile in MongoDB `users` and `students` collections.
     SECURITY ENFORCEMENT:
-    Students may ONLY update: full_name, email, and university.
+    Students may ONLY update: full_name, email, university, and contact phone number.
     All academic fields (CGPA, backlogs, skills, percentages) are strictly read-only
     and controlled exclusively by the document verification pipeline.
     """
@@ -882,6 +1015,7 @@ async def update_current_user_profile(
     full_name = data.get("full_name")
     new_email = data.get("email")
     university = data.get("university")
+    phone_input = data.get("phone_number") or data.get("phone")
 
     if full_name:
         await users_collection.update_many(
@@ -896,6 +1030,10 @@ async def update_current_user_profile(
         update_fields["email"] = new_email
     if university:
         update_fields["university"] = university
+    if phone_input:
+        clean_p = str(phone_input).strip()
+        update_fields["phone_number"] = clean_p
+        update_fields["encrypted_phone"] = encrypt_field(clean_p)
 
     if update_fields:
         await students_collection.update_many(
@@ -903,6 +1041,20 @@ async def update_current_user_profile(
             {"$set": update_fields},
             upsert=True
         )
+
+    # Audit profile update
+    try:
+        client_ip = request.client.host if request.client else "127.0.0.1"
+        user_agent = request.headers.get("user-agent", "unknown")
+        audit_entry = AuditLogModel(
+            user_id=uid,
+            action="STUDENT_PROFILE_UPDATE",
+            ip=client_ip,
+            device=user_agent,
+        )
+        await audit_logs_collection.insert_one(audit_entry.model_dump())
+    except Exception:
+        pass
 
     return {"message": "Profile updated successfully in MongoDB"}
 
@@ -952,3 +1104,89 @@ async def get_user_notifications(
         chats = []
 
     return {"notifications": notifs, "messages": chats}
+
+
+@router.get("/career-preferences")
+async def get_career_preferences(
+    user_payload: dict = Depends(require_role("student")),
+):
+    """
+    GET /auth/career-preferences — fetch student career preferences and autonomous agent settings.
+    """
+    uid = user_payload.get("sub")
+    student = await students_collection.find_one({
+        "$or": [{"student_id": uid}, {"user_id": uid}],
+    })
+    if not student:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student profile not found.")
+
+    raw_prefs = student.get("career_preferences") or {}
+    merged_prefs = dict(DEFAULT_CAREER_PREFERENCES)
+    merged_prefs.update(raw_prefs)
+    return {"career_preferences": merged_prefs}
+
+
+@router.put("/career-preferences")
+async def update_career_preferences(
+    data: CareerPreferencesUpdateRequest,
+    user_payload: dict = Depends(require_role("student")),
+):
+    """
+    PUT /auth/career-preferences — update career preferences & recompute local embedding vector.
+    Uses typed Pydantic request model with StrictBool and dotted $set keys.
+    """
+    uid = user_payload.get("sub")
+    student = await students_collection.find_one({
+        "$or": [{"student_id": uid}, {"user_id": uid}],
+    })
+    if not student:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student profile not found.")
+
+    target_roles = data.target_roles
+    preferred_domains = data.preferred_domains
+    min_ctc = data.min_ctc_lpa
+    max_ctc = data.max_ctc_lpa
+    auto_apply = data.auto_apply_enabled
+    notify_ineligible = data.notify_on_ineligible_match
+    blacklisted = data.blacklisted_companies
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    # Compute dense embedding locally for fast cosine matching (zero external API cost)
+    from app.services.hybrid_matcher import get_text_embedding_async
+    skills = student.get("skills") or []
+    summary_text = (
+        f"Target Roles: {', '.join(target_roles)}. "
+        f"Domains: {', '.join(preferred_domains)}. "
+        f"Student Skills: {', '.join(skills)}"
+    )
+    pref_vec = await get_text_embedding_async(summary_text)
+
+    set_fields: Dict[str, Any] = {
+        "career_preferences.target_roles": target_roles,
+        "career_preferences.preferred_domains": preferred_domains,
+        "career_preferences.min_ctc_lpa": min_ctc,
+        "career_preferences.max_ctc_lpa": max_ctc,
+        "career_preferences.auto_apply_enabled": auto_apply,
+        "career_preferences.notify_on_ineligible_match": notify_ineligible,
+        "career_preferences.blacklisted_companies": blacklisted,
+        "career_preferences.updated_at": now_iso,
+    }
+    if pref_vec:
+        set_fields["preferences_vector"] = pref_vec
+
+    await students_collection.update_one(
+        {"$or": [{"student_id": uid}, {"user_id": uid}]},
+        {"$set": set_fields}
+    )
+
+    updated_student = await students_collection.find_one({
+        "$or": [{"student_id": uid}, {"user_id": uid}],
+    })
+    res_prefs = dict(DEFAULT_CAREER_PREFERENCES)
+    if updated_student and updated_student.get("career_preferences"):
+        res_prefs.update(updated_student["career_preferences"])
+
+    return {
+        "message": "Career preferences updated successfully",
+        "career_preferences": res_prefs,
+    }

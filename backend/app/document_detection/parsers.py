@@ -506,12 +506,12 @@ class ResumeParser(BaseParser):
                             elif cls._is_valid_skill_token(base_tok):
                                 tech_skills_found.add(base_tok)
 
-        # Neural Zero-Shot Entity Extraction (GLiNER) integration to catch novel skills
+        # Neural Zero-Shot Entity Extraction (GLiNER) integration to catch novel skills across whole resume
         try:
-            from app.services.skill_matcher import skill_matcher_engine
-            neural_skills = skill_matcher_engine.extract_skills_from_text(text, use_ner=True)
+            from app.services.skill_matcher import skill_matcher_engine, is_soft_skill, is_spoken_language
+            neural_skills = skill_matcher_engine.extract_skills_from_text(text, use_ner=True, technical_only=True)
             for ns in neural_skills:
-                if cls._is_valid_skill_token(ns):
+                if cls._is_valid_skill_token(ns) and not is_soft_skill(ns) and not is_spoken_language(ns):
                     tech_skills_found.add(ns)
         except Exception:
             pass
@@ -668,22 +668,26 @@ class ResumeParser(BaseParser):
                 pass
 
         # Filter out soft skills and spoken languages from technical_skills
-        tech_skills_found = {
+        from app.services.skill_matcher import is_soft_skill, is_spoken_language
+        clean_tech_skills = sorted(list({
             s for s in tech_skills_found
             if s not in soft_skills_found
             and s not in KNOWN_LANGUAGES
             and s.lower() not in CANONICAL_SOFT_SKILLS_MAP
+            and not is_soft_skill(s)
+            and not is_spoken_language(s)
             and not any(s.lower() == l.lower() for l in KNOWN_LANGUAGES)
             and not any(s.lower() == sk.lower() for sk in soft_skills_found)
-        }
+        }))
+        clean_soft_skills = sorted(list(soft_skills_found))
 
         result = {
             "candidate_name": name,
             "email": email,
             "phone": phone,
-            "skills": sorted(list(tech_skills_found.union(soft_skills_found))),
-            "technical_skills": sorted(list(tech_skills_found)),
-            "soft_skills": sorted(list(soft_skills_found)),
+            "skills": clean_tech_skills,
+            "technical_skills": clean_tech_skills,
+            "soft_skills": clean_soft_skills,
             "deployment_skills": sorted(list(deployment_skills_found)),
             "internships": internships,
             "internship_count": internship_count,

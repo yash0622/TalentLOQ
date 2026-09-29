@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'edit_profile_screen.dart';
 import 'document_verification_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/models.dart';
 import '../../theme/app_colors.dart';
@@ -53,6 +54,8 @@ class _ProfileApplicationsScreenState extends State<ProfileApplicationsScreen> {
   int _internshipCount = 0;
   List<dynamic> _internships = [];
   List<String> _deploymentSkills = [];
+  int? _resumeScore;
+  Map<String, dynamic>? _resumeScoreDetails;
 
   @override
   void initState() {
@@ -282,6 +285,10 @@ class _ProfileApplicationsScreenState extends State<ProfileApplicationsScreen> {
         deploymentSkills = List<String>.from(remoteProfile['deployment_skills'] as List);
       }
 
+      int? resumeScore = (remoteProfile['resume_score'] is num)
+          ? (remoteProfile['resume_score'] as num).toInt()
+          : ((profile['resume_score'] is num) ? (profile['resume_score'] as num).toInt() : null);
+
       if (mounted) {
         setState(() {
           _studentEmail = email;
@@ -311,6 +318,7 @@ class _ProfileApplicationsScreenState extends State<ProfileApplicationsScreen> {
           _isCgpaVerified = isCgpaVerified;
           _hasResume = hasResume;
           _socialLinks = socialLinks;
+          _resumeScore = resumeScore;
         });
       }
     } catch (e) {
@@ -362,7 +370,7 @@ class _ProfileApplicationsScreenState extends State<ProfileApplicationsScreen> {
   Widget _buildPlatformChip(String platform, String url, bool isDark) {
     final visuals = _getPlatformVisuals(platform, isDark);
     final label = visuals.$1;
-    final icon = visuals.$2;
+    final dynamic icon = visuals.$2;
     final color = visuals.$3;
     final bg = visuals.$4;
 
@@ -372,7 +380,7 @@ class _ProfileApplicationsScreenState extends State<ProfileApplicationsScreen> {
         onTap: () => _openPlatformUrl(
           url,
           appName: label,
-          icon: icon,
+          icon: icon is IconData ? icon : null,
           brandColor: color,
         ),
         borderRadius: BorderRadius.circular(8),
@@ -389,7 +397,10 @@ class _ProfileApplicationsScreenState extends State<ProfileApplicationsScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 14, color: color),
+              if (icon is IconData)
+                Icon(icon, size: 14, color: color)
+              else
+                FaIcon(icon, size: 14, color: color),
               const SizedBox(width: 6),
               Text(
                 label,
@@ -408,26 +419,272 @@ class _ProfileApplicationsScreenState extends State<ProfileApplicationsScreen> {
     );
   }
 
-  (String, IconData, Color, Color) _getPlatformVisuals(String platform, bool isDark) {
+  Widget _buildResumeScoreChip(bool isDark) {
+    final score = _resumeScore;
+    if (score == null) return const SizedBox.shrink();
+
+    final Color color;
+    if (score >= 80) {
+      color = const Color(0xFF16A34A);
+    } else if (score >= 60) {
+      color = isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
+    } else {
+      color = AppColors.warning;
+    }
+
+    final bg = color.withValues(alpha: isDark ? 0.18 : 0.09);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _showResumeScoreBottomSheet,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: color.withValues(alpha: 0.35),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.analytics_rounded, size: 14, color: color),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  'ATS Resume Score: $score%',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(Icons.info_outline_rounded, size: 11, color: color.withValues(alpha: 0.7)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showResumeScoreBottomSheet() async {
+    if (_resumeScoreDetails == null) {
+      await _fetchResumeScoreDetails();
+    }
+    if (!mounted) return;
+
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        final details = _resumeScoreDetails;
+        if (details == null) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white24 : Colors.black12,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Icon(Icons.analytics_outlined, size: 36, color: isDark ? Colors.white38 : Colors.black38),
+                const SizedBox(height: 12),
+                Text(
+                  'Resume score details unavailable',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDark ? Colors.white70 : Colors.black54,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: const Icon(Icons.check_rounded, size: 18),
+                    label: const Text('Close', style: TextStyle(fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.lightPrimary,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final score = (_resumeScore ?? (details['score'] as num?)?.toInt()) ?? 0;
+        final formatScore = (details['format_score'] as num?)?.toInt();
+        final metricCount = (details['metric_count'] as num?)?.toInt();
+        final actionVerbsCount = (details['action_verbs_count'] as num?)?.toInt();
+        final skillsCount = (details['skills_count'] as num?)?.toInt();
+        final tier = details['tier']?.toString() ?? (score >= 80 ? 'EXCELLENT' : (score >= 60 ? 'STRONG' : (score >= 50 ? 'GOOD' : 'NEEDS WORK')));
+
+        final Color tierColor;
+        if (score >= 80) {
+          tierColor = const Color(0xFF16A34A);
+        } else if (score >= 60) {
+          tierColor = isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
+        } else {
+          tierColor = AppColors.warning;
+        }
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white24 : Colors.black12,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: tierColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(Icons.analytics_rounded, color: tierColor, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Resume ATS Score',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: tierColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '$score% · $tier',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: tierColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: (score / 100.0).clamp(0.0, 1.0),
+                  minHeight: 8,
+                  backgroundColor: isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant,
+                  valueColor: AlwaysStoppedAnimation<Color>(tierColor),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Divider(height: 1, color: isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant),
+              const SizedBox(height: 14),
+              _buildProvenanceRow('ATS Format Health', formatScore != null ? '$formatScore / 100' : 'Unavailable', Icons.rule_folder_rounded, isDark),
+              const SizedBox(height: 10),
+              _buildProvenanceRow('Bullet Action Verbs', actionVerbsCount != null ? '$actionVerbsCount Detected' : 'Unavailable', Icons.bolt_rounded, isDark),
+              const SizedBox(height: 10),
+              _buildProvenanceRow('Quantified Metrics', metricCount != null ? '$metricCount Unit-Bearing Impact Numbers' : 'Unavailable', Icons.tag_rounded, isDark),
+              const SizedBox(height: 10),
+              _buildProvenanceRow('Verified Skills Richness', skillsCount != null ? '$skillsCount Keywords Extracted' : 'Unavailable', Icons.psychology_rounded, isDark),
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.check_rounded, size: 18),
+                  label: const Text('Close', style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.lightPrimary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _fetchResumeScoreDetails() async {
+    try {
+      final res = await ApiClient.instance.dio.get('/auth/resume-score');
+      if (res.statusCode == 200 && res.data is Map) {
+        if (mounted) {
+          setState(() {
+            _resumeScoreDetails = Map<String, dynamic>.from(res.data as Map);
+            if (_resumeScoreDetails!['score'] is num) {
+              _resumeScore = (_resumeScoreDetails!['score'] as num).toInt();
+            }
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  (String, dynamic, Color, Color) _getPlatformVisuals(String platform, bool isDark) {
     switch (platform.toLowerCase()) {
       case 'linkedin':
         return (
           'LinkedIn',
-          Icons.business_center_rounded,
+          FontAwesomeIcons.linkedin,
           const Color(0xFF0A66C2),
           const Color(0xFF0A66C2).withValues(alpha: isDark ? 0.2 : 0.1),
         );
       case 'github':
         return (
           'GitHub',
-          Icons.terminal_rounded,
+          FontAwesomeIcons.github,
           isDark ? const Color(0xFFE6EDF3) : const Color(0xFF24292E),
           isDark ? Colors.white.withValues(alpha: 0.12) : const Color(0xFF24292E).withValues(alpha: 0.08),
         );
       case 'leetcode':
         return (
           'LeetCode',
-          Icons.code_rounded,
+          FontAwesomeIcons.code,
           const Color(0xFFFFA116),
           const Color(0xFFFFA116).withValues(alpha: isDark ? 0.2 : 0.1),
         );
@@ -448,14 +705,14 @@ class _ProfileApplicationsScreenState extends State<ProfileApplicationsScreen> {
       case 'hackerrank':
         return (
           'HackerRank',
-          Icons.check_circle_outline_rounded,
+          FontAwesomeIcons.hackerrank,
           const Color(0xFF00EA64),
           const Color(0xFF00EA64).withValues(alpha: isDark ? 0.2 : 0.1),
         );
       case 'kaggle':
         return (
           'Kaggle',
-          Icons.analytics_rounded,
+          FontAwesomeIcons.kaggle,
           const Color(0xFF20BEFF),
           const Color(0xFF20BEFF).withValues(alpha: isDark ? 0.2 : 0.1),
         );
@@ -476,7 +733,7 @@ class _ProfileApplicationsScreenState extends State<ProfileApplicationsScreen> {
       case 'twitter':
         return (
           'X / Twitter',
-          Icons.alternate_email_rounded,
+          FontAwesomeIcons.xTwitter,
           const Color(0xFF1DA1F2),
           const Color(0xFF1DA1F2).withValues(alpha: isDark ? 0.2 : 0.1),
         );
@@ -978,8 +1235,7 @@ class _ProfileApplicationsScreenState extends State<ProfileApplicationsScreen> {
         Icon(icon, size: 16, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
         const SizedBox(width: 8),
         Text(
-          '$label: ',
-          style: TextStyle(
+          '$label: ',          style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w500,
             color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
@@ -1113,7 +1369,7 @@ class _ProfileApplicationsScreenState extends State<ProfileApplicationsScreen> {
                     ),
                   ],
                 ),
-                if (_hasResume && _socialLinks.values.any((u) => u.trim().isNotEmpty)) ...[
+                if (_hasResume && (_socialLinks.values.any((u) => u.trim().isNotEmpty) || _resumeScore != null)) ...[
                   const SizedBox(height: 12),
                   Divider(
                     height: 1,
@@ -1123,10 +1379,24 @@ class _ProfileApplicationsScreenState extends State<ProfileApplicationsScreen> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: _socialLinks.entries
-                        .where((e) => e.value.trim().isNotEmpty)
-                        .map((e) => _buildPlatformChip(e.key, e.value, isDark))
-                        .toList(),
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      ...() {
+                        final chips = <Widget>[];
+                        bool addedScoreChip = false;
+                        for (final entry in _socialLinks.entries.where((e) => e.value.trim().isNotEmpty)) {
+                          chips.add(_buildPlatformChip(entry.key, entry.value, isDark));
+                          if (entry.key.toLowerCase() == 'github' && _hasResume && _resumeScore != null) {
+                            chips.add(_buildResumeScoreChip(isDark));
+                            addedScoreChip = true;
+                          }
+                        }
+                        if (_hasResume && _resumeScore != null && !addedScoreChip) {
+                          chips.add(_buildResumeScoreChip(isDark));
+                        }
+                        return chips;
+                      }(),
+                    ],
                   ),
                 ],
               ],

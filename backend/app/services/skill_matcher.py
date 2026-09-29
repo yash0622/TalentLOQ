@@ -172,6 +172,99 @@ SKILLS_TAXONOMY: Dict[str, str] = {
     "oop": "OOP",
 }
 
+# Canonical classification of soft skills and spoken languages to guarantee
+# that ONLY technical skills are extracted and populated into student profiles.
+SOFT_SKILLS_SET: Set[str] = {
+    "communication",
+    "communication skills",
+    "verbal communication",
+    "written communication",
+    "analytical skills",
+    "analytical thinking",
+    "problem solving",
+    "problem-solving",
+    "critical thinking",
+    "teamwork",
+    "team work",
+    "team collaboration",
+    "collaboration",
+    "leadership",
+    "team leadership",
+    "decision making",
+    "decision-making",
+    "interpersonal skills",
+    "work ethic",
+    "public speaking",
+    "presentation skills",
+    "time management",
+    "adaptability",
+    "creativity",
+    "conflict resolution",
+    "negotiation",
+    "emotional intelligence",
+    "active listening",
+    "stress management",
+    "organizational skills",
+    "multitasking",
+    "flexibility",
+}
+
+CANONICAL_SOFT_SKILLS: Set[str] = {
+    "Communication Skills",
+    "Communication",
+    "Analytical Skills",
+    "Analytical Thinking",
+    "Problem Solving",
+    "Critical Thinking",
+    "Teamwork",
+    "Leadership",
+    "Decision Making",
+    "Interpersonal Skills",
+    "Work Ethic",
+    "Public Speaking",
+    "Presentation Skills",
+    "Time Management",
+    "Adaptability",
+    "Creativity",
+    "Conflict Resolution",
+    "Negotiation",
+    "Emotional Intelligence",
+}
+
+SPOKEN_LANGUAGES_SET: Set[str] = {
+    "english", "hindi", "gujarati", "spanish", "french", "german", "mandarin",
+    "japanese", "russian", "arabic", "bengali", "marathi", "telugu", "tamil",
+    "urdu", "punjabi", "kannada", "malayalam", "odia", "sanskrit", "chinese",
+    "italian", "portuguese", "korean"
+}
+
+def is_soft_skill(skill: Optional[str]) -> bool:
+    """Checks if a given skill token or canonical name is a soft/interpersonal skill."""
+    if not skill:
+        return False
+    s_clean = skill.strip().lower()
+    return (
+        s_clean in SOFT_SKILLS_SET
+        or skill.strip() in CANONICAL_SOFT_SKILLS
+        or any(ss in s_clean for ss in [
+            "communication", "teamwork", "leadership", "problem solving",
+            "critical thinking", "interpersonal", "time management",
+            "work ethic", "public speaking", "soft skill"
+        ])
+    )
+
+def is_spoken_language(skill: Optional[str]) -> bool:
+    """Checks if a skill token is a spoken human language."""
+    if not skill:
+        return False
+    return skill.strip().lower() in SPOKEN_LANGUAGES_SET
+
+def is_technical_skill(skill: Optional[str]) -> bool:
+    """Validates that a skill is strictly technical (not soft and not a spoken language)."""
+    if not skill or len(skill.strip()) < 2:
+        return False
+    return not is_soft_skill(skill) and not is_spoken_language(skill)
+
 CANONICAL_SKILL_EQUIVALENCE: Dict[str, List[str]] = {
     "FastAPI": ["REST APIs", "Python", "Backend"],
     "Django": ["REST APIs", "Python", "Backend"],
@@ -210,12 +303,24 @@ class SkillMatcherEngine:
         patterns = [nlp.make_doc(alias) for alias in self.taxonomy.keys()]
         self.matcher.add("SKILLS_TAXONOMY", patterns)
 
-    def extract_skills_from_text(self, text: Optional[str], use_ner: bool = True) -> List[str]:
+    is_soft_skill = staticmethod(is_soft_skill)
+    is_technical_skill = staticmethod(is_technical_skill)
+    is_spoken_language = staticmethod(is_spoken_language)
+
+    def extract_skills_from_text(
+        self,
+        text: Optional[str],
+        use_ner: bool = True,
+        technical_only: bool = True
+    ) -> List[str]:
         """
         Extracts and normalizes skills from unstructured text (drive description or resume)
         into their canonical representations.
         1. Fast-path: Aho-Corasick automaton against SKILLS_TAXONOMY (sub-millisecond).
         2. Neural zero-shot path: GLiNER entity extraction for unseen frameworks, tools, libraries.
+           Scans the WHOLE resume using sliding window chunks.
+        3. Strict technical filtering: When technical_only=True (default), excludes soft skills
+           and spoken languages.
         """
         if not text or not text.strip():
             return []
@@ -232,6 +337,8 @@ class SkillMatcherEngine:
                 prev_char = lower_text[start_idx - 1] if start_idx > 0 else " "
                 next_char = lower_text[end_idx + 1] if end_idx + 1 < n else " "
                 if not (prev_char.isalnum() or next_char.isalnum()):
+                    if technical_only and (is_soft_skill(canonical) or is_spoken_language(canonical)):
+                        continue
                     found_canonical.add(canonical)
         else:
             # Fallback path: spaCy PhraseMatcher
@@ -240,9 +347,13 @@ class SkillMatcherEngine:
             for match_id, start, end in matches:
                 matched_text = doc[start:end].text.lower().strip()
                 if matched_text in self.taxonomy:
-                    found_canonical.add(self.taxonomy[matched_text])
+                    canonical = self.taxonomy[matched_text]
+                    if technical_only and (is_soft_skill(canonical) or is_spoken_language(canonical)):
+                        continue
+                    found_canonical.add(canonical)
 
         # Neural Zero-Shot Entity Extraction (GLiNER) to catch novel/unseen tech skills & frameworks
+        # Evaluates the WHOLE resume via sliding-window chunking
         if use_ner:
             model = get_gliner_model()
             if model is not None:
@@ -255,27 +366,51 @@ class SkillMatcherEngine:
                         "developer tool",
                         "technical skill"
                     ]
-                    # Check first 2500 characters of resume text to maintain high throughput
-                    entities = model.predict_entities(text[:2500], labels, threshold=0.45)
-                    for ent in entities:
-                        raw_tok = ent.get("text", "").strip(" ,;()•-·\t\r")
-                        if len(raw_tok) < 2 or len(raw_tok) > 35 or raw_tok.isdigit():
-                            continue
-                        tok_lower = raw_tok.lower()
-                        # Map to canonical casing if already known
-                        if tok_lower in self.taxonomy:
-                            found_canonical.add(self.taxonomy[tok_lower])
-                        elif len(raw_tok.split()) <= 3:
-                            # Preserve novel tool/framework representation
-                            found_canonical.add(raw_tok)
+                    # Chunk whole resume into overlapping segments (2000 chars with 200 chars overlap)
+                    chunk_size = 2000
+                    overlap = 200
+                    chunks = []
+                    start = 0
+                    t_len = len(text)
+                    while start < t_len:
+                        end = min(start + chunk_size, t_len)
+                        chunks.append(text[start:end])
+                        if end >= t_len or len(chunks) >= 15:
+                            break
+                        start += chunk_size - overlap
+
+                    for chunk in chunks:
+                        entities = model.predict_entities(chunk, labels, threshold=0.45)
+                        for ent in entities:
+                            raw_tok = ent.get("text", "").strip(" ,;()•-·\t\r")
+                            if len(raw_tok) < 2 or len(raw_tok) > 35 or raw_tok.isdigit():
+                                continue
+                            tok_lower = raw_tok.lower()
+                            if technical_only and (is_soft_skill(tok_lower) or is_spoken_language(tok_lower)):
+                                continue
+                            # Map to canonical casing if already known
+                            if tok_lower in self.taxonomy:
+                                canon = self.taxonomy[tok_lower]
+                                if not technical_only or (not is_soft_skill(canon) and not is_spoken_language(canon)):
+                                    found_canonical.add(canon)
+                            elif len(raw_tok.split()) <= 3:
+                                if not technical_only or (not is_soft_skill(raw_tok) and not is_spoken_language(raw_tok)):
+                                    found_canonical.add(raw_tok)
                 except Exception as e:
                     logger.debug(f"GLiNER zero-shot extraction notice: {e}")
 
+        if technical_only:
+            return sorted([s for s in found_canonical if not is_soft_skill(s) and not is_spoken_language(s)])
         return sorted(list(found_canonical))
 
-    async def extract_skills_from_text_async(self, text: Optional[str], use_ner: bool = True) -> List[str]:
+    async def extract_skills_from_text_async(
+        self,
+        text: Optional[str],
+        use_ner: bool = True,
+        technical_only: bool = True
+    ) -> List[str]:
         """Non-blocking async wrapper — offloads neural extraction to threadpool."""
-        return await asyncio.to_thread(self.extract_skills_from_text, text, use_ner)
+        return await asyncio.to_thread(self.extract_skills_from_text, text, use_ner, technical_only)
 
     def get_equivalent_skills(self, skill: str) -> List[str]:
         canon = self.taxonomy.get(skill.lower().strip(), skill.strip())

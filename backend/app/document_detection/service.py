@@ -199,64 +199,13 @@ class DocumentVerificationService:
         # 5. Field Parsing per Document Type
         parsed_fields: Dict[str, Any] = {}
         if detected_type == DocumentTypeEnum.RESUME:
-            # 1. Local baseline extraction
+            # 1. Local baseline extraction (100% offline, zero external LLM API calls)
+            # Scans whole resume, extracts words, isolates strictly technical skills.
             local_parsed = ResumeParser.parse(extracted_text, profile_name=profile_name)
             parsed_fields = dict(local_parsed)
-
-            # Fast-path check: Use local GLiNER/OCR extraction; only invoke Gemini if allow_external_ai is True
-            if not allow_external_ai or (len(parsed_fields.get("skills", [])) >= 8 and parsed_fields.get("student_name")):
-                logger.info("Local GLiNER-OCR extraction engaged for Resume: %d skills identified", len(parsed_fields.get("skills", [])))
-                extraction_method = "local_gliner_ocr"
-                base_ocr_conf = 98.0
-            else:
-                # 2. Try Gemini Flash AI Extraction (Recruiter/Admin reverification only)
-                ai_data = await asyncio.to_thread(
-                    GeminiDocumentExtractor.extract_resume,
-                    file_bytes=contents, filename=clean_filename, ocr_text=extracted_text
-                )
-                if ai_data:
-                    extraction_method = "gemini_ai"
-                    base_ocr_conf = 98.0
-                    if ai_data.get("skills"):
-                        merged_skills = set(parsed_fields.get("skills", [])).union(ai_data["skills"])
-                        parsed_fields["skills"] = sorted(list(merged_skills))
-                        parsed_fields["technical_skills"] = parsed_fields["skills"]
-
-                    if ai_data.get("coding_languages"):
-                        merged_coding = set(parsed_fields.get("coding_languages", [])).union(ai_data["coding_languages"])
-                        parsed_fields["coding_languages"] = sorted(list(merged_coding))
-                        parsed_fields["programming_languages"] = parsed_fields["coding_languages"]
-
-                    if ai_data.get("spoken_languages"):
-                        merged_spoken = set(parsed_fields.get("spoken_languages", [])).union(ai_data["spoken_languages"])
-                        parsed_fields["spoken_languages"] = sorted(list(merged_spoken))
-                        parsed_fields["languages"] = parsed_fields["spoken_languages"]
-
-                    # Deployment skills
-                    if ai_data.get("deployment_skills"):
-                        merged_dep = set(parsed_fields.get("deployment_skills", [])).union(ai_data["deployment_skills"])
-                        parsed_fields["deployment_skills"] = sorted(list(merged_dep))
-
-                    # Internships & count
-                    if ai_data.get("internships"):
-                        ai_internships = ai_data["internships"]
-                        local_internships = parsed_fields.get("internships", [])
-                        # Prefer AI structured internships if found, otherwise keep local
-                        parsed_fields["internships"] = ai_internships if ai_internships else local_internships
-                    if "internship_count" in ai_data and ai_data["internship_count"] is not None:
-                        parsed_fields["internship_count"] = max(int(ai_data["internship_count"]), len(parsed_fields.get("internships", [])))
-                    else:
-                        parsed_fields["internship_count"] = len(parsed_fields.get("internships", []))
-
-                    # URIs: linkedin, github, leetcode, hackerrank, codeforces, kaggle, geeksforgeeks, twitter
-                    ai_uris = ai_data.get("uris") or {}
-                    social_links = dict(parsed_fields.get("social_links", {}))
-                    for plat in ["linkedin", "github", "leetcode", "hackerrank", "codeforces", "kaggle", "geeksforgeeks", "twitter"]:
-                        val = ai_uris.get(plat) or social_links.get(plat)
-                        if val:
-                            social_links[plat] = val
-                            parsed_fields[f"{plat}_url"] = val
-                    parsed_fields["social_links"] = social_links
+            extraction_method = "local_gliner_ocr"
+            base_ocr_conf = 98.0
+            logger.info("Local offline extraction engaged for Resume: %d technical skills identified", len(parsed_fields.get("technical_skills", [])))
 
         elif detected_type == DocumentTypeEnum.TENTH_MARKSHEET:
             local_parsed = TenthMarksheetParser.parse(extracted_text, profile_name=profile_name)
@@ -608,12 +557,16 @@ class DocumentVerificationService:
 
         # Sync by Document Type
         if doc_type == "RESUME":
-            skills = parsed_fields.get("skills")
-            if skills:
-                apply_field("skills", sorted(list(set(skills))), "Resume Skills Extraction")
-            tech_skills = parsed_fields.get("technical_skills")
-            if tech_skills:
-                apply_field("technical_skills", sorted(list(set(tech_skills))), "Resume Technical Skills Extraction")
+            from app.services.skill_matcher import skill_matcher_engine, is_soft_skill, is_spoken_language
+            raw_tech = parsed_fields.get("technical_skills") or parsed_fields.get("skills") or []
+            clean_tech_skills = sorted(list({
+                skill_matcher_engine.taxonomy.get(s.lower(), s.strip())
+                for s in raw_tech
+                if s and s.strip() and not is_soft_skill(s) and not is_spoken_language(s)
+            }))
+            if clean_tech_skills:
+                apply_field("skills", clean_tech_skills, "Resume Technical Skills Extraction")
+                apply_field("technical_skills", clean_tech_skills, "Resume Technical Skills Extraction")
             soft_skills = parsed_fields.get("soft_skills")
             if soft_skills:
                 apply_field("soft_skills", sorted(list(set(soft_skills))), "Resume Soft Skills Extraction")

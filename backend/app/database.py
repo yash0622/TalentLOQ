@@ -43,6 +43,7 @@ chat_messages_collection = async_db["chat_messages"]
 verification_documents_collection = async_db["verification_documents"]
 verification_audits_collection = async_db["verification_audits"]
 ai_match_cache_collection = async_db["ai_match_cache"]
+agent_runs_collection = async_db["agent_runs"]
 
 def get_ai_match_cache_collection():
     """Returns loop-resilient Motor collection for AI Match caching."""
@@ -54,6 +55,17 @@ def get_ai_match_cache_collection():
     except Exception:
         pass
     return ai_match_cache_collection
+
+def get_agent_runs_collection():
+    """Returns loop-resilient Motor collection for agent_runs."""
+    try:
+        loop = asyncio.get_running_loop()
+        if async_client.get_io_loop() != loop:
+            scoped = motor.motor_asyncio.AsyncIOMotorClient(settings.MONGODB_URL)
+            return scoped[settings.DATABASE_NAME]["agent_runs"]
+    except Exception:
+        pass
+    return agent_runs_collection
 
 async def init_db_indexes():
     """Configure MongoDB indexes for unique constraints, fast lookups, and TTL auto-deletion."""

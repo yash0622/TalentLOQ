@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from typing import List, Literal, Optional, Generic, TypeVar, Dict, Any
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, StrictBool
 import uuid
 import re
 
@@ -28,6 +28,19 @@ class UserModel(BaseModel):
     must_change_password: bool = False
     failed_login_attempts: int = 0
     lockout_until: Optional[datetime] = None
+
+DEFAULT_CAREER_PREFERENCES: Dict[str, Any] = {
+    "target_roles": [],
+    "preferred_domains": [],
+    "min_ctc_lpa": 0.0,
+    "max_ctc_lpa": None,
+    "auto_apply_enabled": False,
+    "notify_on_ineligible_match": True,
+    "blacklisted_companies": [],
+    "last_instruction": "",
+    "raw_instruction": "",
+    "updated_at": "",
+}
 
 class StudentModel(BaseModel):
     """
@@ -77,6 +90,10 @@ class StudentModel(BaseModel):
     # Verification Metadata & Provenance tracking
     verified_fields: Dict[str, Any] = Field(default_factory=dict)
     documents: Dict[str, Any] = Field(default_factory=dict)
+
+    # Autonomous Placement Agent Preferences
+    career_preferences: Dict[str, Any] = Field(default_factory=lambda: dict(DEFAULT_CAREER_PREFERENCES))
+    preferences_vector: Optional[List[float]] = None
 
 class VerificationDocumentModel(BaseModel):
     """
@@ -312,6 +329,15 @@ class LogoutRequest(BaseModel):
 class PasswordChangeRequest(BaseModel):
     old_password: str
     new_password: str = Field(min_length=8)
+
+class CareerPreferencesUpdateRequest(BaseModel):
+    target_roles: List[str] = Field(default_factory=list)
+    preferred_domains: List[str] = Field(default_factory=list)
+    min_ctc_lpa: float = Field(default=0.0, ge=0.0)
+    max_ctc_lpa: Optional[float] = Field(default=None, ge=0.0)
+    auto_apply_enabled: StrictBool = False
+    notify_on_ineligible_match: StrictBool = True
+    blacklisted_companies: List[str] = Field(default_factory=list)
 
 class UserResponse(BaseModel):
     user_id: str

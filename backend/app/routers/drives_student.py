@@ -14,6 +14,7 @@ from app.database import (
     users_collection,
     audit_logs_collection,
     notifications_collection,
+    agent_runs_collection,
 )
 from pydantic import BaseModel
 from app.dependencies import get_optional_current_user, require_role
@@ -841,5 +842,28 @@ async def decline_placement_offer(
         "status": "declined",
         "offer_details": offer_details,
     }
+
+
+@router.get("/agent/activity", status_code=status.HTTP_200_OK)
+async def get_student_agent_activity(
+    token_payload: dict = Depends(require_role("student")),
+):
+    """
+    GET /drives/agent/activity — returns transparent history of autonomous placement agent actions for this student.
+    """
+    user_id = token_payload["sub"]
+    cursor = agent_runs_collection.find({
+        "$or": [{"user_id": user_id}, {"student_id": user_id}],
+    }).sort("timestamp", -1).limit(20)
+
+    runs = []
+    async for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        if isinstance(doc.get("timestamp"), datetime):
+            doc["timestamp"] = doc["timestamp"].isoformat()
+        runs.append(doc)
+
+    return {"activity": runs}
+
 
 

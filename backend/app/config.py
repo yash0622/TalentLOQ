@@ -31,7 +31,7 @@ class Settings:
     ALLOWED_ORIGINS: str = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8000,http://127.0.0.1:8000")
     
     # Token expiration configurations
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))  # 24 hours
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))  # 15 minutes short-lived
     REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.environ.get("REFRESH_TOKEN_EXPIRE_DAYS", "30"))       # 30 days
     TEMP_TOKEN_EXPIRE_MINUTES: int = 15    # 15 min for recruiter OTP step
     DEVICE_VERIFY_EXPIRE_MINUTES: int = 15 # 15 min for device verification token

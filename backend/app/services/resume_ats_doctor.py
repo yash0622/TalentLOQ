@@ -265,4 +265,79 @@ class ResumeAtsDoctor:
             "suggestions": suggestions[:4],
         }
 
+    @classmethod
+    def calculate_standalone_resume_score(
+        cls,
+        resume_text: str,
+        student_skills: Optional[List[str]] = None,
+        projects: Optional[List[Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Calculates standalone general resume quality and ATS benchmark score (0-100).
+        Evaluates formatting health, bullet start verbs, quantified metrics, and skills.
+        """
+        raw_text = resume_text or ""
+        format_health = cls.check_format_health(raw_text)
+
+        # 1. Action verbs at bullet/line starts
+        bullet_start_verbs = set()
+        for match in BULLET_START_REGEX.finditer(raw_text):
+            word = match.group(1).lower()
+            if word in STRONG_ACTION_VERBS:
+                bullet_start_verbs.add(word)
+
+        for match in LINE_START_REGEX.finditer(raw_text):
+            word = match.group(1).lower()
+            if word in STRONG_ACTION_VERBS:
+                bullet_start_verbs.add(word)
+
+        for p in (projects or []):
+            desc = p.get("description", "") if isinstance(p, dict) else str(p)
+            for match in LINE_START_REGEX.finditer(desc):
+                word = match.group(1).lower()
+                if word in STRONG_ACTION_VERBS:
+                    bullet_start_verbs.add(word)
+
+        # 2. Strict metrics
+        full_text = f"{raw_text} " + " ".join([
+            f"{p.get('title', '')} {p.get('description', '')}" if isinstance(p, dict) else str(p)
+            for p in (projects or [])
+        ])
+        metric_matches = STRICT_METRICS_REGEX.findall(full_text)
+        has_metrics = len(metric_matches) > 0
+
+        # 3. Skills count
+        extracted_skills = skill_matcher_engine.extract_skills_from_text(raw_text, use_ner=False)
+        all_skills = set((student_skills or []) + extracted_skills)
+
+        # 4. Composite standalone score
+        format_pts = format_health["format_score"] * 0.35  # max 35
+        verb_pts = min(25.0, len(bullet_start_verbs) * 5.0)  # max 25
+        metric_pts = min(20.0, len(metric_matches) * 10.0) if has_metrics else 0.0  # max 20
+        skills_pts = min(20.0, len(all_skills) * 4.0)  # max 20
+
+        base_score = format_pts + verb_pts + metric_pts + skills_pts
+        score = int(round(min(100.0, max(0.0, base_score))))
+
+        if score >= 80:
+            tier = "EXCELLENT"
+        elif score >= 65:
+            tier = "STRONG"
+        elif score >= 50:
+            tier = "GOOD"
+        else:
+            tier = "NEEDS WORK"
+
+        return {
+            "score": score,
+            "tier": tier,
+            "format_score": format_health["format_score"],
+            "format_health": format_health,
+            "metric_count": len(metric_matches),
+            "has_metrics": has_metrics,
+            "action_verbs_count": len(bullet_start_verbs),
+            "bullet_action_verbs": sorted(list(bullet_start_verbs))[:5],
+            "skills_count": len(all_skills),
+        }
+
 resume_ats_doctor = ResumeAtsDoctor()

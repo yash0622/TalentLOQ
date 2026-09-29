@@ -400,16 +400,19 @@ def test_resume_soft_skills_and_programming_languages():
     """
     parsed = ResumeParser.parse(resume_text)
 
-    # Combined deduplicated skills
+    # Strictly technical skills in skills and technical_skills
     assert "Python" in parsed["skills"]
-    assert "Problem Solving" in parsed["skills"]
-    assert "Critical Thinking" in parsed["skills"]
-    assert "Team Leadership" in parsed["skills"]
+    assert "Flutter" in parsed["skills"]
+    assert "FastAPI" in parsed["skills"]
+    assert "Problem Solving" not in parsed["skills"]
+    assert "Critical Thinking" not in parsed["skills"]
+    assert "Team Leadership" not in parsed["skills"]
 
     # Separated categories
     assert "Problem Solving" in parsed["soft_skills"]
     assert "Agile" in parsed["soft_skills"]
     assert "Python" in parsed["technical_skills"]
+    assert "Problem Solving" not in parsed["technical_skills"]
 
     # Spoken vs Programming languages
     assert "English" in parsed["languages"]

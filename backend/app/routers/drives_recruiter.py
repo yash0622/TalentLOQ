@@ -1,7 +1,16 @@
+import asyncio
 import io
 import json
 import logging
 from pathlib import Path
+
+_background_tasks: set[asyncio.Task] = set()
+
+def _schedule_background_task(coro):
+    task = asyncio.create_task(coro)
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+    return task
 import re
 import uuid
 from datetime import datetime, timezone
@@ -267,6 +276,11 @@ async def create_placement_drive(
 
     if drive_doc.get("status") == "published":
         await notify_on_publish(drive_doc["drive_id"], target_audience="all")
+        try:
+            from app.services.autonomous_placement_agent import autonomous_agent
+            _schedule_background_task(autonomous_agent.process_drive_for_all_candidates(drive_doc["drive_id"]))
+        except Exception as _e:
+            logger.warning(f"[AutonomousAgent] Failed to enqueue autonomous run: {_e}")
 
     return drive_doc
 
@@ -380,6 +394,11 @@ async def publish_placement_drive(
         del updated_doc["_id"]
 
     notif_res = await notify_on_publish(drive_id, target_audience=target_audience)
+    try:
+        from app.services.autonomous_placement_agent import autonomous_agent
+        _schedule_background_task(autonomous_agent.process_drive_for_all_candidates(drive_id))
+    except Exception as _e:
+        logger.warning(f"[AutonomousAgent] Failed to enqueue autonomous run on publish: {_e}")
 
     return {
         "message": "Drive published successfully.",

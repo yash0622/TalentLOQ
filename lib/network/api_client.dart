@@ -96,8 +96,8 @@ class ApiClient {
       if (kIsWeb) {
         return 'http://127.0.0.1:8000';
       }
-      // PC local Wi-Fi IP allows both physical devices and emulators on the local network to connect
-      return 'http://10.205.31.179:8000';
+      // PC local Wi-Fi IP allows physical devices and emulators on the local network to connect
+      return 'http://192.168.1.10:8000';
     }
 
     throw StateError(

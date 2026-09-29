@@ -74,6 +74,20 @@ def sanitize_text(text: str) -> str:
     text = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', text)
     return text.strip()
 
+def scrub_pii(text: str) -> str:
+    """
+    Minimizes PII by masking phone numbers and email addresses before sending data
+    to external services or AI APIs.
+    """
+    if not text:
+        return ""
+    # Mask emails
+    text = re.sub(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', '[REDACTED_EMAIL]', text)
+    # Mask 10-12 digit phone numbers (with optional country codes)
+    text = re.sub(r'(?:\+?91[\s-]?)?[6-9]\d{9}', '[REDACTED_PHONE]', text)
+    text = re.sub(r'\b(?:\+?\d{1,3}[\s-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b', '[REDACTED_PHONE]', text)
+    return text
+
 def verify_captcha(captcha_token: str) -> bool:
     """
     Verifies user-supplied CAPTCHA token (e.g. Cloudflare Turnstile / Google reCAPTCHA).
