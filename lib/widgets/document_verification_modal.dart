@@ -131,7 +131,7 @@ class _DocumentVerificationModalState extends State<DocumentVerificationModal> {
   Future<void> _runAIExtraction() async {
     setState(() {
       _isExtracting = true;
-      _statusMessage = 'Running Gemini Multimodal Vision extraction...';
+      _statusMessage = 'Extracting document details...';
     });
 
     try {
@@ -142,12 +142,12 @@ class _DocumentVerificationModalState extends State<DocumentVerificationModal> {
           _populateFromData(fields);
           setState(() {
             _isExtracting = false;
-            _statusMessage = 'AI extraction completed! Review and edit values below.';
+            _statusMessage = 'Document extraction completed! Review and edit values below.';
           });
         } else {
           setState(() {
             _isExtracting = false;
-            _statusMessage = 'AI Vision could not extract fields reliably. Enter manually.';
+            _statusMessage = 'Could not extract fields reliably. Enter manually.';
           });
         }
       }
@@ -155,7 +155,7 @@ class _DocumentVerificationModalState extends State<DocumentVerificationModal> {
       if (mounted) {
         setState(() {
           _isExtracting = false;
-          _statusMessage = 'AI Vision error: $e';
+          _statusMessage = 'Extraction error: $e';
         });
       }
     }
@@ -389,7 +389,7 @@ class _DocumentVerificationModalState extends State<DocumentVerificationModal> {
                       )
                     : const Icon(Icons.auto_awesome_rounded, size: 18),
                 label: Text(
-                  _isExtracting ? 'Extracting via Gemini Vision...' : '✨ Run AI Vision Extraction (Recruiter API)',
+                  _isExtracting ? 'Extracting document details...' : '✨ Run Document Extraction',
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 ),
               ),

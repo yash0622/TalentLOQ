@@ -253,3 +253,40 @@ def test_latency_seconds_and_markdown_bold_bullets():
     assert "architected" in result["bullet_action_verbs"]
     assert result["ats_score"] >= 80
 
+
+def test_indian_phone_and_punctuation_metrics():
+    """
+    Asserts that Indian phone formats (+91 98765 43210, 98765 43210) are detected as contact info,
+    and trailing symbols (% followed by space, + followed by users) match quantifiable metrics.
+    """
+    resume_text = """
+    Rohan Patel
+    rohan.patel@gsfcuniversity.ac.in | +91 98765 43210
+
+    Education
+    B.Tech Computer Science 2021-2025
+
+    Skills
+    Python, Django, PostgreSQL
+
+    Experience
+    - Improved backend throughput by 25% and reduced latency by 300ms.
+    - Scaled real-time WebSocket cluster supporting 500+ users concurrently.
+    """
+    format_health = ResumeAtsDoctor.check_format_health(resume_text)
+    assert format_health["has_contact_info"] is True
+    assert not any("phone" in w.lower() for w in format_health["format_warnings"])
+    assert not any("email" in w.lower() for w in format_health["format_warnings"])
+    # 3 sections (Edu, Skills, Exp): 15 + 15 + 20 = 50 + 20 contact + 20 layout = 90
+    assert format_health["format_score"] == 90
+
+    res = ResumeAtsDoctor.analyze_resume_fit(
+        resume_text=resume_text,
+        student_skills=["Python", "Django"],
+        projects=[],
+        drive_doc={"drive_title": "Python Dev", "required_skills": ["Python"]},
+    )
+    assert res["has_quantifiable_metrics"] is True
+    assert res["metric_count"] >= 3
+
+

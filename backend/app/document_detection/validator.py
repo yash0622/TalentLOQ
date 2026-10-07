@@ -198,6 +198,14 @@ class DocumentValidator:
                     status=VerificationStatusEnum.VERIFIED,
                     validation_notes=[f"Extracted {len(skills)} normalized skills."],
                 )
+                field_metadata["technical_skills"] = ExtractedField(
+                    value=skills,
+                    ocr_confidence=ocr_conf,
+                    extraction_confidence=95.0,
+                    validation_confidence=98.0,
+                    status=VerificationStatusEnum.VERIFIED,
+                    validation_notes=[f"Extracted {len(skills)} verified technical skills."],
+                )
             else:
                 warnings.append("No explicit technical skills section recognized in resume.")
 

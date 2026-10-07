@@ -196,10 +196,10 @@ class _CandidateDetailScreenState extends State<CandidateDetailScreen> {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.auto_awesome_rounded, color: AppColors.warning, size: 13),
+                        Icon(Icons.verified_user_rounded, color: AppColors.warning, size: 13),
                         SizedBox(width: 4),
                         Text(
-                          'AI Verify',
+                          'Quick Verify',
                           style: TextStyle(color: AppColors.warning, fontSize: 11, fontWeight: FontWeight.bold),
                         ),
                       ],
@@ -362,7 +362,7 @@ class _CandidateDetailScreenState extends State<CandidateDetailScreen> {
                           // Aligned Match Score & Validation Status Row
                           Row(
                             children: [
-                              // 0-10 AI Match Score Pill
+                              // 0-10 Skill Match Score Pill
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                 decoration: BoxDecoration(
@@ -375,7 +375,7 @@ class _CandidateDetailScreenState extends State<CandidateDetailScreen> {
                                     const Icon(Icons.bolt_rounded, color: AppColors.success, size: 16),
                                     const SizedBox(width: 4),
                                     Text(
-                                      'AI Match: ${matchScoreOutOf10.toStringAsFixed(1)} / 10',
+                                      'Skill Match: ${matchScoreOutOf10.toStringAsFixed(1)} / 10',
                                       style: const TextStyle(
                                         color: AppColors.success,
                                         fontWeight: FontWeight.bold,

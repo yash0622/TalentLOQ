@@ -450,8 +450,27 @@ async def get_drive_ats_check(
     if not drive:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Placement drive not found.")
 
+    resume_text = student.get("resume_text", "")
+    if not resume_text and student.get("resume_id"):
+        try:
+            from bson import ObjectId
+            from app.database import get_grid_fs
+            from app.document_detection.extractor import extract_document_text
+            grid_bucket = get_grid_fs()
+            stream = await grid_bucket.open_download_stream(ObjectId(student["resume_id"]))
+            stream_bytes = await stream.read()
+            extracted, _ = await extract_document_text(stream_bytes, filename=student.get("resume_filename", "resume.pdf"))
+            if extracted:
+                resume_text = extracted
+                await students_collection.update_one(
+                    {"_id": student["_id"]},
+                    {"$set": {"resume_text": resume_text}}
+                )
+        except Exception:
+            pass
+
     return ResumeAtsDoctor.analyze_resume_fit(
-        resume_text=student.get("resume_text", ""),
+        resume_text=resume_text,
         student_skills=student.get("skills", []),
         projects=student.get("projects", []),
         drive_doc=drive,
@@ -532,12 +551,12 @@ async def apply_to_placement_drive(
         r_url = student_doc.get("resume_url")
         r_id = student_doc.get("resume_id")
         r_file = student_doc.get("resume_filename")
-        if r_url == "/static/uploads/resume.pdf" or r_file == "resume.pdf" or (r_file and "jane_smith" in str(r_file).lower()):
+        if r_url == "/static/uploads/resume.pdf":
             has_resume = False
             resume_id = None
-        else:
-            has_resume = bool(student_doc.get("has_resume", False))
-            resume_id = r_id or r_url or ("resume_uploaded" if has_resume else None)
+        elif student_doc.get("has_resume") or r_id or r_url or r_file:
+            has_resume = True
+            resume_id = r_id or r_url or r_file or "resume_uploaded"
 
     if not has_resume or not resume_id:
         raise HTTPException(
@@ -792,7 +811,7 @@ async def accept_placement_offer(
             "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
             "recipient_id": recruiter_id,
             "user_id": recruiter_id,
-            "title": "🎉 Placement Offer Accepted!",
+            "title": "Placement Offer Accepted!",
             "message": f"Candidate {student_id} has officially ACCEPTED the placement offer for {company_name}.",
             "type": "offer_accepted",
             "is_read": False,

@@ -147,19 +147,30 @@ async def test_auth_upload_resume_profile_update(monkeypatch):
     mock_updated_data = {}
 
     class MockStudentsCollection:
-        async def update_many(self, query, update):
+        async def find_one(self, query):
+            return {"student_id": "std_123", "user_id": "usr_123", "documents": {}, "verified_fields": {}}
+
+        async def insert_one(self, doc):
+            return MagicMock(inserted_id="mock_id")
+
+        async def update_many(self, query, update, **kwargs):
             mock_updated_data.update(update.get("$set", {}))
             return MagicMock(modified_count=1)
 
-        async def update_one(self, query, update):
+        async def update_one(self, query, update, **kwargs):
             mock_updated_data.update(update.get("$set", {}))
             return MagicMock(modified_count=1)
+
+    class MockVerificationDocs:
+        async def insert_one(self, doc):
+            return MagicMock(inserted_id="mock_doc_id")
 
     class MockGridFS:
         async def upload_from_stream(self, name, stream, metadata=None):
             return "mock_grid_id_123"
 
     monkeypatch.setattr("app.routers.auth.students_collection", MockStudentsCollection())
+    monkeypatch.setattr("app.routers.auth.verification_documents_collection", MockVerificationDocs())
     monkeypatch.setattr("app.routers.auth.get_grid_fs", lambda: MockGridFS())
 
     upload_file = UploadFile(

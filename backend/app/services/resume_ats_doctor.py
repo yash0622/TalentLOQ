@@ -31,9 +31,10 @@ SECTION_PATTERNS = {
 
 # Strict unit/symbol-bearing impact metrics regex.
 # Eliminates false positives from bare graduation years (2024, 2026), phone numbers, or CGPA 10,
-# while supporting %, x, k, ms, s/sec/seconds, mb, gb, and +.
+# while supporting %, +, x, k, ms, s/sec/seconds, mb, gb without boundary mismatches on punctuation.
 STRICT_METRICS_REGEX = re.compile(
-    r'\b\d+(\.\d+)?\s*(%|x|k|ms|mb|gb|\+|sec|seconds?)\b|\b(?<!\d)(?:\d{1,3}(?:\.\d+)?)\s*s\b',
+    r'(?<![\w.])\d+(?:\.\d+)?\s*(?:%|\+)'
+    r'|(?<![\w.])\d+(?:\.\d+)?\s*(?:x|k|ms|mb|gb|s|sec|seconds?)\b',
     re.IGNORECASE
 )
 
@@ -50,8 +51,10 @@ BULLET_START_REGEX = re.compile(
 )
 LINE_START_REGEX = re.compile(r'^\s*(?:\*{1,2}|_{1,2})?\s*([a-zA-Z]+)\b', re.MULTILINE)
 
-EMAIL_REGEX = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')
-PHONE_REGEX = re.compile(r'(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}')
+EMAIL_REGEX = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b')
+PHONE_REGEX = re.compile(
+    r'(?:\+?\d{1,3}[-.\s]?)?(?:\(?\d{2,4}\)?[-.\s]?)?\d{3,5}[-.\s]?\d{4,5}'
+)
 
 
 DATE_TOKENS = {
@@ -81,6 +84,14 @@ class ResumeAtsDoctor:
         contact information visibility, and layout fragmentation risks.
         """
         text = resume_text or ""
+        if not text.strip():
+            return {
+                "format_score": 0,
+                "sections_detected": [],
+                "has_contact_info": False,
+                "has_layout_risk": False,
+                "format_warnings": ["No resume text detected. Please upload a readable resume."],
+            }
         warnings: List[str] = []
         sections_found: List[str] = []
 
@@ -126,10 +137,23 @@ class ResumeAtsDoctor:
             warnings.append("Multi-column layout or table structures detected — text may parse out-of-order.")
 
         # Compute format health score (0-100)
-        # Sections: 4 * 15 = 60 pts
-        # Contact info: 20 pts
-        # Clean layout: 20 pts
-        format_score = (len(sections_found) * 15)
+        # Sections: up to 60 pts
+        # - Education (15 pts), Skills (15 pts)
+        # - Experience & Projects: 15 pts each if both present (30 pts);
+        #   If either Experience or Projects is present, award 20 pts so experienced candidates
+        #   without university projects or early students without formal jobs are not overly penalized.
+        has_edu = "Education" in sections_found
+        has_skills = "Skills" in sections_found
+        has_exp = "Experience" in sections_found
+        has_proj = "Projects" in sections_found
+
+        section_score = (15 if has_edu else 0) + (15 if has_skills else 0)
+        if has_exp and has_proj:
+            section_score += 30
+        elif has_exp or has_proj:
+            section_score += 20
+
+        format_score = section_score
         if has_email:
             format_score += 10
         if has_phone:
@@ -219,11 +243,11 @@ class ResumeAtsDoctor:
         # - 25% Bullet Impact & Metrics (up to 15 for bullet-start action verbs + 10 for metrics)
         # - 25% Structural Format Health (format_score * 0.25)
         skill_score = overlap_ratio * 50.0
-        verb_score = min(15.0, len(bullet_start_verbs) * 5.0)
+        verb_score = min(15.0, (len(bullet_start_verbs) * 3.5) + min(len(found_action_verbs) * 0.5, 3.0))
         metric_score = 10.0 if has_metrics else 0.0
-        format_score = format_health["format_score"] * 0.25
+        weighted_format_score = format_health["format_score"] * 0.25
 
-        ats_score = int(round(min(100.0, skill_score + verb_score + metric_score + format_score)))
+        ats_score = int(round(min(100.0, skill_score + verb_score + metric_score + weighted_format_score)))
 
         # 6. Determine Fit Tier
         if ats_score >= 80:
@@ -276,8 +300,21 @@ class ResumeAtsDoctor:
         Calculates standalone general resume quality and ATS benchmark score (0-100).
         Evaluates formatting health, bullet start verbs, quantified metrics, and skills.
         """
-        raw_text = resume_text or ""
+        raw_text = (resume_text or "").strip()
         format_health = cls.check_format_health(raw_text)
+
+        if not raw_text:
+            return {
+                "score": 0,
+                "tier": "NEEDS WORK",
+                "format_score": 0,
+                "format_health": format_health,
+                "metric_count": 0,
+                "has_metrics": False,
+                "action_verbs_count": 0,
+                "bullet_action_verbs": [],
+                "skills_count": len(student_skills or []),
+            }
 
         # 1. Action verbs at bullet/line starts
         bullet_start_verbs = set()
@@ -312,7 +349,7 @@ class ResumeAtsDoctor:
 
         # 4. Composite standalone score
         format_pts = format_health["format_score"] * 0.35  # max 35
-        verb_pts = min(25.0, len(bullet_start_verbs) * 5.0)  # max 25
+        verb_pts = min(25.0, (len(bullet_start_verbs) * 4.0) + min(len(bullet_start_verbs) * 1.5, 5.0))  # max 25
         metric_pts = min(20.0, len(metric_matches) * 10.0) if has_metrics else 0.0  # max 20
         skills_pts = min(20.0, len(all_skills) * 4.0)  # max 20
 
@@ -339,5 +376,3 @@ class ResumeAtsDoctor:
             "bullet_action_verbs": sorted(list(bullet_start_verbs))[:5],
             "skills_count": len(all_skills),
         }
-
-resume_ats_doctor = ResumeAtsDoctor()

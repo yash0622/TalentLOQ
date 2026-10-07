@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "723041793077",
+    "project_id": "talentloq",
+    "storage_bucket": "talentloq.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:723041793077:android:8b0fe9628d2a8fecc56d7c",
+        "android_client_info": {
+          "package_name": "com.example.talentloq"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApd4RIyPz8Ll9nR8v1izc_3sPDiosY58A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

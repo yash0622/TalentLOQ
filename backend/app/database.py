@@ -103,6 +103,7 @@ async def init_db_indexes():
         await drives_collection.create_index("extracted_required_skills")
         await drives_collection.create_index("required_skills")
         await students_collection.create_index("skills")
+        await students_collection.create_index([("cgpa", -1), ("skills", 1)])
         await applications_collection.create_index("app_id", unique=True)
         await applications_collection.create_index("job_id")
         await applications_collection.create_index("listing_id")

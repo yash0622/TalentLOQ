@@ -154,27 +154,3 @@ async def root():
         "recruiter_configured": bool(settings.RECRUITER_EMAIL),
         "allowed_origins": origins_list,
     }
-
-# ---------------------------------------------------------------------------
-# Protected Endpoint Examples
-# ---------------------------------------------------------------------------
-
-@app.post("/recruiter/post-job", tags=["Recruiter Operations"])
-async def post_job(
-    token_payload: dict = Depends(require_role("recruiter")),
-    reauth_payload: dict = Depends(require_recent_reauth(max_age_seconds=300)),
-):
-    return {
-        "message": "Job posted successfully",
-        "recruiter_id": token_payload["sub"],
-        "auth_time": token_payload.get("auth_time"),
-    }
-
-@app.get("/student/profile", tags=["Student Operations"])
-async def get_student_profile(
-    token_payload: dict = Depends(require_role("student")),
-):
-    return {
-        "message": "Student profile fetched",
-        "student_id": token_payload["sub"],
-    }

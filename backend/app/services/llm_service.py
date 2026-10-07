@@ -1,14 +1,16 @@
 import os
+import time
 import asyncio
 import logging
 from typing import Optional, Dict, Any, List
 from dotenv import load_dotenv
+from app.services.llm_logger import log_llm_usage
 
 load_dotenv()
 
 logger = logging.getLogger("talentloq.llm")
 
-FREE_GROQ_MODELS = ["llama-3.1-8b-instant", "qwen/qwen3.8-27b", "groq/compound-mini"]
+FREE_GROQ_MODELS = ["qwen/qwen3.8-27b", "llama-3.3-70b-versatile", "groq/compound-mini"]
 FREE_OPENROUTER_MODELS = [
     "qwen/qwen-2.5-coder-32b-instruct:free",
     "meta-llama/llama-3.3-70b-instruct:free",
@@ -92,20 +94,21 @@ class LLMService:
                 logger.warning(f"Could not initialize Hugging Face client: {e}")
 
     @staticmethod
-    def _print_token_usage(provider: str, model: str, prompt_tokens: int, completion_tokens: int, total_tokens: int) -> Dict[str, int]:
-        print(
-            f"\n\033[1;36m+==================== [AI API TOKEN USAGE] ====================+\033[0m\n"
-            f"  \033[1mProvider:\033[0m          {provider.upper()}\n"
-            f"  \033[1mModel:\033[0m             {model}\n"
-            f"  \033[1;33mPrompt Tokens:\033[0m     {prompt_tokens:,}\n"
-            f"  \033[1;32mCompletion Tokens:\033[0m {completion_tokens:,}\n"
-            f"  \033[1;35mTotal Tokens Used:\033[0m {total_tokens:,}\n"
-            f"\033[1;36m+==============================================================+\033[0m\n",
-            flush=True
-        )
-        logger.info(
-            "[AI Token Usage] Provider: %s | Model: %s | Prompt: %d | Completion: %d | Total: %d",
-            provider, model, prompt_tokens, completion_tokens, total_tokens
+    def _print_token_usage(
+        provider: str,
+        model: str,
+        prompt_tokens: int,
+        completion_tokens: int,
+        total_tokens: int,
+        latency_ms: Optional[float] = None,
+    ) -> Dict[str, int]:
+        log_llm_usage(
+            provider=provider,
+            model=model,
+            input_tokens=prompt_tokens,
+            output_tokens=completion_tokens,
+            total_tokens=total_tokens,
+            latency_ms=latency_ms,
         )
         return {
             "prompt_tokens": prompt_tokens,
@@ -113,34 +116,49 @@ class LLMService:
             "total_tokens": total_tokens,
         }
 
-    async def generate(self, prompt: str, system_prompt: Optional[str] = None, max_tokens: int = 500) -> Dict[str, Any]:
+    async def generate(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        max_tokens: int = 500,
+        messages: Optional[List[Dict[str, str]]] = None,
+    ) -> Dict[str, Any]:
         """
         Executes generation strictly through free models across available providers.
-        Priority: Groq (Free) -> OpenRouter (:free) -> Mistral (Free) -> Gemini (Free).
+        Priority: Groq (Free) -> OpenRouter (:free) -> Mistral (Free) -> Gemini (Free) -> Hugging Face.
+        Supports multi-turn chat messages when provided.
         """
         errors = []
+        start_time = time.perf_counter()
+
+        def _get_messages() -> List[Dict[str, str]]:
+            if messages:
+                return list(messages)
+            msgs = []
+            if system_prompt:
+                msgs.append({"role": "system", "content": system_prompt})
+            msgs.append({"role": "user", "content": prompt})
+            return msgs
 
         # 1. Try Groq Free Tier
         if self.groq_client:
             for model_name in FREE_GROQ_MODELS:
                 try:
-                    messages = []
-                    if system_prompt:
-                        messages.append({"role": "system", "content": system_prompt})
-                    messages.append({"role": "user", "content": prompt})
+                    chat_msgs = _get_messages()
                     # Ponytail: offload blocking sync SDK call to worker thread
                     res = await asyncio.to_thread(
                         self.groq_client.chat.completions.create,
                         model=model_name,
-                        messages=messages,
+                        messages=chat_msgs,
                         max_tokens=max_tokens,
                     )
-                    text = res.choices[0].message.content.strip()
+                    text = (res.choices[0].message.content or "").strip()
                     usage = getattr(res, "usage", None)
                     p_tok = int(getattr(usage, "prompt_tokens", 0) or 0)
                     c_tok = int(getattr(usage, "completion_tokens", 0) or 0)
                     t_tok = int(getattr(usage, "total_tokens", 0) or (p_tok + c_tok))
-                    tokens_dict = self._print_token_usage("groq", model_name, p_tok, c_tok, t_tok)
+                    latency_ms = (time.perf_counter() - start_time) * 1000
+                    tokens_dict = self._print_token_usage("groq", model_name, p_tok, c_tok, t_tok, latency_ms=latency_ms)
 
                     return {
                         "text": text,
@@ -149,6 +167,7 @@ class LLMService:
                         "is_free": True,
                         "fallback_used": False,
                         "tokens_used": tokens_dict,
+                        "latency_ms": latency_ms,
                     }
                 except Exception as e:
                     logger.warning(f"Groq {model_name} failed: {e}")
@@ -158,23 +177,21 @@ class LLMService:
         if self.openrouter_client:
             for model_name in FREE_OPENROUTER_MODELS:
                 try:
-                    messages = []
-                    if system_prompt:
-                        messages.append({"role": "system", "content": system_prompt})
-                    messages.append({"role": "user", "content": prompt})
+                    chat_msgs = _get_messages()
                     # Ponytail: offload blocking sync SDK call to worker thread
                     res = await asyncio.to_thread(
                         self.openrouter_client.chat.completions.create,
                         model=model_name,
-                        messages=messages,
+                        messages=chat_msgs,
                         max_tokens=max_tokens,
                     )
-                    text = res.choices[0].message.content.strip()
+                    text = (res.choices[0].message.content or "").strip()
                     usage = getattr(res, "usage", None)
                     p_tok = int(getattr(usage, "prompt_tokens", 0) or 0)
                     c_tok = int(getattr(usage, "completion_tokens", 0) or 0)
                     t_tok = int(getattr(usage, "total_tokens", 0) or (p_tok + c_tok))
-                    tokens_dict = self._print_token_usage("openrouter", model_name, p_tok, c_tok, t_tok)
+                    latency_ms = (time.perf_counter() - start_time) * 1000
+                    tokens_dict = self._print_token_usage("openrouter", model_name, p_tok, c_tok, t_tok, latency_ms=latency_ms)
 
                     return {
                         "text": text,
@@ -183,6 +200,7 @@ class LLMService:
                         "is_free": True,
                         "fallback_used": True,
                         "tokens_used": tokens_dict,
+                        "latency_ms": latency_ms,
                     }
                 except Exception as e:
                     logger.warning(f"OpenRouter {model_name} failed: {e}")
@@ -192,23 +210,21 @@ class LLMService:
         if self.mistral_client:
             for model_name in FREE_MISTRAL_MODELS:
                 try:
-                    messages = []
-                    if system_prompt:
-                        messages.append({"role": "system", "content": system_prompt})
-                    messages.append({"role": "user", "content": prompt})
+                    chat_msgs = _get_messages()
                     # Ponytail: offload blocking sync SDK call to worker thread
                     res = await asyncio.to_thread(
                         self.mistral_client.chat.complete,
                         model=model_name,
-                        messages=messages,
+                        messages=chat_msgs,
                         max_tokens=max_tokens,
                     )
-                    text = res.choices[0].message.content.strip()
+                    text = (res.choices[0].message.content or "").strip()
                     usage = getattr(res, "usage", None)
                     p_tok = int(getattr(usage, "prompt_tokens", 0) or 0)
                     c_tok = int(getattr(usage, "completion_tokens", 0) or 0)
                     t_tok = int(getattr(usage, "total_tokens", 0) or (p_tok + c_tok))
-                    tokens_dict = self._print_token_usage("mistral", model_name, p_tok, c_tok, t_tok)
+                    latency_ms = (time.perf_counter() - start_time) * 1000
+                    tokens_dict = self._print_token_usage("mistral", model_name, p_tok, c_tok, t_tok, latency_ms=latency_ms)
 
                     return {
                         "text": text,
@@ -217,6 +233,7 @@ class LLMService:
                         "is_free": True,
                         "fallback_used": True,
                         "tokens_used": tokens_dict,
+                        "latency_ms": latency_ms,
                     }
                 except Exception as e:
                     logger.warning(f"Mistral {model_name} failed: {e}")
@@ -226,19 +243,26 @@ class LLMService:
         if self.gemini_client:
             for model_name in FREE_GEMINI_MODELS:
                 try:
-                    full_content = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
+                    if messages:
+                        full_content = "\n\n".join(
+                            f"{m.get('role', 'user').capitalize()}: {m.get('content', '')}"
+                            for m in messages
+                        )
+                    else:
+                        full_content = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
                     # Ponytail: offload blocking sync SDK call to worker thread
                     res = await asyncio.to_thread(
                         self.gemini_client.models.generate_content,
                         model=model_name,
                         contents=full_content,
                     )
-                    text = res.text.strip()
+                    text = (res.text or "").strip()
                     usage = getattr(res, "usage_metadata", None)
                     p_tok = int(getattr(usage, "prompt_token_count", 0) or 0)
                     c_tok = int(getattr(usage, "candidates_token_count", 0) or 0)
                     t_tok = int(getattr(usage, "total_token_count", 0) or (p_tok + c_tok))
-                    tokens_dict = self._print_token_usage("gemini", model_name, p_tok, c_tok, t_tok)
+                    latency_ms = (time.perf_counter() - start_time) * 1000
+                    tokens_dict = self._print_token_usage("gemini", model_name, p_tok, c_tok, t_tok, latency_ms=latency_ms)
 
                     return {
                         "text": text,
@@ -247,6 +271,7 @@ class LLMService:
                         "is_free": True,
                         "fallback_used": True,
                         "tokens_used": tokens_dict,
+                        "latency_ms": latency_ms,
                     }
                 except Exception as e:
                     logger.warning(f"Gemini {model_name} failed: {e}")
@@ -256,22 +281,20 @@ class LLMService:
         if self.hf_client:
             for model_name in FREE_HUGGINGFACE_MODELS:
                 try:
-                    messages = []
-                    if system_prompt:
-                        messages.append({"role": "system", "content": system_prompt})
-                    messages.append({"role": "user", "content": prompt})
+                    chat_msgs = _get_messages()
                     res = await asyncio.to_thread(
                         self.hf_client.chat.completions.create,
                         model=model_name,
-                        messages=messages,
+                        messages=chat_msgs,
                         max_tokens=max_tokens,
                     )
-                    text = res.choices[0].message.content.strip()
+                    text = (res.choices[0].message.content or "").strip()
                     usage = getattr(res, "usage", None)
                     p_tok = int(getattr(usage, "prompt_tokens", 0) or 0)
                     c_tok = int(getattr(usage, "completion_tokens", 0) or 0)
                     t_tok = int(getattr(usage, "total_tokens", 0) or (p_tok + c_tok))
-                    tokens_dict = self._print_token_usage("huggingface", model_name, p_tok, c_tok, t_tok)
+                    latency_ms = (time.perf_counter() - start_time) * 1000
+                    tokens_dict = self._print_token_usage("huggingface", model_name, p_tok, c_tok, t_tok, latency_ms=latency_ms)
 
                     return {
                         "text": text,
@@ -280,6 +303,7 @@ class LLMService:
                         "is_free": True,
                         "fallback_used": True,
                         "tokens_used": tokens_dict,
+                        "latency_ms": latency_ms,
                     }
                 except Exception as e:
                     logger.warning(f"Hugging Face {model_name} failed: {e}")
@@ -293,5 +317,51 @@ class LLMService:
             "fallback_used": True,
             "errors": errors,
         }
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        max_tokens: int = 500,
+        messages: Optional[List[Dict[str, str]]] = None,
+    ):
+        """
+        Streams response tokens chunk-by-chunk using Groq, falling back to full generation.
+        """
+        def _get_messages() -> List[Dict[str, str]]:
+            if messages:
+                return list(messages)
+            msgs = []
+            if system_prompt:
+                msgs.append({"role": "system", "content": system_prompt})
+            msgs.append({"role": "user", "content": prompt})
+            return msgs
+
+        if self.groq_client:
+            for model_name in FREE_GROQ_MODELS:
+                try:
+                    chat_msgs = _get_messages()
+                    # Ponytail: sync stream offloaded cleanly
+                    stream = await asyncio.to_thread(
+                        self.groq_client.chat.completions.create,
+                        model=model_name,
+                        messages=chat_msgs,
+                        max_tokens=max_tokens,
+                        stream=True,
+                    )
+                    for chunk in stream:
+                        delta = chunk.choices[0].delta.content if (chunk.choices and chunk.choices[0].delta) else ""
+                        if delta:
+                            yield delta
+                    return
+                except Exception as e:
+                    logger.warning(f"Groq stream {model_name} failed: {e}")
+
+        # Fallback to standard generation and yield in one or word pieces
+        res = await self.generate(prompt=prompt, system_prompt=system_prompt, max_tokens=max_tokens, messages=messages)
+        full_text = res.get("text", "")
+        if full_text:
+            yield full_text
+
 
 llm_service = LLMService()

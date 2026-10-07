@@ -951,7 +951,7 @@ class _CompanyPortalScreenState extends State<CompanyPortalScreen> with SingleTi
             ),
             const SizedBox(height: 2),
             const Text(
-              'Review AI Match Scores, Skill Gaps, & Student Approval Gate verification.',
+              'Review Match Scores, Skill Gaps, & Student Approval Gate verification.',
               style: TextStyle(fontSize: 11, color: AppColors.lightTextSecondary),
             ),
             const SizedBox(height: 14),
@@ -1452,7 +1452,7 @@ class _CompanyPortalScreenState extends State<CompanyPortalScreen> with SingleTi
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     icon: const Icon(Icons.psychology_outlined, size: 13),
-                    label: const Text('AI Screening', style: TextStyle(fontSize: 11)),
+                    label: const Text('Screening', style: TextStyle(fontSize: 11)),
                   ),
                 ),
                 Expanded(
@@ -1824,14 +1824,14 @@ class _CompanyPortalScreenState extends State<CompanyPortalScreen> with SingleTi
                 );
               }),
             const SizedBox(height: 24),
-            const Text('Student Support Tickets & AI Disputes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text('Student Support Tickets & Disputes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             const Card(
               child: Padding(
                 padding: EdgeInsets.all(20),
                 child: Center(
                   child: Text(
-                    'No student support tickets or AI disputes logged.',
+                    'No student support tickets or disputes logged.',
                     style: TextStyle(color: AppColors.lightTextSecondary, fontSize: 12),
                     textAlign: TextAlign.center,
                   ),

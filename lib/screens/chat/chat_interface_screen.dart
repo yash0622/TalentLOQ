@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../mock_data/mock_data.dart';
@@ -6,6 +7,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/app_avatar.dart';
 import '../../services/chat_service.dart';
 import '../../services/token_storage_service.dart';
+import '../../utils/chat_date_util.dart';
 
 class ChatInterfaceScreen extends StatefulWidget {
   final Conversation conversation;
@@ -21,16 +23,22 @@ class ChatInterfaceScreen extends StatefulWidget {
   State<ChatInterfaceScreen> createState() => _ChatInterfaceScreenState();
 }
 
-class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> {
+class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerProviderStateMixin {
   late List<ChatMessage> _messages;
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final TokenStorageService _tokenStorage = TokenStorageService();
   final ChatService _chatService = ChatService();
+  late AnimationController _dotsController;
+  final Set<String> _animatedMessageIds = <String>{};
 
   String _myName = 'Me';
   bool _isSending = false;
   Map<String, dynamic>? _agentCriteria;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  String? _activeSessionId;
+  List<Map<String, dynamic>>? _aiSessions;
+  bool? _isLoadingSessions;
 
   bool get _isAiBot =>
       widget.conversation.id == 'ai_bot' ||
@@ -39,11 +47,16 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> {
   @override
   void initState() {
     super.initState();
+    _dotsController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..repeat();
     _messages = MockData.conversationMessages[widget.conversation.id] ?? [];
+    _animatedMessageIds.addAll(_messages.map((m) => m.id));
     _loadData();
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadData([String? sessionId]) async {
     final profile = await _tokenStorage.getStudentProfile();
     final name = profile['full_name'] as String? ?? '';
     if (mounted && name.isNotEmpty) {
@@ -61,13 +74,18 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> {
       }
     }
 
+    final currentActive = _activeSessionId ?? '';
+    final targetId = sessionId ?? (currentActive.isNotEmpty ? currentActive : widget.conversation.id);
+    _activeSessionId = targetId;
+
     // Fetch backend messages
-    if (widget.conversation.id.isNotEmpty) {
-      final backendMsgs = await _chatService.getMessages(widget.conversation.id);
+    if (targetId.isNotEmpty) {
+      final backendMsgs = await _chatService.getMessages(targetId);
       if (mounted && backendMsgs.isNotEmpty) {
         setState(() {
           _messages = backendMsgs;
-          MockData.conversationMessages[widget.conversation.id] = backendMsgs;
+          _animatedMessageIds.addAll(backendMsgs.map((m) => m.id));
+          MockData.conversationMessages[targetId] = backendMsgs;
           if (backendMsgs.isNotEmpty) {
             widget.conversation.lastMessage = backendMsgs.last.text;
             widget.conversation.time = backendMsgs.last.time;
@@ -76,6 +94,73 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> {
       }
     }
     _scrollToBottom(animated: false);
+    if (_isAiBot) {
+      _loadAiSessions();
+    }
+  }
+
+  Future<void> _loadAiSessions() async {
+    setState(() => _isLoadingSessions = true);
+    try {
+      final sessions = await _chatService.getAiSessions();
+      if (mounted) {
+        setState(() {
+          _aiSessions = sessions;
+          _isLoadingSessions = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoadingSessions = false);
+      }
+    }
+  }
+
+  void _startNewChat() {
+    Navigator.of(context).pop();
+    final newId = 'ai_bot_${DateTime.now().millisecondsSinceEpoch}';
+    setState(() {
+      _activeSessionId = newId;
+      _messages.clear();
+      _animatedMessageIds.clear();
+      widget.conversation.lastMessage = '';
+    });
+  }
+
+  void _selectSession(String sessionId) {
+    Navigator.of(context).pop();
+    if (_activeSessionId != sessionId) {
+      _loadData(sessionId);
+    }
+  }
+
+  Future<void> _deleteSession(String sessionId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Chat', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: const Text('Are you sure you want to delete this chat session?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await _chatService.clearConversation(sessionId);
+      if (mounted) {
+        if (_activeSessionId == sessionId) {
+          _startNewChat();
+        }
+        await _loadAiSessions();
+      }
+    }
   }
 
   void _scrollToBottom({bool animated = true}) {
@@ -118,20 +203,60 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> {
     _scrollToBottom();
 
     try {
-      await _chatService.sendMessage(
+      final currentActive = _activeSessionId ?? '';
+      final targetId = currentActive.isNotEmpty ? currentActive : widget.conversation.id;
+      final result = await _chatService.sendMessage(
         recipientId: widget.conversation.id,
         text: text,
-        conversationId: widget.conversation.id,
+        conversationId: targetId,
         recipientName: widget.conversation.partnerName,
       );
 
-      if (_isAiBot) {
-        await _loadData();
+      if (mounted) {
+        setState(() {
+          _isSending = false;
+          final tempIdx = _messages.indexWhere((m) => m.id == tempMsg.id);
+          if (tempIdx != -1 && result != null) {
+            _messages[tempIdx] = result.userMessage;
+          }
+          final bot = result?.botResponse;
+          if (bot != null) {
+            _messages.add(bot);
+            widget.conversation.lastMessage = bot.text;
+            widget.conversation.time = bot.time;
+          }
+        });
+        _scrollToBottom();
+        if (_isAiBot) {
+          _loadAiSessions();
+          _chatService.getAiBotCriteria().then((crit) {
+            if (mounted && crit != null) {
+              setState(() => _agentCriteria = crit);
+            }
+          });
+        }
       }
     } catch (_) {
-      // Silent fallback
-    } finally {
       if (mounted) {
+        setState(() {
+          _isSending = false;
+          if (_isAiBot) {
+            final errMsg = ChatMessage(
+              id: 'err-${DateTime.now().millisecondsSinceEpoch}',
+              senderId: 'ai_bot',
+              senderName: 'Placement Assistant',
+              text: "I'm having trouble connecting right now. Please try again in a moment.",
+              time: 'Just now',
+              isMe: false,
+            );
+            _messages.add(errMsg);
+            _animatedMessageIds.add(errMsg.id);
+          }
+        });
+        _scrollToBottom();
+      }
+    } finally {
+      if (mounted && _isSending) {
         setState(() {
           _isSending = false;
         });
@@ -330,7 +455,7 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> {
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.edit_note_rounded, size: 18),
-                  label: const Text('Update by messaging AI Bot'),
+                  label: const Text('Update by messaging Assistant'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -364,8 +489,69 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> {
     );
   }
 
+  Future<void> _showClearAiChatDialog() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: const [
+            Icon(Icons.delete_sweep_rounded, color: Colors.redAccent, size: 24),
+            SizedBox(width: 8),
+            Text('Clear Chat', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to delete all messages? This cannot be undone.',
+          style: TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: const Text('Delete All'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final messenger = ScaffoldMessenger.of(context);
+      final currentActive = _activeSessionId ?? '';
+      final target = currentActive.isNotEmpty ? currentActive : widget.conversation.id;
+      final ok = await _chatService.clearConversation(target);
+      if (mounted) {
+        setState(() {
+          _messages.clear();
+          widget.conversation.lastMessage = '';
+          MockData.conversationMessages.remove(widget.conversation.id);
+          MockData.conversationMessages.remove('ai_bot');
+          MockData.conversationMessages.remove(target);
+        });
+        if (_isAiBot) {
+          await _loadAiSessions();
+        }
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(ok ? 'Chat cleared successfully' : 'Chat cleared locally'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
+    _dotsController.dispose();
     _inputController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -373,10 +559,15 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    _aiSessions ??= [];
+    _activeSessionId ??= widget.conversation.id;
+    _isLoadingSessions ??= false;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
+      key: _scaffoldKey,
+      endDrawer: _isAiBot ? _buildChatHistorySidebar(theme, isDark) : null,
       backgroundColor: isDark ? const Color(0xFF0F1017) : const Color(0xFFF8FAFC),
       appBar: _buildAppBar(theme, isDark),
       body: Column(
@@ -514,7 +705,7 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: const Text(
-                          'AI AGENT',
+                          'ASSISTANT',
                           style: TextStyle(
                             fontSize: 8.5,
                             fontWeight: FontWeight.w800,
@@ -560,12 +751,240 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> {
             icon: const Icon(Icons.tune_rounded, size: 21),
             onPressed: _showCriteriaSheet,
           ),
+        if (_isAiBot)
+          TextButton.icon(
+            onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
+            icon: const Icon(Icons.history_rounded, size: 18),
+            label: const Text('History', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+            style: TextButton.styleFrom(
+              foregroundColor: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+            ),
+          ),
         IconButton(
           tooltip: 'Refresh',
           icon: const Icon(Icons.refresh_rounded, size: 21),
           onPressed: _loadData,
         ),
       ],
+    );
+  }
+
+  Widget _buildChatHistorySidebar(ThemeData theme, bool isDark) {
+    final width = MediaQuery.of(context).size.width * 0.82;
+    final clampedWidth = width.clamp(280.0, 360.0);
+    final sessions = _aiSessions ?? const <Map<String, dynamic>>[];
+    final activeId = _activeSessionId ?? '';
+    final isLoading = _isLoadingSessions ?? false;
+
+    return Drawer(
+      width: clampedWidth,
+      backgroundColor: isDark ? const Color(0xFF131525) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(20),
+          bottomLeft: Radius.circular(20),
+        ),
+      ),
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 8, 12),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6366F1).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.history_rounded, size: 18, color: Color(0xFF6366F1)),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Chat History',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.3,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    tooltip: 'Close',
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              child: ElevatedButton.icon(
+                onPressed: _startNewChat,
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text(
+                  'New Chat',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6366F1),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              child: Text(
+                'PREVIOUS CHATS',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                  color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                ),
+              ),
+            ),
+            const Divider(height: 12, thickness: 0.6),
+            Expanded(
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                  : sessions.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.chat_bubble_outline_rounded,
+                                  size: 36,
+                                  color: isDark ? const Color(0xFF33385B) : const Color(0xFFCBD5E1),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  'No previous chats',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          itemCount: sessions.length,
+                          separatorBuilder: (_, _) => const SizedBox(height: 4),
+                          itemBuilder: (context, index) {
+                            final session = sessions[index];
+                            final sid = session['id'] as String? ?? '';
+                            final title = session['title'] as String? ?? 'Conversation';
+                            final lastMsg = session['last_message'] as String? ?? '';
+                            final time = session['time'] as String? ?? '';
+                            final isActive = sid == activeId ||
+                                (activeId.isEmpty && index == 0);
+
+                            return InkWell(
+                              onTap: () => _selectSession(sid),
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: isActive
+                                      ? (isDark
+                                          ? const Color(0xFF6366F1).withValues(alpha: 0.18)
+                                          : const Color(0xFF6366F1).withValues(alpha: 0.1))
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: isActive
+                                      ? Border.all(
+                                          color: const Color(0xFF6366F1).withValues(alpha: 0.4),
+                                          width: 1,
+                                        )
+                                      : null,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  title,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+                                                    color: isActive
+                                                        ? (isDark ? Colors.white : const Color(0xFF4F46E5))
+                                                        : (isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B)),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                formatChatTimestamp(time),
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          if (lastMsg.isNotEmpty) ...[
+                                            const SizedBox(height: 3),
+                                            Text(
+                                              lastMsg,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 11.5,
+                                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.delete_outline_rounded,
+                                        size: 15,
+                                        color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                                      tooltip: 'Delete chat',
+                                      onPressed: () => _deleteSession(sid),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -642,34 +1061,71 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1E2138) : const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+            bottomRight: Radius.circular(16),
+            bottomLeft: Radius.circular(4),
+          ),
           border: Border.all(
             color: isDark ? const Color(0xFF33385B) : const Color(0xFFE2E8F0),
+            width: 0.8,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(
-              width: 14,
-              height: 14,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Color(0xFF6366F1),
+            Container(
+              width: 20,
+              height: 20,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
               ),
+              child: const Icon(Icons.smart_toy_rounded, size: 11, color: Colors.white),
             ),
-            const SizedBox(width: 10),
-            Text(
-              'AI Bot is analyzing campus drives...',
-              style: TextStyle(
-                fontSize: 12.5,
-                fontStyle: FontStyle.italic,
-                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-              ),
-            ),
+            const SizedBox(width: 8),
+            _buildAnimatedDots(isDark),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildAnimatedDots(bool isDark) {
+    return AnimatedBuilder(
+      animation: _dotsController,
+      builder: (context, child) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(3, (index) {
+            final delay = index * 0.25;
+            final progress = (_dotsController.value - delay) % 1.0;
+            final scale = 0.6 + 0.4 * (1.0 - (progress - 0.5).abs() * 2).clamp(0.0, 1.0);
+            final opacity = 0.35 + 0.65 * (1.0 - (progress - 0.5).abs() * 2).clamp(0.0, 1.0);
+
+            return Transform.scale(
+              scale: scale,
+              child: Opacity(
+                opacity: opacity,
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 2.2),
+                  width: 5.5,
+                  height: 5.5,
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF818CF8) : const Color(0xFF6366F1),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 
@@ -785,94 +1241,107 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> {
 
   Widget _buildMessageBubble(ChatMessage msg, bool isDark) {
     final isBotMsg = !msg.isMe && _isAiBot;
-
-    return Align(
-      alignment: msg.isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.84,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          gradient: msg.isMe
-              ? const LinearGradient(
-                  colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : null,
-          color: msg.isMe
-              ? null
-              : isBotMsg
-                  ? (isDark ? const Color(0xFF1E2138) : const Color(0xFFF8FAFC))
-                  : (isDark ? AppColors.darkSurfaceContainer : AppColors.lightSurfaceContainer),
-          border: isBotMsg
-              ? Border.all(
-                  color: isDark ? const Color(0xFF33385B) : const Color(0xFFE2E8F0),
-                  width: 1,
-                )
-              : null,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(18),
-            topRight: const Radius.circular(18),
-            bottomLeft: Radius.circular(msg.isMe ? 18 : 4),
-            bottomRight: Radius.circular(msg.isMe ? 4 : 18),
+    final bubbleWidget = Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width * 0.84,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: msg.isMe
+            ? const LinearGradient(
+                colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+        color: msg.isMe
+            ? null
+            : isBotMsg
+                ? (isDark ? const Color(0xFF1E2138) : const Color(0xFFF8FAFC))
+                : (isDark ? AppColors.darkSurfaceContainer : AppColors.lightSurfaceContainer),
+        border: isBotMsg
+            ? Border.all(
+                color: isDark ? const Color(0xFF33385B) : const Color(0xFFE2E8F0),
+                width: 1,
+              )
+            : null,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
+        ],
+        borderRadius: BorderRadius.only(
+          topLeft: const Radius.circular(18),
+          topRight: const Radius.circular(18),
+          bottomLeft: Radius.circular(msg.isMe ? 18 : 4),
+          bottomRight: Radius.circular(msg.isMe ? 4 : 18),
         ),
-        child: Column(
-          crossAxisAlignment: msg.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            if (isBotMsg) ...[
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(Icons.smart_toy_rounded, size: 14, color: Color(0xFF6366F1)),
-                      SizedBox(width: 5),
-                      Text(
-                        'AI Placement Assistant',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF6366F1),
-                        ),
-                      ),
-                    ],
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      Clipboard.setData(ClipboardData(text: msg.text));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Copied message to clipboard'),
-                          duration: Duration(seconds: 1),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: Icon(
-                        Icons.copy_rounded,
-                        size: 13,
-                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+      ),
+      child: Column(
+        crossAxisAlignment: msg.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          if (isBotMsg) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.smart_toy_rounded, size: 14, color: Color(0xFF6366F1)),
+                    SizedBox(width: 5),
+                    Text(
+                      'Placement Assistant',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF6366F1),
                       ),
                     ),
+                  ],
+                ),
+                GestureDetector(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: msg.text));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Copied message to clipboard'),
+                        duration: Duration(seconds: 1),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Icon(
+                      Icons.copy_rounded,
+                      size: 13,
+                      color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                    ),
                   ),
-                ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+          ],
+          if (isBotMsg && !_animatedMessageIds.contains(msg.id))
+            AiWordStreamText(
+              fullText: msg.text,
+              style: TextStyle(
+                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                fontSize: 13.5,
+                height: 1.45,
               ),
-              const SizedBox(height: 6),
-            ],
+              onWordEmitted: () => _scrollToBottom(animated: false),
+              onComplete: () {
+                if (mounted) {
+                  setState(() => _animatedMessageIds.add(msg.id));
+                }
+              },
+            )
+          else
             Text(
               msg.text,
               style: TextStyle(
@@ -880,31 +1349,40 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> {
                     ? Colors.white
                     : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
                 fontSize: 13.5,
-                height: 1.4,
+                height: 1.45,
               ),
             ),
-            const SizedBox(height: 5),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  msg.time,
-                  style: TextStyle(
-                    color: msg.isMe
-                        ? Colors.white70
-                        : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
-                    fontSize: 10,
-                  ),
+          const SizedBox(height: 5),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                formatChatTimestamp(msg.time),
+                style: TextStyle(
+                  color: msg.isMe
+                      ? Colors.white70
+                      : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                  fontSize: 10,
                 ),
-                if (msg.isMe) ...[
-                  const SizedBox(width: 4),
-                  const Icon(Icons.done_all_rounded, size: 13, color: Colors.white70),
-                ],
+              ),
+              if (msg.isMe) ...[
+                const SizedBox(width: 4),
+                const Icon(Icons.done_all_rounded, size: 13, color: Colors.white70),
               ],
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ),
+    );
+
+    return Align(
+      alignment: msg.isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: isBotMsg
+          ? GestureDetector(
+              onLongPress: _showClearAiChatDialog,
+              child: bubbleWidget,
+            )
+          : bubbleWidget,
     );
   }
 
@@ -947,13 +1425,19 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> {
                   textInputAction: TextInputAction.send,
                   decoration: InputDecoration(
                     hintText: _isAiBot
-                        ? 'Instruct AI Bot (e.g. Apply for AI/ML 3-4 LPA)...'
+                        ? 'Instruct Assistant (e.g. Apply for 3-4 LPA)...'
                         : 'Type a message...',
                     hintStyle: TextStyle(
                       fontSize: 13,
                       color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                     ),
                     border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                    filled: false,
+                    fillColor: Colors.transparent,
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   ),
@@ -997,6 +1481,115 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Fast, progressive word-by-word streaming typewriter text widget with a minimal pulsing cursor
+class AiWordStreamText extends StatefulWidget {
+  final String fullText;
+  final TextStyle? style;
+  final Duration wordDuration;
+  final VoidCallback? onWordEmitted;
+  final VoidCallback? onComplete;
+
+  const AiWordStreamText({
+    super.key,
+    required this.fullText,
+    this.style,
+    this.wordDuration = const Duration(milliseconds: 22),
+    this.onWordEmitted,
+    this.onComplete,
+  });
+
+  @override
+  State<AiWordStreamText> createState() => _AiWordStreamTextState();
+}
+
+class _AiWordStreamTextState extends State<AiWordStreamText> {
+  late List<String> _tokens;
+  int _currentTokenIndex = 0;
+  Timer? _timer;
+  bool _isFinished = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tokens = _tokenize(widget.fullText);
+    if (_tokens.isEmpty) {
+      _isFinished = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        widget.onComplete?.call();
+      });
+    } else {
+      _startTimer();
+    }
+  }
+
+  List<String> _tokenize(String text) {
+    final pattern = RegExp(r'(\S+\s*)');
+    final matches = pattern.allMatches(text);
+    final result = matches.map((m) => m.group(0) ?? '').toList();
+    return result.isNotEmpty ? result : [text];
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    _currentTokenIndex = 0;
+    _isFinished = false;
+
+    _timer = Timer.periodic(widget.wordDuration, (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_currentTokenIndex < _tokens.length) {
+        // Fast streaming: 2 words per tick for long content, 1 word for short
+        final step = (_tokens.length - _currentTokenIndex > 35) ? 2 : 1;
+        setState(() {
+          _currentTokenIndex = (_currentTokenIndex + step).clamp(0, _tokens.length);
+        });
+        widget.onWordEmitted?.call();
+      } else {
+        timer.cancel();
+        setState(() {
+          _isFinished = true;
+        });
+        widget.onComplete?.call();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isFinished) {
+      return Text(widget.fullText, style: widget.style);
+    }
+    final visibleText = _tokens.take(_currentTokenIndex).join();
+    return RichText(
+      text: TextSpan(
+        children: [
+          TextSpan(text: visibleText, style: widget.style),
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Container(
+              margin: const EdgeInsets.only(left: 2),
+              width: 2,
+              height: (widget.style?.fontSize ?? 13.5) * 1.15,
+              decoration: BoxDecoration(
+                color: const Color(0xFF6366F1),
+                borderRadius: BorderRadius.circular(1),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

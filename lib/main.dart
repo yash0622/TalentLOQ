@@ -1,11 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'navigation/main_navigation_wrapper.dart';
+import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
 
-void main() {
-  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
-  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    FlutterNativeSplash.remove();
+  } catch (_) {}
+
+  // Initialize Firebase and Notification Services
+  try {
+    await NotificationService.instance.initialize();
+  } catch (e) {
+    debugPrint('NotificationService init error: $e');
+  }
+
   runApp(const TalentLOQApp());
 }
 

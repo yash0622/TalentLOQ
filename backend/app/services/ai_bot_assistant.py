@@ -175,7 +175,7 @@ class AiBotAssistant:
         # 1. Handle Greetings
         if clean_text in ["hello", "hi", "hey", "hello!", "hi!", "hey!", "help", "who are you", "who are you?"]:
             reply_text = (
-                f"Hello {first_name}! 👋 I am your autonomous AI Placement Assistant.\n\n"
+                f"Hello {first_name}! 👋 I am your autonomous Placement Assistant.\n\n"
                 "You can instruct me in natural conversational English, and I will automatically monitor "
                 "recruiter drives, verify your eligibility and resume skills, and auto-apply for you.\n\n"
                 "Try saying:\n"
@@ -293,7 +293,7 @@ class AiBotAssistant:
             "message_id": f"msg_{uuid.uuid4().hex[:12]}",
             "conversation_id": conversation_id,
             "sender_id": "ai_bot",
-            "sender_name": "AI Bot",
+            "sender_name": "Placement Assistant",
             "recipient_id": student_user_id,
             "recipient_name": student.get("full_name", "Student"),
             "text": reply_text,
@@ -319,7 +319,7 @@ class AiBotAssistant:
             "message_id": f"msg_{uuid.uuid4().hex[:12]}",
             "conversation_id": conv_id,
             "sender_id": "ai_bot",
-            "sender_name": "AI Bot",
+            "sender_name": "Placement Assistant",
             "recipient_id": student_user_id,
             "recipient_name": "Student",
             "text": text,

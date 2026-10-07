@@ -172,8 +172,8 @@ class _MyOffersScreenState extends State<MyOffersScreen> {
                         Expanded(
                           child: Text(
                             finalOutcome == 'accepted'
-                                ? '🎉 PLACEMENT OFFER ACCEPTED'
-                                : '🎉 OFFICIAL PLACEMENT OFFER EXTENDED',
+                                ? 'PLACEMENT OFFER ACCEPTED'
+                                : 'OFFICIAL PLACEMENT OFFER EXTENDED',
                             style: const TextStyle(
                               color: AppColors.success,
                               fontWeight: FontWeight.bold,

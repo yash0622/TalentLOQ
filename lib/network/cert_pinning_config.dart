@@ -46,7 +46,7 @@ class CertPinningConfig {
       debugPrint('[CERT PINNING ERROR] $e');
     }
 
-    // In production: verify subject matches verified domain
-    return cert.subject.contains('talentloq.app');
+    // Fail-closed if certificate fingerprint does not match pinned hash
+    return false;
   }
 }

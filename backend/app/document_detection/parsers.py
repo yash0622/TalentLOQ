@@ -441,7 +441,7 @@ class ResumeParser(BaseParser):
         return True
 
     @classmethod
-    def parse(cls, text: str, profile_name: Optional[str] = None) -> Dict[str, Any]:
+    def parse(cls, text: str, profile_name: Optional[str] = None, use_ner: bool = False) -> Dict[str, Any]:
         text = _normalize_ocr_text(text)
         lines = [line.strip() for line in text.split("\n") if line.strip()]
         text_lower = text.lower()
@@ -506,13 +506,20 @@ class ResumeParser(BaseParser):
                             elif cls._is_valid_skill_token(base_tok):
                                 tech_skills_found.add(base_tok)
 
-        # Neural Zero-Shot Entity Extraction (GLiNER) integration to catch novel skills across whole resume
+        # Full-Text Aho-Corasick Skill Extraction across whole resume (sub-millisecond offline matching)
         try:
             from app.services.skill_matcher import skill_matcher_engine, is_soft_skill, is_spoken_language
-            neural_skills = skill_matcher_engine.extract_skills_from_text(text, use_ner=True, technical_only=True)
-            for ns in neural_skills:
-                if cls._is_valid_skill_token(ns) and not is_soft_skill(ns) and not is_spoken_language(ns):
-                    tech_skills_found.add(ns)
+            full_text_skills = skill_matcher_engine.extract_skills_from_text(text, use_ner=False, technical_only=True)
+            for fts in full_text_skills:
+                if cls._is_valid_skill_token(fts) and not is_soft_skill(fts) and not is_spoken_language(fts):
+                    tech_skills_found.add(fts)
+
+            # Optional Neural Zero-Shot Entity Extraction (GLiNER) only if explicitly enabled
+            if use_ner:
+                neural_skills = skill_matcher_engine.extract_skills_from_text(text, use_ner=True, technical_only=True)
+                for ns in neural_skills:
+                    if cls._is_valid_skill_token(ns) and not is_soft_skill(ns) and not is_spoken_language(ns):
+                        tech_skills_found.add(ns)
         except Exception:
             pass
 

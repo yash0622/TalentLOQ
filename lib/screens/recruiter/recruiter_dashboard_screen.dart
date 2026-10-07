@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:talentloq/models/models.dart';
 import '../../services/recruiter_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/skeleton_widgets.dart';
 import 'add_company_form.dart';
 import 'my_listings_screen.dart';
+import 'recruiter_ai_screen.dart';
 
 class RecruiterDashboardScreen extends StatefulWidget {
   final VoidCallback? onOpenDrawer;
@@ -602,6 +604,99 @@ class _RecruiterDashboardScreenState extends State<RecruiterDashboardScreen> {
                 ),
               ),
               const SizedBox(height: 12),
+
+              // Operation 0: Recruiter AI Recruitment Intelligence Assistant (Hybrid OKF + RAG)
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: Color(0xFF8B5CF6), width: 1.3),
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: LinearGradient(
+                      colors: isDark
+                          ? [const Color(0xFF1E1736), const Color(0xFF131525)]
+                          : [const Color(0xFFFAF5FF), Colors.white],
+                    ),
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {
+                      final aiConv = Conversation(
+                        id: 'recruiter_ai_bot',
+                        partnerName: 'TalentLOQ Recruiter Assistant',
+                        partnerRole: 'Recruitment Intelligence Assistant',
+                        avatarUrl: '',
+                        lastMessage: 'Ask about candidates, CGPA, comparisons, or interview questions.',
+                        time: 'Always Active',
+                        unreadCount: 0,
+                        isOnline: true,
+                      );
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => RecruiterAiScreen(
+                            conversation: aiConv,
+                            onBack: () => Navigator.pop(context),
+                          ),
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(11),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF8B5CF6), Color(0xFFEC4899), Color(0xFFF59E0B)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.35),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 24),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Text(
+                                      'TalentLOQ Recruiter Assistant',
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 3),
+                                const Text(
+                                  'Ask questions about registered students, rank by skills & CGPA, and compare candidates.',
+                                  style: TextStyle(fontSize: 11.5, color: AppColors.lightTextSecondary, height: 1.3),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF8B5CF6)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
 
               // Operation 1: Post New Drive
               Card(

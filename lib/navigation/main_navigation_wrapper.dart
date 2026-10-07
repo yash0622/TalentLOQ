@@ -20,7 +20,11 @@ import '../screens/recruiter/recruiter_dashboard_screen.dart';
 import '../screens/recruiter/candidate_detail_screen.dart';
 import '../screens/chat/messages_list_screen.dart';
 import '../screens/chat/chat_interface_screen.dart';
+import '../screens/recruiter/recruiter_ai_screen.dart';
 import '../screens/interview/interview_scheduling_screen.dart';
+import '../screens/info/about_us_screen.dart';
+import '../screens/info/privacy_policy_screen.dart';
+import '../screens/info/terms_conditions_screen.dart';
 import '../theme/app_colors.dart';
 import '../widgets/talentloq_branding_header.dart';
 
@@ -63,6 +67,15 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
   @override
   void initState() {
     super.initState();
+    ApiClient.instance.onForceLogout = () {
+      if (mounted) {
+        setState(() {
+          _isLoggedIn = false;
+          _isRecruiterMode = false;
+          _currentTab = 0;
+        });
+      }
+    };
     _checkAuthStatus();
   }
 
@@ -216,12 +229,33 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    // 0. While checking auth, native splash covers the screen; render clean background
+    // 0. While checking auth, render clean branded splash indicator
     if (_isCheckingAuth) {
       final isDark = widget.themeMode == ThemeMode.dark;
       return Scaffold(
         backgroundColor: isDark ? const Color(0xFF13121B) : Colors.white,
-        body: const SizedBox.shrink(),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                'assets/logo/talentloq_icon_only.png',
+                width: 72,
+                height: 72,
+                errorBuilder: (context, error, stackTrace) => const Icon(Icons.school_rounded, size: 56, color: AppColors.lightPrimary),
+              ),
+              const SizedBox(height: 24),
+              const SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: AppColors.lightPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -323,10 +357,32 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
         },
       );
     } else if (_selectedConversation != null) {
-      content = ChatInterfaceScreen(
-        conversation: _selectedConversation!,
-        onBack: () => setState(() => _selectedConversation = null),
-      );
+      final isRecruiterAi = _isRecruiterMode &&
+          (_selectedConversation!.id == 'recruiter_ai_bot' ||
+           _selectedConversation!.id == 'ai_bot' ||
+           _selectedConversation!.partnerName.toLowerCase().contains('scout') ||
+           _selectedConversation!.partnerName.toLowerCase().contains('talent'));
+
+      if (isRecruiterAi) {
+        content = RecruiterAiScreen(
+          conversation: _selectedConversation!,
+          onBack: () => setState(() => _selectedConversation = null),
+          onSelectCandidate: (cand) => setState(() {
+            _selectedConversation = null;
+            _selectedCandidate = cand;
+          }),
+          onScheduleCandidate: (cand) => setState(() {
+            _selectedConversation = null;
+            _selectedCandidate = cand;
+            _showInterviewScheduler = true;
+          }),
+        );
+      } else {
+        content = ChatInterfaceScreen(
+          conversation: _selectedConversation!,
+          onBack: () => setState(() => _selectedConversation = null),
+        );
+      }
     } else {
       final isDark = widget.themeMode == ThemeMode.dark;
       final bottomInset = MediaQuery.paddingOf(context).bottom;
@@ -608,6 +664,7 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
           );
         case 2:
           return MessagesListScreen(
+            isRecruiter: true,
             onSelectConversation: (conv) =>
                 setState(() => _selectedConversation = conv),
           );
@@ -635,6 +692,7 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
           return const JobsSectionScreen();
         case 2:
           return MessagesListScreen(
+            isRecruiter: false,
             onSelectConversation: (conv) =>
                 setState(() => _selectedConversation = conv),
           );
@@ -886,11 +944,173 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
                     const SizedBox(height: 8),
                   ],
 
-                  // --- ACCOUNT ---
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-                    child: Text(
-                      'ACCOUNT',
+                  // --- ABOUT & LEGAL ---
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                      child: Text(
+                        'ABOUT & LEGAL',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.9,
+                          color: textSecondary,
+                        ),
+                      ),
+                    ),
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 2,
+                      ),
+                      leading: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColors.darkPrimary.withValues(alpha: 0.15)
+                              : const Color(0xFFEEF2FF),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.info_outline_rounded,
+                          color: AppColors.lightPrimary,
+                          size: 20,
+                        ),
+                      ),
+                      title: Text(
+                        'About Us',
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                          color: textPrimary,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Mission & platform overview',
+                        style: TextStyle(fontSize: 12, color: textSecondary),
+                      ),
+                      trailing: Icon(
+                        Icons.chevron_right_rounded,
+                        size: 20,
+                        color: textSecondary,
+                      ),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AboutUsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 2,
+                      ),
+                      leading: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0x2422C55E)
+                              : const Color(0xFFDCFCE7),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.shield_outlined,
+                          color: AppColors.success,
+                          size: 20,
+                        ),
+                      ),
+                      title: Text(
+                        'Privacy Policy',
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                          color: textPrimary,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'How we protect your data',
+                        style: TextStyle(fontSize: 12, color: textSecondary),
+                      ),
+                      trailing: Icon(
+                        Icons.chevron_right_rounded,
+                        size: 20,
+                        color: textSecondary,
+                      ),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const PrivacyPolicyScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 2,
+                      ),
+                      leading: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0x24F59E0B)
+                              : const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.gavel_rounded,
+                          color: AppColors.warning,
+                          size: 20,
+                        ),
+                      ),
+                      title: Text(
+                        'Terms & Conditions',
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                          color: textPrimary,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Simple rules and guidelines',
+                        style: TextStyle(fontSize: 12, color: textSecondary),
+                      ),
+                      trailing: Icon(
+                        Icons.chevron_right_rounded,
+                        size: 20,
+                        color: textSecondary,
+                      ),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const TermsConditionsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Divider(height: 1, color: dividerColor),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // --- ACCOUNT ---
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                      child: Text(
+                        'ACCOUNT',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,

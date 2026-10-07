@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:open_filex/open_filex.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/permission_dialogs.dart';
 import '../../widgets/skeleton_widgets.dart';
+import '../../widgets/document_card_scan_overlay.dart';
 import '../../network/api_client.dart';
 import '../../services/token_storage_service.dart';
 
@@ -20,7 +22,26 @@ class DocumentVerificationScreen extends StatefulWidget {
 class _DocumentVerificationScreenState extends State<DocumentVerificationScreen> {
   final TokenStorageService _tokenStorage = TokenStorageService();
   bool _isLoading = true;
-  String? _processingSlot; // Target slot currently uploading/processing
+
+  static const List<String> _scanStages = [
+    'Parsing document…',
+    'Matching keywords…',
+    'Checking format…',
+    'Verifying criteria…',
+  ];
+
+  final Map<String, DocumentScanState> _scanningStates = {};
+  final Map<String, Timer> _stageTimers = {};
+  final Set<String> _deletingSlots = {};
+
+  @override
+  void dispose() {
+    for (final timer in _stageTimers.values) {
+      timer.cancel();
+    }
+    _stageTimers.clear();
+    super.dispose();
+  }
 
   Map<String, dynamic> _verificationState = {};
   List<dynamic> _userDocuments = [];
@@ -84,7 +105,6 @@ class _DocumentVerificationScreenState extends State<DocumentVerificationScreen>
     );
     if (!hasPermission) return;
 
-    bool isDialogShowing = false;
     try {
       final result = await FilePicker.pickFiles(
         type: FileType.custom,
@@ -99,49 +119,47 @@ class _DocumentVerificationScreenState extends State<DocumentVerificationScreen>
 
       if (path == null || path.isEmpty) return;
 
-      setState(() => _processingSlot = targetType);
-
+      await _uploadDocumentFile(targetType, slotTitle, path, name);
+    } catch (e) {
       if (!mounted) return;
-      // Show AI Scanning Loading Screen
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) {
-          isDialogShowing = true;
-          return PopScope(
-            canPop: false,
-            child: Center(
-              child: Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                elevation: 8,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 26),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const SizedBox(
-                        width: 48,
-                        height: 48,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 3.5,
-                          color: AppColors.lightPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        'AI Scanning...',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('File selection failed: $e'), backgroundColor: AppColors.error),
       );
+    }
+  }
 
+  Future<void> _uploadDocumentFile(
+    String targetType,
+    String slotTitle,
+    String path,
+    String name,
+  ) async {
+    _stageTimers[targetType]?.cancel();
+    int stageIdx = 0;
+    setState(() {
+      _scanningStates[targetType] = DocumentScanState(
+        status: DocumentScanStatus.processing,
+        stageText: _scanStages[0],
+        lastFilePath: path,
+        lastFileName: name,
+      );
+    });
+
+    _stageTimers[targetType] = Timer.periodic(const Duration(milliseconds: 1400), (t) {
+      if (!mounted || _scanningStates[targetType]?.status != DocumentScanStatus.processing) {
+        t.cancel();
+        return;
+      }
+      stageIdx = (stageIdx + 1) % _scanStages.length;
+      setState(() {
+        final cur = _scanningStates[targetType];
+        if (cur != null && cur.status == DocumentScanStatus.processing) {
+          _scanningStates[targetType] = cur.copyWith(stageText: _scanStages[stageIdx]);
+        }
+      });
+    });
+
+    try {
       final formData = FormData.fromMap({
         'file': await MultipartFile.fromFile(path, filename: name),
         'target_type': targetType,
@@ -156,6 +174,9 @@ class _DocumentVerificationScreenState extends State<DocumentVerificationScreen>
         ),
       );
 
+      _stageTimers[targetType]?.cancel();
+      _stageTimers.remove(targetType);
+
       if (response.statusCode == 200) {
         final resData = response.data as Map<String, dynamic>? ?? {};
         final status = resData['status'] as String? ?? 'VERIFIED';
@@ -168,6 +189,26 @@ class _DocumentVerificationScreenState extends State<DocumentVerificationScreen>
         await _fetchVerificationData(showFullSpinner: false);
 
         if (!mounted) return;
+        setState(() {
+          _scanningStates[targetType] = DocumentScanState(
+            status: DocumentScanStatus.success,
+            stageText: status == 'VERIFIED'
+                ? 'Verified ($overallConf%)'
+                : 'Processed: $status',
+            lastFilePath: path,
+            lastFileName: name,
+          );
+        });
+
+        // After a brief completion transition, clear scanning state to show verified card
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          if (mounted) {
+            setState(() {
+              _scanningStates.remove(targetType);
+            });
+          }
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -176,39 +217,65 @@ class _DocumentVerificationScreenState extends State<DocumentVerificationScreen>
                   : 'Document submitted: Status is $status.',
             ),
             backgroundColor: status == 'VERIFIED' ? AppColors.success : AppColors.warning,
-            duration: const Duration(seconds: 4),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
     } on DioException catch (e) {
+      _stageTimers[targetType]?.cancel();
+      _stageTimers.remove(targetType);
+
       if (!mounted) return;
       if (e.type == DioExceptionType.receiveTimeout || e.type == DioExceptionType.connectionTimeout) {
-        // Backend often finishes right around the timeout; refresh to catch the processed state
         await _fetchVerificationData();
+        setState(() {
+          _scanningStates.remove(targetType);
+        });
         return;
       }
-      String errorMsg = 'Verification failed. Please ensure document is clear and matches requested slot.';
+
+      String errorMsg = 'Verification failed. Ensure document is clear.';
       if (e.response?.data is Map && (e.response!.data as Map).containsKey('detail')) {
         errorMsg = e.response!.data['detail'].toString();
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('✕ $errorMsg'),
-          backgroundColor: AppColors.error,
-          duration: const Duration(seconds: 5),
-        ),
-      );
+
+      setState(() {
+        _scanningStates[targetType] = DocumentScanState(
+          status: DocumentScanStatus.error,
+          errorMessage: errorMsg,
+          lastFilePath: path,
+          lastFileName: name,
+        );
+      });
     } catch (e) {
+      _stageTimers[targetType]?.cancel();
+      _stageTimers.remove(targetType);
+
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Upload failed: $e'), backgroundColor: AppColors.error),
-      );
-    } finally {
-      if (isDialogShowing && mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
-      }
-      if (mounted) setState(() => _processingSlot = null);
+      setState(() {
+        _scanningStates[targetType] = DocumentScanState(
+          status: DocumentScanStatus.error,
+          errorMessage: 'Upload failed: $e',
+          lastFilePath: path,
+          lastFileName: name,
+        );
+      });
     }
+  }
+
+  void _retryUpload(String targetType, String slotTitle) {
+    final cur = _scanningStates[targetType];
+    if (cur?.lastFilePath != null && cur!.lastFilePath!.isNotEmpty) {
+      _uploadDocumentFile(targetType, slotTitle, cur.lastFilePath!, cur.lastFileName ?? 'document');
+    } else {
+      _pickAndUploadDocument(targetType, slotTitle);
+    }
+  }
+
+  void _dismissScanError(String targetType) {
+    setState(() {
+      _scanningStates.remove(targetType);
+    });
   }
 
   Map<String, dynamic>? _findDocForType(String docTypeKey) {
@@ -281,7 +348,7 @@ class _DocumentVerificationScreenState extends State<DocumentVerificationScreen>
     if (confirmed != true) return;
 
     setState(() {
-      _processingSlot = targetType;
+      _deletingSlots.add(targetType);
     });
 
     try {
@@ -320,7 +387,7 @@ class _DocumentVerificationScreenState extends State<DocumentVerificationScreen>
     } finally {
       if (mounted) {
         setState(() {
-          _processingSlot = null;
+          _deletingSlots.remove(targetType);
         });
       }
     }
@@ -603,7 +670,9 @@ class _DocumentVerificationScreenState extends State<DocumentVerificationScreen>
     required Map<String, dynamic>? docRecord,
     required List<Widget> badgePreview,
   }) {
-    final isProcessing = _processingSlot == targetType;
+    final scanState = _scanningStates[targetType];
+    final isProcessing = scanState?.status == DocumentScanStatus.processing;
+    final isDeleting = _deletingSlots.contains(targetType);
     final status = docRecord?['processing_status']?.toString().toUpperCase() ?? 'NOT_UPLOADED';
     final filename = docRecord?['filename']?.toString();
     final confidence = (docRecord?['validation_confidence'] as num?)?.toDouble() ??
@@ -641,19 +710,23 @@ class _DocumentVerificationScreenState extends State<DocumentVerificationScreen>
         statusIcon = null;
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: status == 'VERIFIED'
-              ? AppColors.success.withValues(alpha: 0.4)
-              : (isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant),
-          width: status == 'VERIFIED' ? 1.4 : 1.0,
-        ),
-      ),
-      child: Column(
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: Stack(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: status == 'VERIFIED'
+                    ? AppColors.success.withValues(alpha: 0.4)
+                    : (isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant),
+                width: status == 'VERIFIED' ? 1.4 : 1.0,
+              ),
+            ),
+            child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -723,7 +796,7 @@ class _DocumentVerificationScreenState extends State<DocumentVerificationScreen>
               const SizedBox(width: 8),
 
               // 3. Upload Icon Only Button
-              if (isProcessing)
+              if (isProcessing || isDeleting)
                 const SizedBox(
                   width: 38,
                   height: 38,
@@ -964,6 +1037,20 @@ class _DocumentVerificationScreenState extends State<DocumentVerificationScreen>
               ),
             ),
           ],
+        ],
+      ),
+    ),
+          if (scanState != null && scanState.status != DocumentScanStatus.idle)
+            Positioned.fill(
+              child: DocumentCardScanOverlay(
+                status: scanState.status,
+                stageText: scanState.stageText,
+                errorMessage: scanState.errorMessage,
+                onRetry: () => _retryUpload(targetType, title),
+                onDismiss: () => _dismissScanError(targetType),
+                isDark: isDark,
+              ),
+            ),
         ],
       ),
     );

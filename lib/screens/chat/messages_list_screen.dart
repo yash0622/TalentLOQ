@@ -5,11 +5,18 @@ import '../../theme/app_colors.dart';
 import '../../widgets/app_avatar.dart';
 import '../../services/drive_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/chat_service.dart';
+import '../../utils/chat_date_util.dart';
 
 class MessagesListScreen extends StatefulWidget {
   final Function(Conversation) onSelectConversation;
+  final bool isRecruiter;
 
-  const MessagesListScreen({super.key, required this.onSelectConversation});
+  const MessagesListScreen({
+    super.key,
+    required this.onSelectConversation,
+    this.isRecruiter = false,
+  });
 
   @override
   State<MessagesListScreen> createState() => _MessagesListScreenState();
@@ -19,6 +26,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
   String _searchQuery = '';
   final DriveService _driveService = DriveService();
   final AuthService _authService = AuthService();
+  final ChatService _chatService = ChatService();
 
   @override
   void initState() {
@@ -34,33 +42,67 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
     if (!mounted) return;
 
     setState(() {
-      // Remove any legacy test/mock conversations from memory
+      // Clean up conversations to prevent cross-role bot leakage
       MockData.conversations.removeWhere((c) =>
           c.partnerName.contains('UCI Placement') ||
           c.lastMessage.contains('UCI Placement'));
 
-      // Ensure AI Bot is permanently available at the top
-      final aiBotIndex = MockData.conversations.indexWhere((c) => c.id == 'ai_bot' || c.partnerName == 'AI Bot');
-      if (aiBotIndex == -1) {
-        MockData.conversations.insert(
-          0,
-          Conversation(
-            id: 'ai_bot',
-            partnerName: 'AI Bot',
-            partnerRole: 'Placement Assistant',
-            avatarUrl: '',
-            lastMessage: 'Tell me your target domains, skills, and salary in plain English!',
-            time: 'Always Active',
-            unreadCount: 0,
-            isOnline: true,
-          ),
-        );
-      } else if (aiBotIndex > 0) {
-        final botConv = MockData.conversations.removeAt(aiBotIndex);
-        MockData.conversations.insert(0, botConv);
-      }
+      // Ensure appropriate AI Bot is permanently available at the top
+      final botId = widget.isRecruiter ? 'recruiter_ai_bot' : 'ai_bot';
+      final botTitle = widget.isRecruiter ? 'TalentLOQ Assistant' : 'TalentLOQ Assistant';
+      final botRole = widget.isRecruiter ? 'Recruitment Assistant' : 'Autonomous Placement Copilot';
+      final botMsg = widget.isRecruiter
+          ? 'Ask me anything about candidates.'
+          : 'Tell me your target domains, skills, and salary in plain English!';
 
-      // 1. Process backend notifications & direct messages
+      // Aggressively remove ANY existing AI bots (both recruiter & student bots, duplicates, variants)
+      MockData.conversations.removeWhere((c) {
+        final name = c.partnerName.toLowerCase();
+        final role = c.partnerRole.toLowerCase();
+        final id = c.id.toLowerCase();
+        return id == 'ai_bot' ||
+            id == 'recruiter_ai_bot' ||
+            id.endsWith('_ai_bot') ||
+            name.contains('ai bot') ||
+            name.contains('talent scout') ||
+            name.contains('recruiter ai') ||
+            name.contains('talentloq ai') ||
+            name.contains('talentloq assistant') ||
+            name.contains('placement bot') ||
+            name.contains('placement copilot') ||
+            role.contains('recruitment assistant') ||
+            role.contains('placement assistant');
+      });
+
+      MockData.conversationMessages.putIfAbsent(botId, () => [
+        ChatMessage(
+          id: 'welcome_$botId',
+          senderId: botId,
+          senderName: botTitle,
+          text: widget.isRecruiter
+              ? 'Hello! I am your Recruitment Assistant. Ask me anything about candidates in natural English!'
+              : 'Hello! I am your Placement Assistant.\n\nTell me what opportunities you want me to monitor and apply for in natural English.\n\nExample:\n"Apply for upcoming companies that match my profile with a salary of 3–4 LPA."',
+          time: 'Always Active',
+          isMe: false,
+        ),
+      ]);
+
+      // Insert ONLY the single active available AI bot at index 0
+      MockData.conversations.insert(
+        0,
+        Conversation(
+          id: botId,
+          partnerName: botTitle,
+          partnerRole: botRole,
+          avatarUrl: '',
+          lastMessage: botMsg,
+          time: 'Always Active',
+          unreadCount: 0,
+          isOnline: true,
+        ),
+      );
+
+      // 1. Process backend notifications & direct messages (excluding any AI bot duplicates)
       for (var item in [...notifs, ...chats]) {
         if (item is! Map) continue;
         final title = (item['title'] ?? item['sender_name'] ?? 'Placement Officer').toString();
@@ -69,6 +111,30 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
 
         if (body.isEmpty) continue;
         if (title.contains('UCI Placement') || body.contains('UCI Placement')) continue;
+
+        final titleLower = title.toLowerCase();
+        final idLower = id.toLowerCase();
+        // If this notification/message is from or for an AI assistant, update the single active bot — NEVER create a new conversation tile!
+        final isAiMessage = idLower.contains('ai_bot') ||
+            idLower.contains('recruiter_ai') ||
+            titleLower.contains('ai bot') ||
+            titleLower.contains('talent scout') ||
+            titleLower.contains('recruiter ai') ||
+            titleLower.contains('talentloq ai') ||
+            titleLower.contains('placement bot') ||
+            titleLower.contains('copilot');
+
+        if (isAiMessage) {
+          final botConv = MockData.conversations.firstWhere(
+            (c) => c.id == botId,
+            orElse: () => MockData.conversations.first,
+          );
+          if (botConv.id == botId && body.isNotEmpty) {
+            botConv.lastMessage = body;
+            botConv.time = 'Just Now';
+          }
+          continue; // DO NOT create an additional conversation
+        }
 
         final convIndex = MockData.conversations.indexWhere(
           (c) => c.id == id ||
@@ -91,7 +157,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
             unreadCount: 1,
             isOnline: true,
           );
-          MockData.conversations.insert(0, conv);
+          MockData.conversations.add(conv);
         }
 
         final chatMsgList = MockData.conversationMessages.putIfAbsent(id, () => []);
@@ -331,21 +397,133 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
     }
   }
 
+  Future<void> _showClearAiChatDialog(Conversation conv) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return AlertDialog(
+          backgroundColor: isDark ? AppColors.darkSurfaceContainer : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 22),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Delete Chat History',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: const Text(
+            'Are you sure you want to delete all messages with the TalentLOQ Assistant? This action cannot be undone.',
+            style: TextStyle(fontSize: 13, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Delete All'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true && mounted) {
+      final defaultMsg = widget.isRecruiter
+          ? 'Ask me anything about candidates.'
+          : 'Tell me your target domains, skills, and salary in plain English!';
+
+      await _chatService.clearConversation(conv.id);
+
+      setState(() {
+        conv.lastMessage = defaultMsg;
+        conv.time = 'Always Active';
+        conv.unreadCount = 0;
+        MockData.conversationMessages[conv.id] = [];
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('TalentLOQ Assistant history deleted'),
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final filteredConversations = MockData.conversations.where((conv) {
+    final targetBotId = widget.isRecruiter ? 'recruiter_ai_bot' : 'ai_bot';
+
+    final rawMatches = MockData.conversations.where((conv) {
       return conv.partnerName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           conv.partnerRole.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           conv.lastMessage.toLowerCase().contains(_searchQuery.toLowerCase());
     }).toList();
 
+    // Ensure ONLY the single available AI bot is displayed in the list
+    final filteredConversations = <Conversation>[];
+    bool hasAddedAi = false;
+
+    for (final conv in rawMatches) {
+      final name = conv.partnerName.toLowerCase();
+      final role = conv.partnerRole.toLowerCase();
+      final id = conv.id.toLowerCase();
+      final isAnyAi = id == 'ai_bot' ||
+          id == 'recruiter_ai_bot' ||
+          id.endsWith('_ai_bot') ||
+          name.contains('ai bot') ||
+          name.contains('talent scout') ||
+          name.contains('recruiter ai') ||
+          name.contains('talentloq ai') ||
+          name.contains('placement bot') ||
+          role.contains('recruitment assistant') ||
+          role.contains('placement assistant');
+
+      if (isAnyAi) {
+        if (!hasAddedAi && conv.id == targetBotId) {
+          filteredConversations.add(conv);
+          hasAddedAi = true;
+        }
+      } else {
+        filteredConversations.add(conv);
+      }
+    }
+
     return Scaffold(
       body: Column(
         children: [
-          // Search Header Bar with New Chat Icon Button
           Container(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             decoration: BoxDecoration(
@@ -414,7 +592,12 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                     ),
                     itemBuilder: (context, index) {
                       final conv = filteredConversations[index];
-                      final isAiBot = conv.id == 'ai_bot' || conv.partnerName == 'AI Bot';
+                      final isRecruiterAi = conv.id == 'recruiter_ai_bot' ||
+                          conv.partnerName.toLowerCase().contains('recruiter ai') ||
+                          conv.partnerName.toLowerCase().contains('talent scout');
+                      final isStudentAi = conv.id == 'ai_bot' ||
+                          conv.partnerName.toLowerCase().contains('placement bot');
+                      final isAiBot = isRecruiterAi || isStudentAi;
 
                       return ListTile(
                         onTap: () {
@@ -423,54 +606,76 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                           });
                           widget.onSelectConversation(conv);
                         },
+                        onLongPress: isAiBot ? () => _showClearAiChatDialog(conv) : null,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                        leading: isAiBot
+                        leading: isRecruiterAi
                             ? Container(
                                 width: 48,
                                 height: 48,
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+                                    colors: [Color(0xFF8B5CF6), Color(0xFFEC4899), Color(0xFFF59E0B)],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(0xFF6366F1).withValues(alpha: 0.35),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
+                                      color: const Color(0xFF8B5CF6).withValues(alpha: 0.35),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 3),
                                     ),
                                   ],
                                 ),
-                                child: const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 24),
+                                child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 24),
                               )
-                            : Stack(
-                                children: [
-                                  AppAvatar(
-                                    radius: 24,
-                                    imageUrl: conv.avatarUrl,
-                                    fallbackText: conv.partnerName,
-                                  ),
-                                  if (conv.isOnline)
-                                    Positioned(
-                                      right: 0,
-                                      bottom: 0,
-                                      child: Container(
-                                        width: 12,
-                                        height: 12,
-                                        decoration: BoxDecoration(
-                                          color: AppColors.success,
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: isDark ? AppColors.darkSurface : Colors.white,
-                                            width: 2,
+                            : isStudentAi
+                                ? Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFF6366F1).withValues(alpha: 0.35),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 24),
+                                  )
+                                : Stack(
+                                    children: [
+                                      AppAvatar(
+                                        radius: 24,
+                                        imageUrl: conv.avatarUrl,
+                                        fallbackText: conv.partnerName,
+                                      ),
+                                      if (conv.isOnline)
+                                        Positioned(
+                                          right: 0,
+                                          bottom: 0,
+                                          child: Container(
+                                            width: 12,
+                                            height: 12,
+                                            decoration: BoxDecoration(
+                                              color: AppColors.success,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: isDark ? AppColors.darkSurface : Colors.white,
+                                                width: 2,
+                                              ),
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ),
-                                ],
-                              ),
+                                    ],
+                                  ),
                         title: Row(
                           children: [
                             Flexible(
@@ -484,7 +689,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                                 ),
                               ),
                             ),
-                            if (isAiBot) ...[
+                            if (isStudentAi) ...[
                               const SizedBox(width: 8),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -493,9 +698,9 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: const Text(
-                                  'AI ASSISTANT',
+                                  'AUTONOMOUS',
                                   style: TextStyle(
-                                    fontSize: 9,
+                                    fontSize: 8.5,
                                     fontWeight: FontWeight.bold,
                                     color: AppColors.lightPrimary,
                                     letterSpacing: 0.5,
@@ -541,7 +746,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                conv.time,
+                                formatConversationTime(conv.time),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 textAlign: TextAlign.end,

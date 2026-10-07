@@ -11,6 +11,7 @@ from typing import Optional, Dict, Any
 from dotenv import load_dotenv
 
 load_dotenv()
+from app.services.llm_logger import log_llm_usage
 logger = logging.getLogger("talentloq.gemini_extractor")
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
@@ -312,20 +313,12 @@ Return strictly valid JSON with this exact structure:
                     c_tok = int(getattr(usage, "candidates_token_count", 0) or 0)
                     t_tok = int(getattr(usage, "total_token_count", 0) or (p_tok + c_tok))
 
-                    print(
-                        f"\n\033[1;36m+==================== [AI API TOKEN USAGE] ====================+\033[0m\n"
-                        f"  \033[1mTask:\033[0m              Multimodal Document OCR & Extraction\n"
-                        f"  \033[1mProvider:\033[0m          GOOGLE GEMINI\n"
-                        f"  \033[1mModel:\033[0m             {model_name}\n"
-                        f"  \033[1;33mPrompt Tokens:\033[0m     {p_tok:,}\n"
-                        f"  \033[1;32mCompletion Tokens:\033[0m {c_tok:,}\n"
-                        f"  \033[1;35mTotal Tokens Used:\033[0m {t_tok:,}\n"
-                        f"\033[1;36m+==============================================================+\033[0m\n",
-                        flush=True
-                    )
-                    logger.info(
-                        "[AI Token Usage] Gemini Document Extraction | Model: %s | Prompt: %d | Completion: %d | Total: %d",
-                        model_name, p_tok, c_tok, t_tok
+                    log_llm_usage(
+                        provider="Google Gemini",
+                        model=model_name,
+                        input_tokens=p_tok,
+                        output_tokens=c_tok,
+                        total_tokens=t_tok,
                     )
 
                     raw_text = response.text.strip()

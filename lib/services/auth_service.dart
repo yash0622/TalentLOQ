@@ -119,7 +119,7 @@ class AuthService {
           }
         }
       }
-      throw Exception('Cannot connect to backend server. Please make sure the FastAPI server is running on http://10.205.27.35:8000.');
+      throw Exception('Cannot connect to backend server. Please make sure the backend server is reachable.');
     }
   }
 
@@ -226,7 +226,7 @@ class AuthService {
     final isRegistered = isRegisteredInMemory || isRegisteredInStorage;
 
     if (!isRegistered) {
-      throw Exception('Unable to connect to server. Please check your network connection.');
+      throw Exception('Invalid credentials. Please verify your connection or register.');
     }
 
     // 3. Password Check against Registered Password (check memory & secure storage)
@@ -271,7 +271,7 @@ class AuthService {
 
         final role = JwtDecoderUtil.getRoleFromToken(accessToken) ?? 'recruiter';
         await _tokenStorage.saveUserRole(role);
-          await _tokenStorage.saveIsLoggedIn(true);
+        await _tokenStorage.saveIsLoggedIn(true);
 
         return AuthLoginResult(
           status: AuthStatus.success,
@@ -284,26 +284,10 @@ class AuthService {
         final msg = e.response?.data['detail'] ?? 'Invalid or expired OTP';
         throw Exception(msg.toString());
       }
-      return _handleOfflineOtpFallback(otp);
+      throw Exception('Network error during OTP verification. Please verify server connection.');
     } catch (_) {
-      return _handleOfflineOtpFallback(otp);
+      throw Exception('Network error during OTP verification. Please verify server connection.');
     }
-  }
-
-  Future<AuthLoginResult> _handleOfflineOtpFallback(String otp) async {
-    if (otp.length == 6) {
-      final mockToken = _createMockJwt('recruiter', 'talentloq.recruiter@gmail.com');
-      await _tokenStorage.saveAccessToken(mockToken);
-      await _tokenStorage.saveRefreshToken(mockToken);
-      await _tokenStorage.saveUserRole('recruiter');
-      await _tokenStorage.saveIsLoggedIn(true);
-
-      return AuthLoginResult(
-        status: AuthStatus.success,
-        mustChangePassword: false,
-      );
-    }
-    throw Exception('Invalid or expired OTP');
   }
 
   /// Fetch user notifications and direct messages (GET /auth/notifications)
@@ -315,6 +299,19 @@ class AuthService {
       }
     } catch (_) {}
     return {'notifications': [], 'messages': []};
+  }
+
+  /// Register device FCM token (POST /auth/device-token)
+  Future<bool> registerDeviceToken(String fcmToken) async {
+    try {
+      final response = await _dio.post(
+        '/auth/device-token',
+        data: {'fcm_token': fcmToken},
+      );
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Logout (POST /auth/logout)

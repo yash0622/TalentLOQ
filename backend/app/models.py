@@ -326,6 +326,10 @@ class RefreshTokenRequest(BaseModel):
 class LogoutRequest(BaseModel):
     refresh_token: str
 
+class DeviceTokenRequest(BaseModel):
+    fcm_token: str
+
+
 class PasswordChangeRequest(BaseModel):
     old_password: str
     new_password: str = Field(min_length=8)

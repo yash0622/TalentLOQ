@@ -682,8 +682,12 @@ class DocumentVerificationService:
         update_fields["verified_fields"] = provenance_updates
 
         if update_fields:
+            or_query = [{"student_id": student_id}, {"user_id": user_id}]
+            s_email = student_doc.get("email")
+            if s_email:
+                or_query.append({"email": s_email})
             await students_collection.update_one(
-                {"$or": [{"student_id": student_id}, {"user_id": user_id}]},
+                {"$or": or_query},
                 {"$set": update_fields}
             )
 

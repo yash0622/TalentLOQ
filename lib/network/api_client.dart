@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show HttpClient;
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
@@ -10,13 +11,14 @@ class ApiClient {
   late final Dio dio;
   final TokenStorageService _tokenStorage = TokenStorageService();
   void Function()? onForceLogout;
+  Completer<bool>? _refreshCompleter;
 
   ApiClient._internal() {
     dio = Dio(
       BaseOptions(
         baseUrl: _getBaseUrl(),
-        connectTimeout: const Duration(seconds: 30),
-        receiveTimeout: const Duration(seconds: 60),
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 30),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -96,8 +98,8 @@ class ApiClient {
       if (kIsWeb) {
         return 'http://127.0.0.1:8000';
       }
-      // PC local Wi-Fi IP allows physical devices and emulators on the local network to connect
-      return 'http://192.168.1.10:8000';
+      // Active ngrok tunnel allows physical device to connect seamlessly
+      return 'https://unrecorded-unpretended-loretta.ngrok-free.dev';
     }
 
     throw StateError(
@@ -106,9 +108,19 @@ class ApiClient {
   }
 
   Future<bool> attemptSilentRefresh() async {
+    if (_refreshCompleter != null) {
+      return _refreshCompleter!.future;
+    }
+
+    final completer = Completer<bool>();
+    _refreshCompleter = completer;
+
     try {
       final refreshToken = await _tokenStorage.getRefreshToken();
-      if (refreshToken == null || refreshToken.isEmpty) return false;
+      if (refreshToken == null || refreshToken.isEmpty) {
+        completer.complete(false);
+        return false;
+      }
 
       final response = await dio.post(
         '/auth/refresh',
@@ -122,13 +134,20 @@ class ApiClient {
         if (newAccessToken != null && newRefreshToken != null) {
           await _tokenStorage.saveAccessToken(newAccessToken);
           await _tokenStorage.saveRefreshToken(newRefreshToken);
+          completer.complete(true);
           return true;
         }
       }
+      completer.complete(false);
       return false;
     } catch (e) {
       debugPrint('[ApiClient] Silent refresh failed: $e');
+      if (!completer.isCompleted) {
+        completer.complete(false);
+      }
       return false;
+    } finally {
+      _refreshCompleter = null;
     }
   }
 }

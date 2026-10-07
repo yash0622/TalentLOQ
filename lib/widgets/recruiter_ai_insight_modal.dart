@@ -95,7 +95,7 @@ class _RecruiterAIInsightModalState extends State<RecruiterAIInsightModal> {
           _isLoading = false;
           _isRefreshing = false;
           if (res == null) {
-            _errorMessage = 'Could not generate AI screening insights.';
+            _errorMessage = 'Could not generate screening insights.';
           }
         });
       }

@@ -333,7 +333,7 @@ class AutonomousPlacementAgent:
                 "notification_id": str(uuid.uuid4()),
                 "user_id": user_id,
                 "type": "AGENT_AUTO_APPLIED",
-                "title": f"Applied to {company_name} by AI Bot",
+                "title": f"Applied to {company_name} by Assistant",
                 "message": bot_chat_text,
                 "drive_id": drive_id,
                 "read": False,
@@ -376,7 +376,7 @@ class AutonomousPlacementAgent:
                     "notification_id": str(uuid.uuid4()),
                     "user_id": user_id,
                     "type": "AGENT_INELIGIBLE_ALERT",
-                    "title": f"AI Bot Notice: {company_name}",
+                    "title": f"Notice: {company_name}",
                     "message": bot_chat_text,
                     "drive_id": drive_id,
                     "read": False,
@@ -418,26 +418,30 @@ class AutonomousPlacementAgent:
         """
         Background processor triggered on drive publication.
         """
-        drive = await drives_collection.find_one({"drive_id": drive_id})
-        if not drive or drive.get("status") == "closed":
-            return {"processed": 0, "auto_applied": 0}
+        try:
+            drive = await drives_collection.find_one({"drive_id": drive_id})
+            if not drive or drive.get("status") == "closed":
+                return {"processed": 0, "auto_applied": 0}
 
-        stats = {"processed": 0, "auto_applied": 0, "ineligible_notified": 0}
-        cursor = students_collection.find({})
-        async for student in cursor:
-            stats["processed"] += 1
-            try:
-                res = await cls.evaluate_and_act(student, drive)
-                if res:
-                    if res.get("action") == "AUTO_APPLIED":
-                        stats["auto_applied"] += 1
-                    elif res.get("action") == "INELIGIBLE_NOTIFIED":
-                        stats["ineligible_notified"] += 1
-            except Exception as e:
-                logger.error(f"[AutonomousAgent] Error evaluating student {student.get('student_id')}: {e}")
+            stats = {"processed": 0, "auto_applied": 0, "ineligible_notified": 0}
+            cursor = students_collection.find({})
+            async for student in cursor:
+                stats["processed"] += 1
+                try:
+                    res = await cls.evaluate_and_act(student, drive)
+                    if res:
+                        if res.get("action") == "AUTO_APPLIED":
+                            stats["auto_applied"] += 1
+                        elif res.get("action") == "INELIGIBLE_NOTIFIED":
+                            stats["ineligible_notified"] += 1
+                except Exception as e:
+                    logger.error(f"[AutonomousAgent] Error evaluating student {student.get('student_id')}: {e}")
 
-        logger.info(f"[AutonomousAgent] Completed drive {drive_id}: {stats}")
-        return stats
+            logger.info(f"[AutonomousAgent] Completed drive {drive_id}: {stats}")
+            return stats
+        except Exception as e:
+            logger.warning(f"[AutonomousAgent] process_drive_for_all_candidates skipped due to loop/db state: {e}")
+            return {"processed": 0, "auto_applied": 0, "ineligible_notified": 0}
 
     @classmethod
     async def process_student_for_all_drives(cls, student_user_id: str) -> int:

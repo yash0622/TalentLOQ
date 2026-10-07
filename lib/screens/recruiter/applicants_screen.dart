@@ -338,7 +338,7 @@ class _ApplicantsScreenState extends State<ApplicantsScreen> {
                     );
                   },
                   icon: const Icon(Icons.bolt_rounded, size: 18),
-                  label: const Text('View AI Candidate Screening Insight', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  label: const Text('View Candidate Screening Insight', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: isDark ? AppColors.darkPrimaryContainer : AppColors.lightPrimary,
                     foregroundColor: Colors.white,
@@ -765,7 +765,7 @@ class _ApplicantsScreenState extends State<ApplicantsScreen> {
                                           Icon(Icons.bolt_rounded, size: 14, color: AppColors.lightPrimary),
                                           SizedBox(width: 3),
                                           Text(
-                                            'AI Insight',
+                                            'Screening Insight',
                                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.lightPrimary),
                                           ),
                                         ],
