@@ -569,6 +569,16 @@ async def apply_to_placement_drive(
 
     # 4. Create Application Document
     now_dt = datetime.now(timezone.utc)
+    student_phone = ""
+    if student_doc:
+        student_phone = student_doc.get("phone_number") or student_doc.get("phone") or ""
+        if not student_phone and student_doc.get("encrypted_phone"):
+            try:
+                from app.encryption import decrypt_field
+                student_phone = decrypt_field(student_doc.get("encrypted_phone"))
+            except Exception:
+                student_phone = ""
+
     app_doc = {
         "app_id": f"app_{uuid.uuid4().hex[:12]}",
         "student_id": student_id,
@@ -579,7 +589,7 @@ async def apply_to_placement_drive(
         "company_name": drive.get("company_name", ""),
         "name": (student_doc.get("full_name") or student_doc.get("name") or "") if student_doc else "",
         "email": (student_doc.get("email") or "") if student_doc else "",
-        "phone_number": (student_doc.get("phone_number") or student_doc.get("phone") or "") if student_doc else "",
+        "phone_number": student_phone,
         "cgpa": float(student_doc.get("CGPA") or student_doc.get("cgpa") or 0.0) if student_doc else 0.0,
         "course": (student_doc.get("course") or student_doc.get("education") or "") if student_doc else "",
         "resume_link": resume_id,
@@ -692,6 +702,12 @@ async def get_drive_email_draft(
     student_name = student_doc.get("full_name") or student_doc.get("name") or token_payload.get("name") or "Student Candidate"
     student_email = student_doc.get("email") or token_payload.get("email") or ""
     student_phone = student_doc.get("phone_number") or student_doc.get("phone") or ""
+    if not student_phone and student_doc.get("encrypted_phone"):
+        try:
+            from app.encryption import decrypt_field
+            student_phone = decrypt_field(student_doc.get("encrypted_phone"))
+        except Exception:
+            student_phone = ""
     degree = student_doc.get("course") or student_doc.get("education") or "GSFC University"
     
     cgpa_raw = student_doc.get("CGPA") or student_doc.get("cgpa") or 8.0

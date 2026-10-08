@@ -158,7 +158,7 @@ class _OfferSetupModalState extends State<OfferSetupModal> {
       if (ok) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('🎉 Placement Offer successfully issued to ${widget.candidateName}!'),
+            content: Text('Placement Offer successfully issued to ${widget.candidateName}!'),
             backgroundColor: AppColors.success,
           ),
         );

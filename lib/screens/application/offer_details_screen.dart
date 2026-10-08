@@ -153,7 +153,7 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('🎉 Congratulations! You have accepted the placement offer from $_companyName.'),
+            content: Text('Congratulations! You have accepted the placement offer from $_companyName.'),
             backgroundColor: AppColors.success,
           ),
         );

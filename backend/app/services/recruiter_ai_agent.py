@@ -267,8 +267,18 @@ class RecruiterHybridAgent:
                 break
 
         # 5. Intent classification
-        intent = "search_candidates"
-        if "compare" in q_lower or "versus" in q_lower or "vs" in q_lower or "difference" in q_lower:
+        clean_q = re.sub(r'[^\w\s]', '', q_lower).strip()
+        greetings = {"hello", "hi", "hey", "greetings", "good morning", "good afternoon", "good evening", "howdy", "yo", "namaste"}
+        thanks = {"thanks", "thank you", "thx", "appreciate it"}
+        help_kw = {"help", "what can you do", "who are you", "how does this work", "instructions"}
+
+        if clean_q in greetings or any(clean_q.startswith(g + " ") for g in ["hello", "hi", "hey"]):
+            intent = "greeting"
+        elif clean_q in thanks or any(clean_q.startswith(t + " ") for t in ["thanks", "thank you"]):
+            intent = "thanks"
+        elif clean_q in help_kw or "what can you do" in q_lower or "who are you" in q_lower:
+            intent = "help"
+        elif "compare" in q_lower or "versus" in q_lower or "vs" in q_lower or "difference" in q_lower:
             intent = "compare_candidates"
         elif target_name and ("interview" in q_lower or "question" in q_lower or "ask" in q_lower):
             intent = "interview_questions"
@@ -282,6 +292,10 @@ class RecruiterHybridAgent:
             intent = "drive_applicants"
         elif target_role or any(k in q_lower for k in ["best candidate", "top candidate", "match"]):
             intent = "job_matching"
+        elif any(k in q_lower for k in ["find", "show", "search", "list", "top", "rank", "candidate", "candidates", "student", "students"]) or matched_skills or min_cgpa:
+            intent = "search_candidates"
+        else:
+            intent = "general_query"
 
         return {
             "min_cgpa": min_cgpa,
@@ -299,6 +313,10 @@ class RecruiterHybridAgent:
         Step 2: RAG - Queries database pushing OKF constraints into MongoDB with field projection,
         enriching candidate cards with explainability vectors.
         """
+        intent = okf_data.get("intent")
+        if intent in ["greeting", "thanks", "help", "general_query"]:
+            return []
+
         target_name = okf_data.get("target_name")
         target_skills = [s.lower() for s in okf_data.get("target_skills", [])]
         min_cgpa = okf_data.get("min_cgpa")
@@ -325,7 +343,7 @@ class RecruiterHybridAgent:
                 ]
 
         projection = {
-            "_id": 1, "student_id": 1, "full_name": 1, "cgpa": 1, "branch": 1, "course": 1,
+            "_id": 1, "student_id": 1, "full_name": 1, "cgpa": 1, "CGPA": 1, "branch": 1, "course": 1,
             "graduation_year": 1, "batch": 1, "active_backlogs": 1, "backlogs": 1,
             "skills": 1, "coding_languages": 1, "deployment_skills": 1,
             "internships": 1, "internship_count": 1, "projects": 1, "certifications": 1,
@@ -343,7 +361,7 @@ class RecruiterHybridAgent:
         # Fallback to wider pool if strict query yielded 0 results
         if not students:
             try:
-                fallback_query = {"cgpa": {"$gte": min_cgpa}} if min_cgpa else {}
+                fallback_query = {"$or": [{"cgpa": {"$gte": min_cgpa}}, {"CGPA": {"$gte": min_cgpa}}]} if min_cgpa else {}
                 cursor = students_col.find(fallback_query, projection).limit(20)
                 students = await cursor.to_list(length=20)
                 if not students:
@@ -367,7 +385,7 @@ class RecruiterHybridAgent:
             student_id = s.get("student_id") or str(s.get("_id"))
             full_name = s.get("full_name") or "Student Candidate"
             try:
-                cgpa = float(s.get("cgpa") or 0.0)
+                cgpa = float(s.get("cgpa") or s.get("CGPA") or 0.0)
             except (ValueError, TypeError):
                 cgpa = 0.0
             branch = s.get("branch") or s.get("course") or "Computer Science and Engineering"
@@ -652,6 +670,54 @@ class RecruiterHybridAgent:
         okf = cls.parse_query_okf(query, history)
         logger.info(f"[RECRUITER AI OKF] Query: '{query}' -> OKF: {okf}")
 
+        # Conversational Fast Path (Greetings, Thanks, Capabilities)
+        intent = okf.get("intent")
+        if intent in ["greeting", "thanks", "help"]:
+            if intent == "greeting":
+                final_text = (
+                    "Hello! I am your AI Talent Scout. I can help you search student profiles, "
+                    "filter by CGPA or skills, compare candidates, and generate interview questions. "
+                    "How can I help you today?"
+                )
+            elif intent == "thanks":
+                final_text = "You're welcome! Let me know if you need more candidate profiles or drive analysis."
+            else:
+                final_text = (
+                    "I can assist you with:\n"
+                    "• Searching candidates by skills (e.g. 'Show me Flutter and Python developers')\n"
+                    "• Academic filters (e.g. 'Candidates with CGPA > 8.0 and no backlogs')\n"
+                    "• Candidate comparisons (e.g. 'Compare Chintan and Jaitra')\n"
+                    "• Preparing interview questions for specific applicants"
+                )
+
+            msg_id = f"msg_{uuid.uuid4().hex[:12]}"
+            now = datetime.now(timezone.utc)
+            bot_doc = {
+                "message_id": msg_id,
+                "conversation_id": conversation_id,
+                "sender_id": "recruiter_ai_bot",
+                "sender_name": "Talent Scout",
+                "recipient_id": recruiter_id,
+                "recipient_name": "Campus Recruiter",
+                "text": final_text,
+                "created_at": now,
+            }
+            try:
+                await chat_col.insert_one(bot_doc)
+            except Exception as e:
+                logger.error(f"Failed to persist bot message: {e}")
+
+            return {
+                "id": msg_id,
+                "conversation_id": conversation_id,
+                "sender_id": "recruiter_ai_bot",
+                "sender_name": "Talent Scout",
+                "text": final_text,
+                "time": now.isoformat(),
+                "is_me": False,
+                "candidates": [],
+            }
+
         # 3. RAG Step (Structured DB filter + Candidate Dossier enrichment)
         candidates = await cls.retrieve_rag_context(okf)
 
@@ -754,6 +820,57 @@ class RecruiterHybridAgent:
         # 2. OKF Step
         okf = cls.parse_query_okf(query, history)
 
+        # Conversational Fast Path (Greetings, Thanks, Capabilities)
+        intent = okf.get("intent")
+        if intent in ["greeting", "thanks", "help"]:
+            if intent == "greeting":
+                final_text = (
+                    "Hello! I am your AI Talent Scout. I can help you search student profiles, "
+                    "filter by CGPA or skills, compare candidates, and generate interview questions. "
+                    "How can I help you today?"
+                )
+            elif intent == "thanks":
+                final_text = "You're welcome! Let me know if you need more candidate profiles or drive analysis."
+            else:
+                final_text = (
+                    "I can assist you with:\n"
+                    "• Searching candidates by skills (e.g. 'Show me Flutter and Python developers')\n"
+                    "• Academic filters (e.g. 'Candidates with CGPA > 8.0 and no backlogs')\n"
+                    "• Candidate comparisons (e.g. 'Compare Chintan and Jaitra')\n"
+                    "• Preparing interview questions for specific applicants"
+                )
+
+            yield {"chunk": final_text}
+
+            msg_id = f"msg_{uuid.uuid4().hex[:12]}"
+            now = datetime.now(timezone.utc)
+            bot_doc = {
+                "message_id": msg_id,
+                "conversation_id": conversation_id,
+                "sender_id": "recruiter_ai_bot",
+                "sender_name": "Talent Scout",
+                "recipient_id": recruiter_id,
+                "recipient_name": "Campus Recruiter",
+                "text": final_text,
+                "created_at": now,
+            }
+            try:
+                await chat_col.insert_one(bot_doc)
+            except Exception as e:
+                logger.error(f"Failed to persist bot message: {e}")
+
+            yield {
+                "done": True,
+                "id": msg_id,
+                "conversation_id": conversation_id,
+                "sender_id": "recruiter_ai_bot",
+                "sender_name": "Talent Scout",
+                "text": final_text,
+                "time": now.isoformat(),
+                "candidates": [],
+            }
+            return
+
         # 3. RAG Step
         candidates = await cls.retrieve_rag_context(okf)
 
@@ -854,6 +971,4 @@ class RecruiterHybridAgent:
             "time": now.isoformat(),
             "candidates": top_candidates,
         }
-
-
 recruiter_hybrid_agent = RecruiterHybridAgent()

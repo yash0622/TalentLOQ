@@ -1,3 +1,4 @@
+import re
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, Query, status
 from app.database import audit_logs_collection, async_db
@@ -21,7 +22,7 @@ async def get_audit_logs(
     """
     query: Dict[str, Any] = {}
     if action:
-        query["action"] = {"$regex": action, "$options": "i"}
+        query["action"] = {"$regex": re.escape(action), "$options": "i"}
     if user_id:
         query["user_id"] = user_id
 

@@ -69,6 +69,16 @@ class CachedAppImage extends StatelessWidget {
     final text = fallbackText?.trim();
     final hasText = text != null && text.isNotEmpty;
 
+    String? initial;
+    if (hasText) {
+      final clean = text.replaceAll(RegExp(r'[^\p{L}\p{N}]', unicode: true), '').trim();
+      if (clean.isNotEmpty) {
+        initial = clean.characters.first.toUpperCase();
+      } else if (text.characters.isNotEmpty) {
+        initial = text.characters.first;
+      }
+    }
+
     return Container(
       width: width,
       height: height,
@@ -77,9 +87,9 @@ class CachedAppImage extends StatelessWidget {
         borderRadius: BorderRadius.circular(borderRadius),
       ),
       child: Center(
-        child: hasText
+        child: initial != null && initial.isNotEmpty
             ? Text(
-                text[0].toUpperCase(),
+                initial,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: (height ?? 40) * 0.4,

@@ -1113,7 +1113,7 @@ class _RecruiterAiScreenState extends State<RecruiterAiScreen>
               Icon(Icons.verified_user_rounded, size: 13, color: Color(0xFF8B5CF6)),
               SizedBox(width: 5),
               Text(
-                'RETRIEVED CANDIDATE DOSSIERS (HYBRID OKF + RAG)',
+                'RETRIEVED CANDIDATE DOSSIERS',
                 style: TextStyle(
                   fontSize: 9.5,
                   fontWeight: FontWeight.w800,

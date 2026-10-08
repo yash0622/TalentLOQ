@@ -21,15 +21,13 @@ class RecruiterService {
         );
       }
 
-      final formData = FormData.fromMap(mapData);
-      
       // Try /recruiter/drives first, fallback to /recruiter/companies
       try {
-        final res = await _apiClient.dio.post('/recruiter/drives', data: formData);
+        final res = await _apiClient.dio.post('/recruiter/drives', data: FormData.fromMap(mapData));
         if (res.statusCode == 201) return true;
       } catch (_) {}
 
-      final response = await _apiClient.dio.post('/recruiter/companies', data: formData);
+      final response = await _apiClient.dio.post('/recruiter/companies', data: FormData.fromMap(mapData));
       return response.statusCode == 201;
     } catch (_) {
       return false;

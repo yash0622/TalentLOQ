@@ -44,12 +44,14 @@ async def notify_on_publish(listing_id: str, target_audience: str = "all") -> Di
     Dispatches FCM push notifications & SMTP emails, storing notification records in MongoDB.
     """
     listing = await company_listings_collection.find_one({"listing_id": listing_id})
+    if not listing:
+        listing = await drives_collection.find_one({"drive_id": listing_id})
     if not listing or listing.get("status") != "published":
         return {"status": "skipped", "reason": "Listing not found or not published", "notified_count": 0}
 
-    cgpa_cutoff = float(listing.get("cgpa_criteria", 6.0))
+    cgpa_cutoff = float(listing.get("cgpa_criteria", listing.get("min_cgpa", 6.0)))
     company_name = listing.get("company_name", "Company")
-    job_role = listing.get("interview_job", "Role")
+    job_role = listing.get("interview_job", listing.get("job_title", listing.get("drive_title", "Role")))
 
     # Fetch candidate students safely
     try:
@@ -200,7 +202,7 @@ async def notify_on_round_advance(
     fcm_token = student.get("fcm_token", "fcm-token-mock") if student else "fcm-token-mock"
 
     if result == "pass" and final_outcome == "selected":
-        title = f"🎉 Offer Selection: {company_name}!"
+        title = f"Offer Selection: {company_name}!"
         body = f"Congratulations! You passed Round {round_number} ({round_name}) and have been SELECTED for {company_name}!"
     elif result == "pass":
         title = f"Round Advanced: {company_name}"

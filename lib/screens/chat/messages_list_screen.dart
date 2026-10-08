@@ -596,8 +596,21 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                           conv.partnerName.toLowerCase().contains('recruiter ai') ||
                           conv.partnerName.toLowerCase().contains('talent scout');
                       final isStudentAi = conv.id == 'ai_bot' ||
-                          conv.partnerName.toLowerCase().contains('placement bot');
+                          conv.partnerName.toLowerCase().contains('placement bot') ||
+                          conv.partnerName.toLowerCase().contains('talentloq assistant') ||
+                          conv.partnerName.toLowerCase().contains('placement assistant');
                       final isAiBot = isRecruiterAi || isStudentAi;
+                      final isOffer = conv.partnerName.toLowerCase().contains('offer') ||
+                          conv.partnerName.toLowerCase().contains('selection') ||
+                          conv.partnerName.toLowerCase().contains('selected') ||
+                          conv.lastMessage.toLowerCase().contains('selected');
+                      final isRound = !isOffer && (
+                          conv.partnerName.toLowerCase().contains('round') ||
+                          conv.partnerName.toLowerCase().contains('advanced') ||
+                          conv.partnerName.toLowerCase().contains('advancing') ||
+                          conv.partnerName.toLowerCase().contains('interview') ||
+                          conv.lastMessage.toLowerCase().contains('passed round'));
+                      final displayTitle = conv.partnerName.replaceAll(RegExp(r'^[^\w\s]+'), '').trim();
 
                       return ListTile(
                         onTap: () {
@@ -607,102 +620,224 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                           widget.onSelectConversation(conv);
                         },
                         onLongPress: isAiBot ? () => _showClearAiChatDialog(conv) : null,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                        leading: isRecruiterAi
-                            ? Container(
-                                width: 48,
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [Color(0xFF8B5CF6), Color(0xFFEC4899), Color(0xFFF59E0B)],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFF8B5CF6).withValues(alpha: 0.35),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 3),
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 24),
-                              )
-                            : isStudentAi
-                                ? Container(
-                                    width: 48,
-                                    height: 48,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        leading: isAiBot
+                            ? Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Container(
+                                    width: 44,
+                                    height: 44,
                                     decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                      ),
+                                      color: isDark ? const Color(0xFF1E2235) : const Color(0xFFEEF2F6),
                                       shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(0xFF6366F1).withValues(alpha: 0.35),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 24),
-                                  )
-                                : Stack(
-                                    children: [
-                                      AppAvatar(
-                                        radius: 24,
-                                        imageUrl: conv.avatarUrl,
-                                        fallbackText: conv.partnerName,
+                                      border: Border.all(
+                                        color: isDark ? const Color(0xFF2E344E) : const Color(0xFFCBD5E1),
+                                        width: 1,
                                       ),
-                                      if (conv.isOnline)
-                                        Positioned(
-                                          right: 0,
-                                          bottom: 0,
-                                          child: Container(
-                                            width: 12,
-                                            height: 12,
-                                            decoration: BoxDecoration(
-                                              color: AppColors.success,
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                color: isDark ? AppColors.darkSurface : Colors.white,
-                                                width: 2,
-                                              ),
+                                    ),
+                                    child: Icon(
+                                      Icons.auto_awesome,
+                                      color: isDark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5),
+                                      size: 20,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    right: 0,
+                                    bottom: 0,
+                                    child: Container(
+                                      width: 10,
+                                      height: 10,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF10B981),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: isDark ? AppColors.darkSurface : Colors.white,
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : isOffer
+                                ? Stack(
+                                    clipBehavior: Clip.none,
+                                    children: [
+                                      Container(
+                                        width: 44,
+                                        height: 44,
+                                        decoration: BoxDecoration(
+                                          color: isDark ? const Color(0xFF064E3B) : const Color(0xFFECFDF5),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: isDark ? const Color(0xFF047857) : const Color(0xFFA7F3D0),
+                                            width: 1.2,
+                                          ),
+                                        ),
+                                        child: const Center(
+                                          child: Icon(Icons.workspace_premium_rounded, color: Color(0xFF10B981), size: 22),
+                                        ),
+                                      ),
+                                      Positioned(
+                                        right: 0,
+                                        bottom: 0,
+                                        child: Container(
+                                          width: 10,
+                                          height: 10,
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF10B981),
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: isDark ? AppColors.darkSurface : Colors.white,
+                                              width: 1.5,
                                             ),
                                           ),
                                         ),
+                                      ),
                                     ],
-                                  ),
+                                  )
+                                : isRound
+                                    ? Stack(
+                                        clipBehavior: Clip.none,
+                                        children: [
+                                          Container(
+                                            width: 44,
+                                            height: 44,
+                                            decoration: BoxDecoration(
+                                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF),
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: isDark ? const Color(0xFF3B82F6).withValues(alpha: 0.4) : const Color(0xFFBFDBFE),
+                                                width: 1.2,
+                                              ),
+                                            ),
+                                            child: const Center(
+                                              child: Icon(Icons.trending_up_rounded, color: Color(0xFF2563EB), size: 22),
+                                            ),
+                                          ),
+                                          Positioned(
+                                            right: 0,
+                                            bottom: 0,
+                                            child: Container(
+                                              width: 10,
+                                              height: 10,
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF22C55E),
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: isDark ? AppColors.darkSurface : Colors.white,
+                                                  width: 1.5,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    : Stack(
+                                        children: [
+                                          AppAvatar(
+                                            radius: 22,
+                                            imageUrl: conv.avatarUrl,
+                                            fallbackText: conv.partnerName,
+                                          ),
+                                          if (conv.isOnline)
+                                            Positioned(
+                                              right: 0,
+                                              bottom: 0,
+                                              child: Container(
+                                                width: 10,
+                                                height: 10,
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.success,
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                    color: isDark ? AppColors.darkSurface : Colors.white,
+                                                    width: 1.5,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
                         title: Row(
                           children: [
                             Flexible(
                               child: Text(
-                                conv.partnerName,
+                                displayTitle.isNotEmpty ? displayTitle : conv.partnerName,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: conv.unreadCount > 0 || isAiBot ? FontWeight.bold : FontWeight.w600,
+                                  fontWeight: conv.unreadCount > 0 || isAiBot || isOffer ? FontWeight.w700 : FontWeight.w600,
                                   fontSize: 14,
+                                  letterSpacing: -0.2,
                                 ),
                               ),
                             ),
-                            if (isStudentAi) ...[
-                              const SizedBox(width: 8),
+                            if (isOffer) ...[
+                              const SizedBox(width: 6),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                                 decoration: BoxDecoration(
-                                  color: AppColors.lightPrimary.withValues(alpha: 0.15),
+                                  color: const Color(0xFF059669).withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                                    width: 0.8,
+                                  ),
                                 ),
                                 child: const Text(
-                                  'AUTONOMOUS',
+                                  'OFFER',
                                   style: TextStyle(
                                     fontSize: 8.5,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.lightPrimary,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF059669),
+                                    letterSpacing: 0.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            if (isRound) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: const Color(0xFF2563EB).withValues(alpha: 0.25),
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: const Text(
+                                  'UPDATE',
+                                  style: TextStyle(
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF2563EB),
+                                    letterSpacing: 0.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            if (isAiBot) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1E2235) : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: isDark ? const Color(0xFF2E344E) : const Color(0xFFE2E8F0),
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: Text(
+                                  'AI',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                                     letterSpacing: 0.5,
                                   ),
                                 ),
@@ -710,77 +845,60 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                             ],
                           ],
                         ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 2),
-                            Text(
-                              conv.partnerRole,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                fontSize: 11,
-                                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 3),
+                          child: Text(
+                            conv.lastMessage,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: conv.unreadCount > 0
+                                  ? (isDark ? AppColors.darkTextPrimary : const Color(0xFF0F172A))
+                                  : (isDark ? AppColors.darkTextSecondary : const Color(0xFF64748B)),
+                              fontWeight: conv.unreadCount > 0 ? FontWeight.w600 : FontWeight.normal,
+                              fontSize: 12.5,
                             ),
-                            const SizedBox(height: 3),
-                            Text(
-                              conv.lastMessage,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: conv.unreadCount > 0
-                                    ? (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary)
-                                    : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
-                                fontWeight: conv.unreadCount > 0 ? FontWeight.w600 : FontWeight.normal,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                        trailing: SizedBox(
-                          width: 72,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                formatConversationTime(conv.time),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.end,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: conv.unreadCount > 0
-                                      ? (isDark ? AppColors.darkPrimary : AppColors.lightPrimary)
-                                      : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
-                                  fontWeight: conv.unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
-                                  fontSize: 11,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              if (conv.unreadCount > 0)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                                  decoration: BoxDecoration(
-                                    color: isDark ? AppColors.darkPrimary : AppColors.lightPrimary,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    '${conv.unreadCount}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                )
-                              else
-                                const SizedBox(height: 18),
-                            ],
                           ),
+                        ),
+                        trailing: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              conv.time == 'Always Active' ? 'Active' : formatConversationTime(conv.time),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: conv.unreadCount > 0
+                                    ? (isDark ? const Color(0xFF818CF8) : const Color(0xFF2563EB))
+                                    : (isDark ? AppColors.darkTextSecondary : const Color(0xFF94A3B8)),
+                                fontWeight: conv.unreadCount > 0 ? FontWeight.w600 : FontWeight.normal,
+                                fontSize: 11,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            if (conv.unreadCount > 0)
+                              Container(
+                                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: isOffer
+                                      ? const Color(0xFF059669)
+                                      : (isDark ? const Color(0xFF6366F1) : const Color(0xFF2563EB)),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  '${conv.unreadCount}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              )
+                            else
+                              const SizedBox(height: 18),
+                          ],
                         ),
                       );
                     },

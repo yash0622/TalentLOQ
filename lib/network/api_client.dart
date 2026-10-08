@@ -102,6 +102,10 @@ class ApiClient {
       return 'https://unrecorded-unpretended-loretta.ngrok-free.dev';
     }
 
+    if (kIsWeb) {
+      return '/api';
+    }
+
     throw StateError(
       'API_URL not set. Pass --dart-define=API_URL=https://your-backend-url at build time.',
     );

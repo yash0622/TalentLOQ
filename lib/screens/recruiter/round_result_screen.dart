@@ -49,8 +49,8 @@ class _RoundResultScreenState extends State<RoundResultScreen> {
         final studentName = (widget.applicantData['name'] ?? widget.applicantData['full_name'] ?? widget.applicantData['student_name'] ?? 'Candidate').toString();
         final customNote = _messageController.text.trim();
         final msgText = customNote.isNotEmpty
-            ? '🎉 Congratulations $studentName! You have been selected & advanced to the next round!\nNote: $customNote'
-            : '🎉 Congratulations $studentName! You passed the selection round and have been advanced to the next round!';
+            ? 'Congratulations $studentName! You have been selected & advanced to the next round!\nNote: $customNote'
+            : 'Congratulations $studentName! You passed the selection round and have been advanced to the next round!';
 
         // Post Direct Message to Student in Messages Section
         try {

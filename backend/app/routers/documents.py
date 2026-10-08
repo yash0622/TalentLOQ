@@ -143,9 +143,24 @@ async def get_document_status(
     """
     Polls real-time verification and OCR status of a specific document.
     """
+    student_doc = await students_collection.find_one({
+        "$or": [{"user_id": user_id}, {"student_id": user_id}, {"email": user_id}]
+    })
+    student_ids = {user_id}
+    if student_doc:
+        student_ids.add(student_doc.get("student_id", user_id))
+        student_ids.add(student_doc.get("user_id", user_id))
+
     doc = await verification_documents_collection.find_one({"document_id": document_id})
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
+
+    doc_owner = doc.get("user_id") or doc.get("student_id")
+    if doc_owner not in student_ids:
+        caller_user = await users_collection.find_one({"$or": [{"user_id": user_id}, {"email": user_id}]})
+        role = caller_user.get("role") if caller_user else None
+        if role not in ["recruiter", "admin"]:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this document.")
 
     return {
         "document_id": doc.get("document_id"),
@@ -258,12 +273,11 @@ async def delete_document(
     # Clean up GridFS if grid_file_id exists using shared database client
     if grid_file_id:
         try:
-            import motor.motor_asyncio
-            from app.database import database
-            grid_bucket = motor.motor_asyncio.AsyncIOMotorGridFSBucket(database)
+            from app.database import get_grid_fs
+            grid_bucket = get_grid_fs()
             await grid_bucket.delete(ObjectId(grid_file_id))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Could not delete GridFS file {grid_file_id}: {e}")
 
     # Instantly reset/clear all verified fields associated with this document type
     set_fields: Dict[str, Any] = {}
@@ -629,9 +643,24 @@ async def extract_document_by_id(
     """
     Section 10: Re-triggers text extraction and verification on an already stored document.
     """
+    student_doc = await students_collection.find_one({
+        "$or": [{"user_id": user_id}, {"student_id": user_id}, {"email": user_id}]
+    })
+    student_ids = {user_id}
+    if student_doc:
+        student_ids.add(student_doc.get("student_id", user_id))
+        student_ids.add(student_doc.get("user_id", user_id))
+
     doc = await verification_documents_collection.find_one({"document_id": document_id})
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
+
+    doc_owner = doc.get("user_id") or doc.get("student_id")
+    if doc_owner not in student_ids:
+        caller_user = await users_collection.find_one({"$or": [{"user_id": user_id}, {"email": user_id}]})
+        role = caller_user.get("role") if caller_user else None
+        if role not in ["recruiter", "admin"]:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this document.")
 
     grid_file_id = doc.get("grid_file_id")
     if not grid_file_id:

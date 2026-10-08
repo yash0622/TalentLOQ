@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:dio/dio.dart';
 import '../network/api_client.dart';
 import '../utils/jwt_decoder_util.dart';
@@ -32,15 +31,6 @@ class AuthService {
 
   // In-memory registered user cache
   static final Set<String> _registeredEmailsSet = {};
-  static final Map<String, String> _registeredPasswords = {};
-
-  /// Helper to generate a mock JWT for offline/local development mode
-  String _createMockJwt(String role, String email) {
-    const header = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9';
-    final payloadJson = '{"sub":"user-${DateTime.now().millisecondsSinceEpoch}","role":"$role","email":"$email","exp":${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 86400}}';
-    final payload = base64Url.encode(utf8.encode(payloadJson)).replaceAll('=', '');
-    return '$header.$payload.mock_signature';
-  }
 
   /// Student Registration (POST /auth/register)
   Future<bool> register({
@@ -86,7 +76,6 @@ class AuthService {
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         _registeredEmailsSet.add(cleanEmail);
-        _registeredPasswords[cleanEmail] = cleanPassword;
         await _tokenStorage.saveRegisteredEmail(cleanEmail);
         // Password hashed on server; not stored in plaintext
         await _tokenStorage.saveStudentProfile(
@@ -196,57 +185,11 @@ class AuthService {
         }
         throw Exception(msg);
       }
-      return await _handleOfflineLoginFallback(cleanEmail, cleanPassword);
-    } catch (_) {
-      return await _handleOfflineLoginFallback(cleanEmail, cleanPassword);
+      throw Exception('Invalid credentials or unable to reach server. Please check your connection.');
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('Invalid credentials or unable to reach server.');
     }
-  }
-
-  Future<AuthLoginResult> _handleOfflineLoginFallback(String cleanEmail, String cleanPassword) async {
-    final isRecruiter = cleanEmail.contains('recruiter');
-    final isStudentDomain = cleanEmail.endsWith('@gsfcuniversity.ac.in');
-
-    // 1. Check strict email domain (.ac.in for students, recruiter email)
-    if (!isRecruiter && !isStudentDomain) {
-      throw Exception('Incorrect email');
-    }
-
-    // Recruiter account flow
-    if (isRecruiter) {
-      return AuthLoginResult(
-        status: AuthStatus.otpRequired,
-        message: 'OTP sent to recruiter email address',
-        tempToken: 'temp-mock-recruiter-token-12345',
-      );
-    }
-
-    // 2. Strict Registration Check for Student Account (check memory & secure storage)
-    final isRegisteredInMemory = _registeredEmailsSet.contains(cleanEmail);
-    final isRegisteredInStorage = await _tokenStorage.isRegisteredUser(cleanEmail);
-    final isRegistered = isRegisteredInMemory || isRegisteredInStorage;
-
-    if (!isRegistered) {
-      throw Exception('Invalid credentials. Please verify your connection or register.');
-    }
-
-    // 3. Password Check against Registered Password (check memory & secure storage)
-    final storedPassword = _registeredPasswords[cleanEmail];
-
-    if (storedPassword == null || cleanPassword != storedPassword.trim()) {
-      throw Exception('Incorrect password');
-    }
-
-    // Direct Login Success for Registered Student
-    final mockToken = _createMockJwt('student', cleanEmail);
-    await _tokenStorage.saveAccessToken(mockToken);
-    await _tokenStorage.saveRefreshToken(mockToken);
-    await _tokenStorage.saveUserRole('student');
-    await _tokenStorage.saveIsLoggedIn(true);
-
-    return AuthLoginResult(
-      status: AuthStatus.success,
-      mustChangePassword: false,
-    );
   }
 
   /// Verify Recruiter 6-Digit OTP (POST /auth/verify-otp)

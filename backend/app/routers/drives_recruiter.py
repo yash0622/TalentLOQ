@@ -553,6 +553,12 @@ async def list_drive_applicants(
         course = a.get("course") or (student.get("course", student.get("degree", "BTECH_CSE")) if student else "BTECH_CSE")
         email = a.get("email") or (user.get("email") if user else None) or (student.get("email") if student else None)
         phone = a.get("phone_number") or (student.get("phone_number") or student.get("phone") if student else None) or (user.get("phone_number") if user else None)
+        if not phone and student and student.get("encrypted_phone"):
+            try:
+                from app.encryption import decrypt_field
+                phone = decrypt_field(student.get("encrypted_phone"))
+            except Exception:
+                phone = None
 
         applied_at_val = a.get("applied_at")
         if isinstance(applied_at_val, datetime):
@@ -781,7 +787,7 @@ async def setup_placement_offer(
         "recipient_id": student_user_id,
         "recipient_email": student_email,
         "user_id": student_user_id,
-        "title": "🎉 Official Placement Offer Extended!",
+        "title": "Official Placement Offer Extended!",
         "message": f"Congratulations! {company_name} has extended an official placement offer for {role_title} with CTC {data.ctc}.",
         "type": "placement_offer",
         "is_read": False,

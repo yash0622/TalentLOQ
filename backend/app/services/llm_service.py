@@ -10,15 +10,13 @@ load_dotenv()
 
 logger = logging.getLogger("talentloq.llm")
 
-FREE_GROQ_MODELS = ["qwen/qwen3.8-27b", "llama-3.3-70b-versatile", "groq/compound-mini"]
+FREE_GROQ_MODELS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"]
+FREE_GEMINI_MODELS = ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-2.5-flash-lite"]
+FREE_MISTRAL_MODELS = ["open-mistral-7b", "mistral-small-latest"]
 FREE_OPENROUTER_MODELS = [
-    "qwen/qwen-2.5-coder-32b-instruct:free",
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "deepseek/deepseek-r1:free",
-    "google/gemma-2-9b-it:free",
+    "liquid/lfm-2.5-2.6b:free",
+    "nvidia/nemotron-3.5-lightning:free",
 ]
-FREE_MISTRAL_MODELS = ["mistral-small-latest", "open-mistral-7b"]
-FREE_GEMINI_MODELS = ["gemini-2.0-flash-lite", "gemini-flash-latest"]
 FREE_HUGGINGFACE_MODELS = [
     "meta-llama/Llama-3.2-3B-Instruct",
     "meta-llama/Llama-3.1-8B-Instruct",
@@ -173,73 +171,7 @@ class LLMService:
                     logger.warning(f"Groq {model_name} failed: {e}")
                     errors.append(f"Groq ({model_name}): {e}")
 
-        # 2. Try OpenRouter :free Models
-        if self.openrouter_client:
-            for model_name in FREE_OPENROUTER_MODELS:
-                try:
-                    chat_msgs = _get_messages()
-                    # Ponytail: offload blocking sync SDK call to worker thread
-                    res = await asyncio.to_thread(
-                        self.openrouter_client.chat.completions.create,
-                        model=model_name,
-                        messages=chat_msgs,
-                        max_tokens=max_tokens,
-                    )
-                    text = (res.choices[0].message.content or "").strip()
-                    usage = getattr(res, "usage", None)
-                    p_tok = int(getattr(usage, "prompt_tokens", 0) or 0)
-                    c_tok = int(getattr(usage, "completion_tokens", 0) or 0)
-                    t_tok = int(getattr(usage, "total_tokens", 0) or (p_tok + c_tok))
-                    latency_ms = (time.perf_counter() - start_time) * 1000
-                    tokens_dict = self._print_token_usage("openrouter", model_name, p_tok, c_tok, t_tok, latency_ms=latency_ms)
-
-                    return {
-                        "text": text,
-                        "provider": "openrouter",
-                        "model": model_name,
-                        "is_free": True,
-                        "fallback_used": True,
-                        "tokens_used": tokens_dict,
-                        "latency_ms": latency_ms,
-                    }
-                except Exception as e:
-                    logger.warning(f"OpenRouter {model_name} failed: {e}")
-                    errors.append(f"OpenRouter ({model_name}): {e}")
-
-        # 3. Try Mistral Free
-        if self.mistral_client:
-            for model_name in FREE_MISTRAL_MODELS:
-                try:
-                    chat_msgs = _get_messages()
-                    # Ponytail: offload blocking sync SDK call to worker thread
-                    res = await asyncio.to_thread(
-                        self.mistral_client.chat.complete,
-                        model=model_name,
-                        messages=chat_msgs,
-                        max_tokens=max_tokens,
-                    )
-                    text = (res.choices[0].message.content or "").strip()
-                    usage = getattr(res, "usage", None)
-                    p_tok = int(getattr(usage, "prompt_tokens", 0) or 0)
-                    c_tok = int(getattr(usage, "completion_tokens", 0) or 0)
-                    t_tok = int(getattr(usage, "total_tokens", 0) or (p_tok + c_tok))
-                    latency_ms = (time.perf_counter() - start_time) * 1000
-                    tokens_dict = self._print_token_usage("mistral", model_name, p_tok, c_tok, t_tok, latency_ms=latency_ms)
-
-                    return {
-                        "text": text,
-                        "provider": "mistral",
-                        "model": model_name,
-                        "is_free": True,
-                        "fallback_used": True,
-                        "tokens_used": tokens_dict,
-                        "latency_ms": latency_ms,
-                    }
-                except Exception as e:
-                    logger.warning(f"Mistral {model_name} failed: {e}")
-                    errors.append(f"Mistral ({model_name}): {e}")
-
-        # 4. Try Gemini Free Tier
+        # 2. Try Gemini Free Tier
         if self.gemini_client:
             for model_name in FREE_GEMINI_MODELS:
                 try:
@@ -276,6 +208,72 @@ class LLMService:
                 except Exception as e:
                     logger.warning(f"Gemini {model_name} failed: {e}")
                     errors.append(f"Gemini ({model_name}): {e}")
+
+        # 3. Try Mistral Free
+        if self.mistral_client:
+            for model_name in FREE_MISTRAL_MODELS:
+                try:
+                    chat_msgs = _get_messages()
+                    # Ponytail: offload blocking sync SDK call to worker thread
+                    res = await asyncio.to_thread(
+                        self.mistral_client.chat.complete,
+                        model=model_name,
+                        messages=chat_msgs,
+                        max_tokens=max_tokens,
+                    )
+                    text = (res.choices[0].message.content or "").strip()
+                    usage = getattr(res, "usage", None)
+                    p_tok = int(getattr(usage, "prompt_tokens", 0) or 0)
+                    c_tok = int(getattr(usage, "completion_tokens", 0) or 0)
+                    t_tok = int(getattr(usage, "total_tokens", 0) or (p_tok + c_tok))
+                    latency_ms = (time.perf_counter() - start_time) * 1000
+                    tokens_dict = self._print_token_usage("mistral", model_name, p_tok, c_tok, t_tok, latency_ms=latency_ms)
+
+                    return {
+                        "text": text,
+                        "provider": "mistral",
+                        "model": model_name,
+                        "is_free": True,
+                        "fallback_used": True,
+                        "tokens_used": tokens_dict,
+                        "latency_ms": latency_ms,
+                    }
+                except Exception as e:
+                    logger.warning(f"Mistral {model_name} failed: {e}")
+                    errors.append(f"Mistral ({model_name}): {e}")
+
+        # 4. Try OpenRouter :free Models
+        if self.openrouter_client:
+            for model_name in FREE_OPENROUTER_MODELS:
+                try:
+                    chat_msgs = _get_messages()
+                    # Ponytail: offload blocking sync SDK call to worker thread
+                    res = await asyncio.to_thread(
+                        self.openrouter_client.chat.completions.create,
+                        model=model_name,
+                        messages=chat_msgs,
+                        max_tokens=max_tokens,
+                    )
+                    text = (res.choices[0].message.content or "").strip()
+                    usage = getattr(res, "usage", None)
+                    p_tok = int(getattr(usage, "prompt_tokens", 0) or 0)
+                    c_tok = int(getattr(usage, "completion_tokens", 0) or 0)
+                    t_tok = int(getattr(usage, "total_tokens", 0) or (p_tok + c_tok))
+                    latency_ms = (time.perf_counter() - start_time) * 1000
+                    tokens_dict = self._print_token_usage("openrouter", model_name, p_tok, c_tok, t_tok, latency_ms=latency_ms)
+
+                    return {
+                        "text": text,
+                        "provider": "openrouter",
+                        "model": model_name,
+                        "is_free": True,
+                        "fallback_used": True,
+                        "tokens_used": tokens_dict,
+                        "latency_ms": latency_ms,
+                    }
+                except Exception as e:
+                    logger.warning(f"OpenRouter {model_name} failed: {e}")
+                    errors.append(f"OpenRouter ({model_name}): {e}")
 
         # 5. Try Hugging Face Free Serverless Models
         if self.hf_client:

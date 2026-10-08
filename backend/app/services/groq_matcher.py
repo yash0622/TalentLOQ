@@ -16,11 +16,8 @@ logger = logging.getLogger("talentloq.groq_matcher")
 
 # Candidate Groq models in order of priority (Fastest & active on this Groq account)
 GROQ_MODELS = [
-    "openai/gpt-oss-20b",
-    "openai/gpt-oss-120b",
-    "qwen/qwen3.8-27b",
-    "qwen/qwen3.6-27b",
-    "groq/compound-mini",
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
 ]
 
 # Pydantic Output Models

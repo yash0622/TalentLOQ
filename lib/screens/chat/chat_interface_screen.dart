@@ -30,6 +30,7 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
   final TokenStorageService _tokenStorage = TokenStorageService();
   final ChatService _chatService = ChatService();
   late AnimationController _dotsController;
+  late AnimationController _aiOrbController;
   final Set<String> _animatedMessageIds = <String>{};
 
   String _myName = 'Me';
@@ -42,7 +43,27 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
 
   bool get _isAiBot =>
       widget.conversation.id == 'ai_bot' ||
-      widget.conversation.partnerName.toLowerCase().contains('ai bot');
+      widget.conversation.id == 'recruiter_ai_bot' ||
+      widget.conversation.partnerName.toLowerCase().contains('ai bot') ||
+      widget.conversation.partnerName.toLowerCase().contains('talentloq assistant') ||
+      widget.conversation.partnerName.toLowerCase().contains('placement assistant');
+
+  bool get _isOfferConversation {
+    final title = widget.conversation.partnerName.toLowerCase();
+    return title.contains('offer') ||
+        title.contains('selection') ||
+        title.contains('selected') ||
+        _hasOfferMessage;
+  }
+
+  bool get _hasOfferMessage =>
+      _messages.any((m) => !m.isMe && _isOfferMessage(m.text));
+
+  bool _isOfferMessage(String text) {
+    final lower = text.toLowerCase();
+    return (lower.contains('congratulations') || lower.contains('selected')) &&
+        (lower.contains('round') || lower.contains('offer') || lower.contains('passed'));
+  }
 
   @override
   void initState() {
@@ -51,6 +72,10 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
       vsync: this,
       duration: const Duration(milliseconds: 1100),
     )..repeat();
+    _aiOrbController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2800),
+    )..repeat(reverse: true);
     _messages = MockData.conversationMessages[widget.conversation.id] ?? [];
     _animatedMessageIds.addAll(_messages.map((m) => m.id));
     _loadData();
@@ -552,6 +577,7 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
   @override
   void dispose() {
     _dotsController.dispose();
+    _aiOrbController.dispose();
     _inputController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -607,7 +633,10 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
                     },
                   ),
           ),
-          if (_isAiBot) _buildSuggestionsCarousel(isDark),
+          if (_isAiBot)
+            _buildSuggestionsCarousel(isDark)
+          else if (_hasOfferMessage)
+            _buildOfferQuickReplies(isDark),
           _buildInputBar(theme, isDark),
         ],
       ),
@@ -637,48 +666,89 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
                   clipBehavior: Clip.none,
                   children: [
                     Container(
-                      width: 40,
-                      height: 40,
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                        color: isDark ? const Color(0xFF1E2235) : const Color(0xFFEEF2F6),
                         shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF6366F1).withValues(alpha: 0.4),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF2E344E) : const Color(0xFFCBD5E1),
+                          width: 1,
+                        ),
                       ),
-                      child: const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 22),
+                      child: Icon(
+                        Icons.auto_awesome,
+                        color: isDark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5),
+                        size: 18,
+                      ),
                     ),
                     Positioned(
                       right: 0,
                       bottom: 0,
                       child: Container(
-                        width: 11,
-                        height: 11,
+                        width: 9,
+                        height: 9,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF22C55E),
+                          color: const Color(0xFF10B981),
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: isDark ? const Color(0xFF161722) : Colors.white,
-                            width: 2,
+                            width: 1.5,
                           ),
                         ),
                       ),
                     ),
                   ],
                 )
-              : AppAvatar(
-                  radius: 19,
-                  imageUrl: widget.conversation.avatarUrl,
-                  fallbackText: widget.conversation.partnerName,
-                ),
+              : _isOfferConversation
+                  ? Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF059669), Color(0xFF10B981)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Center(
+                            child: Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 22),
+                          ),
+                        ),
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            width: 11,
+                            height: 11,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF22C55E),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isDark ? const Color(0xFF161722) : Colors.white,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : AppAvatar(
+                      radius: 19,
+                      imageUrl: widget.conversation.avatarUrl,
+                      fallbackText: widget.conversation.partnerName,
+                    ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -694,23 +764,29 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    if (_isOfferConversation) ...[
+                      const SizedBox(width: 5),
+                      const Icon(Icons.verified_rounded, size: 16, color: Color(0xFF10B981)),
+                    ],
                     if (_isAiBot) ...[
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF6366F1), Color(0xFF818CF8)],
+                          color: isDark ? const Color(0xFF1E2235) : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF2E344E) : const Color(0xFFE2E8F0),
+                            width: 0.8,
                           ),
-                          borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Text(
-                          'ASSISTANT',
+                        child: Text(
+                          'AI',
                           style: TextStyle(
-                            fontSize: 8.5,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            letterSpacing: 0.4,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                            letterSpacing: 0.5,
                           ),
                         ),
                       ),
@@ -730,7 +806,11 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
                     ),
                     const SizedBox(width: 5),
                     Text(
-                      _isAiBot ? 'Placement Assistant · Autonomous' : 'Active Now',
+                      _isAiBot
+                          ? 'Placement Assistant · Autonomous'
+                          : (_isOfferConversation
+                              ? 'Official Placement Drive · Verified'
+                              : 'Active Now'),
                       style: TextStyle(
                         fontSize: 11,
                         color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
@@ -745,25 +825,35 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
         ],
       ),
       actions: [
+        if (_isOfferConversation)
+          IconButton(
+            tooltip: 'Offer Verified',
+            icon: const Icon(Icons.workspace_premium_rounded, color: Color(0xFF10B981), size: 22),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Verified Selection Offer from Campus Recruitment Drive'),
+                  behavior: SnackBarBehavior.floating,
+                  backgroundColor: Color(0xFF059669),
+                ),
+              );
+            },
+          ),
         if (_isAiBot)
           IconButton(
-            tooltip: 'View Active Placement Criteria',
-            icon: const Icon(Icons.tune_rounded, size: 21),
+            tooltip: 'View Active Criteria',
+            icon: Icon(Icons.tune_rounded, size: 20, color: isDark ? Colors.white70 : const Color(0xFF475569)),
             onPressed: _showCriteriaSheet,
           ),
         if (_isAiBot)
-          TextButton.icon(
+          IconButton(
+            tooltip: 'Chat History',
+            icon: Icon(Icons.history_rounded, size: 20, color: isDark ? Colors.white70 : const Color(0xFF475569)),
             onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
-            icon: const Icon(Icons.history_rounded, size: 18),
-            label: const Text('History', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-            style: TextButton.styleFrom(
-              foregroundColor: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-            ),
           ),
         IconButton(
           tooltip: 'Refresh',
-          icon: const Icon(Icons.refresh_rounded, size: 21),
+          icon: Icon(Icons.refresh_rounded, size: 20, color: isDark ? Colors.white70 : const Color(0xFF475569)),
           onPressed: _loadData,
         ),
       ],
@@ -989,20 +1079,16 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
   }
 
   Widget _buildDateBadge(bool isDark) {
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E1F2B) : const Color(0xFFE2E8F0),
-          borderRadius: BorderRadius.circular(12),
-        ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Center(
         child: Text(
-          'TODAY',
+          'Today',
           style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.8,
-            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+            letterSpacing: 0.3,
           ),
         ),
       ),
@@ -1011,11 +1097,54 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
 
   Widget _buildSuggestionsCarousel(bool isDark) {
     final suggestions = [
-      '💼 Apply for AI/ML roles (3-4 LPA)',
-      '🚀 Target Full Stack / Python (5+ LPA)',
-      '📊 Show my active criteria',
-      '🔍 Check matching campus drives',
-      '⚡ Apply to all eligible drives',
+      'Apply for AI/ML roles (3–4 LPA)',
+      'Target Full Stack / Python (5+ LPA)',
+      'Show my active criteria',
+      'Check matching campus drives',
+      'Apply to all eligible drives',
+    ];
+
+    return Container(
+      height: 38,
+      margin: const EdgeInsets.only(bottom: 6),
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        scrollDirection: Axis.horizontal,
+        itemCount: suggestions.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 6),
+        itemBuilder: (context, index) {
+          final prompt = suggestions[index];
+          return ActionChip(
+            label: Text(
+              prompt,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
+                color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
+              ),
+            ),
+            backgroundColor: isDark ? const Color(0xFF171923) : const Color(0xFFF8FAFC),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: isDark ? const Color(0xFF262A3B) : const Color(0xFFE2E8F0),
+                width: 0.8,
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+            onPressed: () => _sendMessage(prompt),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildOfferQuickReplies(bool isDark) {
+    final replies = [
+      'Thank you so much for the opportunity!',
+      'Thrilled and excited to join!',
+      'When can I expect the official offer letter?',
+      'Looking forward to next steps!',
     ];
 
     return Container(
@@ -1024,34 +1153,37 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 14),
         scrollDirection: Axis.horizontal,
-        itemCount: suggestions.length,
+        itemCount: replies.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
-          final prompt = suggestions[index];
+          final reply = replies[index];
           return ActionChip(
             label: Text(
-              prompt,
+              reply,
               style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,
-                color: isDark ? const Color(0xFFC7D2FE) : const Color(0xFF4338CA),
+                color: isDark ? const Color(0xFF6EE7B7) : const Color(0xFF065F46),
               ),
             ),
-            backgroundColor: isDark ? const Color(0xFF1E2139) : const Color(0xFFEEF2FF),
+            backgroundColor: isDark
+                ? const Color(0xFF064E3B).withValues(alpha: 0.5)
+                : const Color(0xFFECFDF5),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
               side: BorderSide(
-                color: isDark ? const Color(0xFF373A63) : const Color(0xFFC7D2FE),
+                color: isDark ? const Color(0xFF047857) : const Color(0xFFA7F3D0),
                 width: 1,
               ),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-            onPressed: () => _sendMessage(prompt.replaceFirst(RegExp(r'^[^\w]+'), '').trim()),
+            onPressed: () => _sendMessage(reply),
           );
         },
       ),
     );
   }
+
 
   Widget _buildThinkingBubble(bool isDark) {
     return Align(
@@ -1129,6 +1261,123 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
     );
   }
 
+  Widget _buildAiAnimatedOrb(bool isDark) {
+    return AnimatedBuilder(
+      animation: _aiOrbController,
+      builder: (context, child) {
+        final t = _aiOrbController.value;
+        final outerScale = 1.0 + (0.18 * t);
+        final innerScale = 0.95 + (0.08 * (1.0 - t));
+        final ringOpacity = (0.35 * (1.0 - (t * 0.4))).clamp(0.08, 0.4);
+
+        return SizedBox(
+          width: 120,
+          height: 120,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Outer expanding pulse wave
+              Transform.scale(
+                scale: outerScale,
+                child: Container(
+                  width: 96,
+                  height: 96,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: (isDark ? const Color(0xFF818CF8) : const Color(0xFF6366F1))
+                          .withValues(alpha: ringOpacity * 0.5),
+                      width: 1.5,
+                    ),
+                    gradient: RadialGradient(
+                      colors: [
+                        (isDark ? const Color(0xFF6366F1) : const Color(0xFF818CF8))
+                            .withValues(alpha: ringOpacity * 0.3),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // Secondary inner ambient breathing glow
+              Container(
+                width: 80 + (8 * t),
+                height: 80 + (8 * t),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: (isDark ? const Color(0xFF4F46E5) : const Color(0xFF6366F1))
+                      .withValues(alpha: 0.12 + (0.08 * t)),
+                ),
+              ),
+              // Core AI Orb with smooth breathing scale
+              Transform.scale(
+                scale: innerScale,
+                child: Container(
+                  width: 66,
+                  height: 66,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF6366F1), Color(0xFF4338CA)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF6366F1).withValues(alpha: 0.35 + (0.15 * t)),
+                        blurRadius: 16 + (8 * t),
+                        spreadRadius: 1 + (2 * t),
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.auto_awesome,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+                  ),
+                ),
+              ),
+              // Floating ambient micro-sparkle (top-right)
+              Positioned(
+                top: 14 + (4 * (1.0 - t)),
+                right: 20 - (4 * t),
+                child: Opacity(
+                  opacity: 0.45 + (0.55 * t),
+                  child: Container(
+                    width: 7,
+                    height: 7,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFC7D2FE),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ),
+              // Floating ambient micro-sparkle (bottom-left)
+              Positioned(
+                bottom: 18 + (3 * t),
+                left: 18 + (4 * (1.0 - t)),
+                child: Opacity(
+                  opacity: 0.4 + (0.6 * (1.0 - t)),
+                  child: Container(
+                    width: 5.5,
+                    height: 5.5,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFA5B4FC),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildAiBotWelcome(ThemeData theme, bool isDark) {
     final samplePrompts = [
       'Apply for upcoming companies that require AI/ML skills with a salary of 3–4 LPA.',
@@ -1138,37 +1387,54 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
 
     return SingleChildScrollView(
       controller: _scrollController,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+          _buildAiAnimatedOrb(isDark),
+          const SizedBox(height: 14),
           Container(
-            width: 68,
-            height: 68,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+              color: isDark ? const Color(0xFF1E2235) : const Color(0xFFEEF2F6),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark ? const Color(0xFF2E344E) : const Color(0xFFE2E8F0),
+                width: 0.8,
               ),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF6366F1).withValues(alpha: 0.35),
-                  blurRadius: 18,
-                  offset: const Offset(0, 4),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF10B981),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'AUTONOMOUS COPILOT',
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                  ),
                 ),
               ],
             ),
-            child: const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 34),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Text(
             'Autonomous Placement Assistant',
             style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w700,
               fontSize: 18,
+              letterSpacing: -0.3,
             ),
           ),
           const SizedBox(height: 8),
@@ -1178,18 +1444,19 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
             style: theme.textTheme.bodySmall?.copyWith(
               color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
               height: 1.45,
+              fontSize: 12.5,
             ),
           ),
           const SizedBox(height: 24),
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              'QUICK SUGGESTIONS:',
+              'QUICK SUGGESTIONS',
               style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary,
-                letterSpacing: 0.6,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                color: isDark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5),
+                letterSpacing: 0.7,
               ),
             ),
           ),
@@ -1199,35 +1466,42 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
               padding: const EdgeInsets.only(bottom: 8),
               child: InkWell(
                 onTap: () => _sendMessage(prompt),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
-                    color: isDark
-                        ? AppColors.darkSurfaceContainer
-                        : AppColors.lightSurfaceContainer,
-                    borderRadius: BorderRadius.circular(12),
+                    color: isDark ? const Color(0xFF161823) : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: isDark
-                          ? AppColors.darkOutlineVariant
-                          : AppColors.lightOutlineVariant,
+                      color: isDark ? const Color(0xFF262B3D) : const Color(0xFFE2E8F0),
+                      width: 0.8,
                     ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.chat_bubble_outline_rounded, size: 16, color: Color(0xFF6366F1)),
+                      Icon(
+                        Icons.auto_awesome_outlined,
+                        size: 16,
+                        color: isDark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5),
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           prompt,
                           style: TextStyle(
                             fontSize: 12.5,
-                            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                            color: isDark ? AppColors.darkTextPrimary : const Color(0xFF334155),
+                            height: 1.35,
                           ),
                         ),
                       ),
-                      const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Colors.grey),
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 14,
+                        color: isDark ? Colors.white24 : const Color(0xFF94A3B8),
+                      ),
                     ],
                   ),
                 ),
@@ -1239,18 +1513,366 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
     );
   }
 
+  Widget _buildCelebrationCard(ChatMessage msg, bool isDark, ThemeData theme) {
+    final fullText = msg.text;
+    String mainText = fullText;
+    String? recruiterNote;
+    if (fullText.contains('Recruiter Note:')) {
+      final parts = fullText.split('Recruiter Note:');
+      mainText = parts[0].trim();
+      recruiterNote = parts.length > 1 ? parts[1].trim() : null;
+    }
+
+    final companyMatch = RegExp(r'SELECTED for\s+([^!\n]+)', caseSensitive: false).firstMatch(fullText);
+    final companyName = companyMatch?.group(1)?.trim() ??
+        widget.conversation.partnerName.replaceAll(RegExp(r'[^\w\s]'), '').replaceAll('Offer Selection', '').trim();
+
+    final roundMatch = RegExp(r'passed\s+([^!\n]+?)\s+and have been', caseSensitive: false).firstMatch(fullText);
+    final roundName = roundMatch?.group(1)?.trim();
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.92,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            colors: isDark
+                ? [const Color(0xFF0D281E), const Color(0xFF131D28)]
+                : [const Color(0xFFF0FDF4), const Color(0xFFF8FAFC)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border.all(
+            color: isDark ? const Color(0xFF10B981).withValues(alpha: 0.4) : const Color(0xFF86EFAC),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF10B981).withValues(alpha: isDark ? 0.2 : 0.12),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF059669), Color(0xFF10B981)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 22),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'OFFICIAL SELECTION OFFER',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                          SizedBox(height: 1),
+                          Text(
+                            'Campus Recruitment Drive · Verified',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.check_circle_rounded, color: Color(0xFF059669), size: 14),
+                          SizedBox(width: 4),
+                          Text(
+                            'SELECTED',
+                            style: TextStyle(
+                              color: Color(0xFF059669),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('🎉', style: TextStyle(fontSize: 26)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            mainText,
+                            style: TextStyle(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w600,
+                              height: 1.45,
+                              color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        if (companyName.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF1E3A2F)
+                                  : const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isDark ? const Color(0xFF10B981).withValues(alpha: 0.5) : const Color(0xFF86EFAC),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.business_rounded, size: 14, color: Color(0xFF059669)),
+                                const SizedBox(width: 5),
+                                Text(
+                                  companyName,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDark ? const Color(0xFFA7F3D0) : const Color(0xFF065F46),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (roundName != null && roundName.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF1E293B)
+                                  : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.task_alt_rounded, size: 14, color: isDark ? Colors.cyanAccent : const Color(0xFF0284C7)),
+                                const SizedBox(width: 5),
+                                Text(
+                                  roundName,
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                    if (recruiterNote != null && recruiterNote.isNotEmpty) ...[
+                      const SizedBox(height: 14),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1A222C) : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border(
+                            left: const BorderSide(color: Color(0xFF10B981), width: 3.5),
+                            top: BorderSide(color: isDark ? const Color(0xFF2E3B4E) : const Color(0xFFE2E8F0), width: 0.8),
+                            right: BorderSide(color: isDark ? const Color(0xFF2E3B4E) : const Color(0xFFE2E8F0), width: 0.8),
+                            bottom: BorderSide(color: isDark ? const Color(0xFF2E3B4E) : const Color(0xFFE2E8F0), width: 0.8),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.rate_review_outlined, size: 14, color: Color(0xFF10B981)),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Recruiter Note',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.3,
+                                    color: isDark ? const Color(0xFF6EE7B7) : const Color(0xFF047857),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              recruiterNote,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontStyle: FontStyle.italic,
+                                height: 1.4,
+                                color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF059669),
+                              side: const BorderSide(color: Color(0xFF10B981)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                            ),
+                            onPressed: () {
+                              _inputController.text = 'Thank you so much! I am thrilled to accept and join.';
+                            },
+                            icon: const Icon(Icons.reply_rounded, size: 16),
+                            label: const Text('Say Thanks ', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF059669),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                            ),
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Congratulations on your placement at Google! Best of luck!'),
+                                  behavior: SnackBarBehavior.floating,
+                                  backgroundColor: Color(0xFF059669),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.celebration_rounded, size: 16),
+                            label: const Text('Celebrate ', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.verified_outlined, size: 12, color: Color(0xFF10B981)),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Direct from Placement Portal',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          formatChatTimestamp(msg.time),
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildMessageBubble(ChatMessage msg, bool isDark) {
+    if (!msg.isMe && _isOfferMessage(msg.text)) {
+      return _buildCelebrationCard(msg, isDark, Theme.of(context));
+    }
+
     final isBotMsg = !msg.isMe && _isAiBot;
     final bubbleWidget = Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 10),
       constraints: BoxConstraints(
         maxWidth: MediaQuery.of(context).size.width * 0.84,
       ),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         gradient: msg.isMe
-            ? const LinearGradient(
-                colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+            ? LinearGradient(
+                colors: isDark
+                    ? [const Color(0xFF4F46E5), const Color(0xFF4338CA)]
+                    : [const Color(0xFF2563EB), const Color(0xFF1D4ED8)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               )
@@ -1258,26 +1880,28 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
         color: msg.isMe
             ? null
             : isBotMsg
-                ? (isDark ? const Color(0xFF1E2138) : const Color(0xFFF8FAFC))
-                : (isDark ? AppColors.darkSurfaceContainer : AppColors.lightSurfaceContainer),
-        border: isBotMsg
-            ? Border.all(
-                color: isDark ? const Color(0xFF33385B) : const Color(0xFFE2E8F0),
-                width: 1,
-              )
-            : null,
+                ? (isDark ? const Color(0xFF161824) : Colors.white)
+                : (isDark ? const Color(0xFF1E2130) : Colors.white),
+        border: msg.isMe
+            ? null
+            : Border.all(
+                color: isDark ? const Color(0xFF282D42) : const Color(0xFFE2E8F0),
+                width: 0.85,
+              ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-            blurRadius: 6,
+            color: msg.isMe
+                ? const Color(0xFF2563EB).withValues(alpha: isDark ? 0.28 : 0.18)
+                : Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
         borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(18),
-          topRight: const Radius.circular(18),
-          bottomLeft: Radius.circular(msg.isMe ? 18 : 4),
-          bottomRight: Radius.circular(msg.isMe ? 4 : 18),
+          topLeft: const Radius.circular(16),
+          topRight: const Radius.circular(16),
+          bottomLeft: Radius.circular(msg.isMe ? 16 : 4),
+          bottomRight: Radius.circular(msg.isMe ? 4 : 16),
         ),
       ),
       child: Column(
@@ -1289,15 +1913,19 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
               children: [
                 Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Icon(Icons.smart_toy_rounded, size: 14, color: Color(0xFF6366F1)),
-                    SizedBox(width: 5),
+                  children: [
+                    Icon(
+                      Icons.auto_awesome,
+                      size: 12,
+                      color: isDark ? const Color(0xFF818CF8) : const Color(0xFF64748B),
+                    ),
+                    const SizedBox(width: 5),
                     Text(
-                      'Placement Assistant',
+                      'Assistant',
                       style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF6366F1),
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                       ),
                     ),
                   ],
@@ -1325,6 +1953,27 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
               ],
             ),
             const SizedBox(height: 6),
+          ] else if (!msg.isMe && msg.senderName.isNotEmpty && msg.senderName != 'Me') ...[
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.business_rounded,
+                  size: 11,
+                  color: isDark ? const Color(0xFF818CF8) : const Color(0xFF2563EB),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  msg.senderName,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? const Color(0xFF818CF8) : const Color(0xFF2563EB),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
           ],
           if (isBotMsg && !_animatedMessageIds.contains(msg.id))
             AiWordStreamText(
@@ -1347,12 +1996,12 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
               style: TextStyle(
                 color: msg.isMe
                     ? Colors.white
-                    : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+                    : (isDark ? AppColors.darkTextPrimary : const Color(0xFF0F172A)),
                 fontSize: 13.5,
                 height: 1.45,
               ),
             ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 4),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1360,14 +2009,18 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
                 formatChatTimestamp(msg.time),
                 style: TextStyle(
                   color: msg.isMe
-                      ? Colors.white70
-                      : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                      ? Colors.white.withValues(alpha: 0.75)
+                      : (isDark ? AppColors.darkTextSecondary : const Color(0xFF94A3B8)),
                   fontSize: 10,
                 ),
               ),
               if (msg.isMe) ...[
                 const SizedBox(width: 4),
-                const Icon(Icons.done_all_rounded, size: 13, color: Colors.white70),
+                Icon(
+                  Icons.done_all_rounded,
+                  size: 13,
+                  color: Colors.white.withValues(alpha: 0.8),
+                ),
               ],
             ],
           ),
@@ -1377,33 +2030,35 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
 
     return Align(
       alignment: msg.isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: isBotMsg
-          ? GestureDetector(
-              onLongPress: _showClearAiChatDialog,
-              child: bubbleWidget,
-            )
-          : bubbleWidget,
+      child: GestureDetector(
+        onLongPress: isBotMsg
+            ? _showClearAiChatDialog
+            : () {
+                Clipboard.setData(ClipboardData(text: msg.text));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Message copied to clipboard'),
+                    duration: Duration(seconds: 1),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+        child: bubbleWidget,
+      ),
     );
   }
 
   Widget _buildInputBar(ThemeData theme, bool isDark) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF161722) : Colors.white,
+        color: isDark ? const Color(0xFF11131A) : Colors.white,
         border: Border(
           top: BorderSide(
-            color: isDark ? const Color(0xFF26283B) : const Color(0xFFE2E8F0),
+            color: isDark ? const Color(0xFF222636) : const Color(0xFFF1F5F9),
             width: 1,
           ),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
       ),
       child: SafeArea(
         top: false,
@@ -1412,10 +2067,11 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF202234) : const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(24),
+                  color: isDark ? const Color(0xFF1A1C29) : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(22),
                   border: Border.all(
-                    color: isDark ? const Color(0xFF33385B) : const Color(0xFFE2E8F0),
+                    color: isDark ? const Color(0xFF2B2F42) : const Color(0xFFE2E8F0),
+                    width: 0.8,
                   ),
                 ),
                 child: TextField(
@@ -1425,7 +2081,7 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
                   textInputAction: TextInputAction.send,
                   decoration: InputDecoration(
                     hintText: _isAiBot
-                        ? 'Instruct Assistant (e.g. Apply for 3-4 LPA)...'
+                        ? 'Message Assistant...'
                         : 'Type a message...',
                     hintStyle: TextStyle(
                       fontSize: 13,
@@ -1437,7 +2093,6 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
                     errorBorder: InputBorder.none,
                     disabledBorder: InputBorder.none,
                     filled: false,
-                    fillColor: Colors.transparent,
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   ),
@@ -1447,35 +2102,24 @@ class _ChatInterfaceScreenState extends State<ChatInterfaceScreen> with TickerPr
             ),
             const SizedBox(width: 8),
             Container(
-              width: 42,
-              height: 42,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: isDark ? const Color(0xFF4F46E5) : const Color(0xFF1E293B),
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF6366F1).withValues(alpha: 0.35),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
               ),
               child: IconButton(
                 padding: EdgeInsets.zero,
                 icon: _isSending
                     ? const SizedBox(
-                        width: 18,
-                        height: 18,
+                        width: 16,
+                        height: 16,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
                           color: Colors.white,
                         ),
                       )
-                    : const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 22),
+                    : const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 19),
                 onPressed: _isSending ? null : () => _sendMessage(),
               ),
             ),

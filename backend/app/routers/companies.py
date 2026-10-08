@@ -34,20 +34,14 @@ async def list_published_companies(
 
     cursor_comp = company_listings_collection.find({"status": "published"}).sort("created_at", -1)
     comp_list = await cursor_comp.to_list(100)
-    if not comp_list:
-        cursor_all_c = company_listings_collection.find({}).sort("created_at", -1)
-        comp_list = await cursor_all_c.to_list(100)
     for l in comp_list:
         l_id = str(l.get("listing_id") or l.get("drive_id") or "")
         if l_id and l_id not in seen_ids:
             seen_ids.add(l_id)
             listings.append(l)
 
-    cursor_drives = drives_collection.find({"status": {"$ne": "closed"}}).sort("created_at", -1)
+    cursor_drives = drives_collection.find({"status": "published"}).sort("created_at", -1)
     drives_list = await cursor_drives.to_list(100)
-    if not drives_list:
-        cursor_all_d = drives_collection.find({}).sort("created_at", -1)
-        drives_list = await cursor_all_d.to_list(100)
     for d in drives_list:
         d_id = str(d.get("drive_id") or d.get("listing_id") or "")
         if d_id and d_id not in seen_ids:

@@ -155,10 +155,10 @@ def send_otp_email(email: str, otp: str) -> None:
     msg = f"[OTP SERVICE] Sent OTP to {email} (Expires in {settings.TEMP_TOKEN_EXPIRE_MINUTES} mins)"
     logger.info(msg)
     if settings.SHOW_DEV_OTP:
-        print("=" * 70)
-        print(f"  OTP CODE FOR {email}: {otp}")
-        print(msg)
-        print("=" * 70)
+        print("\n" + "=" * 60, flush=True)
+        print(f"  🔑 RECRUITER OTP FOR {email}: {otp}", flush=True)
+        print(f"  {msg}", flush=True)
+        print("=" * 60 + "\n", flush=True)
 
     if settings.SMTP_USER and settings.SMTP_PASSWORD:
         try:

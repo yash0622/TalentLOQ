@@ -1,7 +1,9 @@
-from PIL.Image import logger
+import logging
 import io
 import re
 import hmac
+
+logger = logging.getLogger("talentloq.auth")
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, Request, Depends, UploadFile, File, Header, status
@@ -422,10 +424,13 @@ async def verify_otp(data: VerifyOTPRequest, request: Request):
 
     device_to_bind = payload.get("device_id") or request.headers.get("x-device-id")
     if device_to_bind:
-        await users_collection.update_one(
-            {"user_id": user_id},
-            {"$addToSet": {"trusted_devices": device_to_bind}}
-        )
+        # ponytail: Only initialize trusted device if none registered yet; new devices require /verify-device flow
+        user_record = await users_collection.find_one({"user_id": user_id})
+        if user_record and not user_record.get("trusted_devices"):
+            await users_collection.update_one(
+                {"user_id": user_id},
+                {"$addToSet": {"trusted_devices": device_to_bind}}
+            )
 
     send_recruiter_login_alert(ip=client_ip, device=user_agent, timestamp=now)
 

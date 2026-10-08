@@ -62,9 +62,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       final appsResponse = await _driveService.getMyApplicationsPaginated(page: 1, limit: 100);
       final apps = appsResponse.items;
       final inReview = apps.where((a) {
-        final st = a['status'];
-        final outcome = (st is Map ? st['final_outcome'] : '')?.toString().toLowerCase() ?? '';
-        return outcome.contains('progress') || outcome.contains('review') || outcome.contains('pending');
+        final st = (a['status'] ?? '').toString().toLowerCase();
+        final outcome = (a['final_outcome'] ?? (a['status'] is Map ? a['status']['final_outcome'] : ''))?.toString().toLowerCase() ?? '';
+        return st == 'under_review' || st == 'applied' || st == 'in_review' || outcome.contains('progress') || outcome.contains('review') || outcome.contains('pending');
       }).length;
 
       final interviews = await InterviewService().getMyInterviews();
@@ -77,7 +77,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         setState(() {
           _appliedCount = appsResponse.totalCount > 0 ? appsResponse.totalCount : apps.length;
           _inReviewCount = inReview;
-          _interviewsCount = interviews.isNotEmpty ? interviews.length : MockData.interviewSlots.where((s) => s.isBooked).length;
+          _interviewsCount = interviews.length;
           _upcomingInterview = nextIntv;
           _broadcasts = announcements;
           _recommendedDrives = drives
