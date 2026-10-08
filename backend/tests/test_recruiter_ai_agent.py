@@ -541,4 +541,272 @@ async def test_chat_router_messages_stream_endpoint():
         assert any('"done": true' in c for c in chunks)
 
 
+@pytest.mark.asyncio
+async def test_rrf_scoring_and_fusion():
+    """Verify Reciprocal Rank Fusion assigns rrf_score to retrieved candidates."""
+    mock_cursor = MagicMock()
+    mock_cursor.limit.return_value = mock_cursor
+    mock_cursor.to_list = AsyncMock(return_value=[
+        {"_id": "1", "student_id": "s1", "full_name": "Candidate One", "cgpa": 8.5, "skills": ["python"], "active_backlogs": 0},
+        {"_id": "2", "student_id": "s2", "full_name": "Candidate Two", "cgpa": 8.0, "skills": ["python", "docker"], "active_backlogs": 0},
+    ])
+    mock_col = MagicMock()
+    mock_col.find.return_value = mock_cursor
+
+    with patch("app.services.recruiter_ai_agent.get_scoped_students_col", return_value=mock_col):
+        okf_data = {
+            "target_name": None,
+            "min_cgpa": None,
+            "target_skills": ["python"],
+            "target_role": None,
+            "intent": "search_candidates",
+            "raw_query": "Python developers",
+        }
+        candidates = await RecruiterHybridAgent.retrieve_rag_context(okf_data)
+        assert len(candidates) == 2
+        for cand in candidates:
+            assert "rrf_score" in cand
+            assert cand["rrf_score"] > 0.0
+
+
+@pytest.mark.asyncio
+async def test_micro_reranker_backlog_and_coverage_prioritization():
+    """Verify micro-reranker penalizes backlogs and prioritizes skill coverage."""
+    mock_cursor = MagicMock()
+    mock_cursor.limit.return_value = mock_cursor
+    mock_cursor.to_list = AsyncMock(return_value=[
+        {"_id": "1", "student_id": "s1", "full_name": "Backlog Cand", "cgpa": 9.5, "skills": ["python"], "active_backlogs": 2},
+        {"_id": "2", "student_id": "s2", "full_name": "Clean Cand", "cgpa": 8.2, "skills": ["python", "fastapi"], "active_backlogs": 0},
+    ])
+    mock_col = MagicMock()
+    mock_col.find.return_value = mock_cursor
+
+    with patch("app.services.recruiter_ai_agent.get_scoped_students_col", return_value=mock_col):
+        okf_data = {
+            "target_name": None,
+            "min_cgpa": None,
+            "target_skills": ["python", "fastapi"],
+            "target_role": None,
+            "intent": "search_candidates",
+        }
+        candidates = await RecruiterHybridAgent.retrieve_rag_context(okf_data)
+        assert len(candidates) == 2
+        # Clean Cand with full coverage and 0 backlogs must rank first
+        assert candidates[0]["full_name"] == "Clean Cand"
+
+
+@pytest.mark.asyncio
+async def test_structured_query_llm_fallback():
+    """Verify extract_structured_query_llm parses complex conditional query via LLM mock."""
+    mock_llm_response = {
+        "text": '{"min_cgpa": 8.2, "target_skills": ["flutter", "dart"], "target_role": "mobile developer", "intent": "search_candidates"}'
+    }
+    with patch("app.services.recruiter_ai_agent.llm_service.generate", AsyncMock(return_value=mock_llm_response)):
+        res = await RecruiterHybridAgent.extract_structured_query_llm(
+            "Looking for someone who can build flutter mobile apps with at least 8.2 pointer without backlogs"
+        )
+        assert res is not None
+        assert res["min_cgpa"] == 8.2
+        assert "flutter" in res["target_skills"]
+
+
+# ==========================================
+# 5. OVERHAUL SUITE: 10 REQUIRED VALIDATION TESTS
+# ==========================================
+
+@pytest.mark.asyncio
+async def test_unknown_name_returns_not_found_message_and_no_cards():
+    """1. Unknown name returns the not-found message and no cards."""
+    mock_cursor = MagicMock()
+    mock_cursor.limit.return_value = mock_cursor
+    mock_cursor.to_list = AsyncMock(return_value=[])  # No student found in MongoDB
+    mock_col = MagicMock()
+    mock_col.find.return_value = mock_cursor
+
+    mock_chat_col = MagicMock()
+    mock_chat_col.find.return_value.sort.return_value.limit.return_value.to_list = AsyncMock(return_value=[])
+    mock_chat_col.insert_one = AsyncMock()
+
+    with patch("app.services.recruiter_ai_agent.get_scoped_students_col", return_value=mock_col), \
+         patch("app.services.recruiter_ai_agent.get_scoped_chat_col", return_value=mock_chat_col):
+        res = await RecruiterHybridAgent.process_recruiter_message("rec_1", "Tell me about Nonexistent Student", "conv_test_unknown")
+        assert res["text"] == "I couldn't find that information."
+        assert res["candidates"] == []
+        assert "<!-- CANDIDATE_CARDS:" not in res["text"]
+
+
+def test_for_backend_roles_yields_no_name():
+    """2. 'for backend roles' yields no name."""
+    okf = RecruiterHybridAgent.parse_query_okf("Looking for candidate for backend roles")
+    assert okf["target_name"] is None
+    assert okf.get("target_names") == []
+
+
+def test_fresh_search_after_card_message_ignores_history_names():
+    """3. Fresh search after a card message ignores history names."""
+    history = [
+        {"sender_id": "recruiter", "text": "Who is the top candidate for Flutter?"},
+        {
+            "sender_id": "recruiter_ai_bot",
+            "text": "The top candidate is Rahul Sharma.\n\n<!-- CANDIDATE_CARDS:[{\"full_name\": \"Rahul Sharma\"}] -->",
+        },
+    ]
+    # Fresh search with criteria (python, 8.0 cgpa) must not inherit "Rahul Sharma"
+    okf = RecruiterHybridAgent.parse_query_okf("Show me Python developers with 8.0 CGPA", conversation_history=history)
+    assert okf["target_name"] is None
+    assert okf["is_follow_up"] is False
+    assert "python" in okf["target_skills"]
+    assert okf["min_cgpa"] == 8.0
+
+
+def test_hey_show_me_top_python_devs_runs_search():
+    """4. 'Hey show me top Python devs' runs a search (not greeting)."""
+    okf = RecruiterHybridAgent.parse_query_okf("Hey show me top Python devs")
+    assert okf["intent"] == "search_candidates"
+    assert "python" in okf["target_skills"]
+
+
+def test_devs_does_not_trigger_compare():
+    """5. 'devs' does not trigger compare (word boundary \bvs\b prevents substring match)."""
+    okf = RecruiterHybridAgent.parse_query_okf("Top backend devs")
+    assert okf["intent"] != "compare_candidates"
+    assert okf["intent"] == "search_candidates"
+
+
+@pytest.mark.asyncio
+async def test_compare_of_two_named_students_returns_both():
+    """6. Compare of two named students returns both."""
+    mock_students = [
+        {
+            "_id": "s-1",
+            "student_id": "std-1",
+            "full_name": "Aarav Patel",
+            "cgpa": 8.5,
+            "skills": ["Python"],
+        },
+        {
+            "_id": "s-2",
+            "student_id": "std-2",
+            "full_name": "Priya Shah",
+            "cgpa": 9.1,
+            "skills": ["Flutter"],
+        },
+    ]
+    mock_cursor = MagicMock()
+    mock_cursor.limit.return_value = mock_cursor
+    mock_cursor.to_list = AsyncMock(return_value=mock_students)
+    mock_col = MagicMock()
+    mock_col.find.return_value = mock_cursor
+
+    with patch("app.services.recruiter_ai_agent.get_scoped_students_col", return_value=mock_col):
+        okf = RecruiterHybridAgent.parse_query_okf("Compare Aarav and Priya")
+        assert len(okf["target_names"]) == 2
+        assert "aarav" in okf["target_names"]
+        assert "priya" in okf["target_names"]
+
+        candidates = await RecruiterHybridAgent.retrieve_rag_context(okf)
+        assert len(candidates) == 2
+        names = [c["full_name"] for c in candidates]
+        assert "Aarav Patel" in names
+        assert "Priya Shah" in names
+
+
+def test_highest_cgpa_survives_clean_bot_response():
+    """7. 'Highest CGPA is 9.1' survives clean_bot_response without stripping 'Hi'."""
+    raw = "Highest CGPA is 9.1"
+    cleaned = clean_bot_response(raw)
+    assert cleaned == "Highest CGPA is 9.1"
+
+
+@pytest.mark.asyncio
+async def test_non_serializable_datetime_in_internships_does_not_crash():
+    """8. Non-serializable datetime in internships does not crash (json default=str)."""
+    from datetime import datetime
+    mock_students = [
+        {
+            "_id": "s-dt-1",
+            "student_id": "std-dt-1",
+            "full_name": "Timestamp Candidate",
+            "cgpa": 8.0,
+            "skills": ["Python"],
+            "internships": [
+                {
+                    "company_name": "Tech Corp",
+                    "start_date": datetime(2025, 1, 15, 10, 30, 0),
+                    "end_date": datetime(2025, 6, 15, 10, 30, 0),
+                }
+            ],
+            "active_backlogs": 0,
+        }
+    ]
+    mock_cursor = MagicMock()
+    mock_cursor.limit.return_value = mock_cursor
+    mock_cursor.to_list = AsyncMock(return_value=mock_students)
+    mock_col = MagicMock()
+    mock_col.find.return_value = mock_cursor
+
+    mock_chat_col = MagicMock()
+    mock_chat_col.find.return_value.sort.return_value.limit.return_value.to_list = AsyncMock(return_value=[])
+    mock_chat_col.insert_one = AsyncMock()
+
+    with patch("app.services.recruiter_ai_agent.get_scoped_students_col", return_value=mock_col), \
+         patch("app.services.recruiter_ai_agent.get_scoped_chat_col", return_value=mock_chat_col):
+        res = await RecruiterHybridAgent.process_recruiter_message("rec_1", "Find candidates with Python", "conv_dt_1")
+        assert len(res["candidates"]) == 1
+        assert res["candidates"][0]["full_name"] == "Timestamp Candidate"
+
+
+@pytest.mark.asyncio
+async def test_deterministic_ordering_across_runs():
+    """9. Deterministic ordering across runs."""
+    mock_students = [
+        {"_id": f"s-{i}", "student_id": f"std-{i}", "full_name": f"Candidate {i}", "cgpa": 8.0 + (i % 3) * 0.2, "skills": ["Python", "Docker"], "active_backlogs": 0}
+        for i in range(10)
+    ]
+    okf_data = {
+        "target_names": [],
+        "min_cgpa": 8.0,
+        "explicit_skills": ["python", "docker"],
+        "target_skills": ["python", "docker"],
+        "intent": "search_candidates",
+    }
+
+    mock_cursor = MagicMock()
+    mock_cursor.limit.return_value = mock_cursor
+    mock_cursor.to_list = AsyncMock(return_value=mock_students)
+    mock_col = MagicMock()
+    mock_col.find.return_value = mock_cursor
+
+    with patch("app.services.recruiter_ai_agent.get_scoped_students_col", return_value=mock_col):
+        res1 = await RecruiterHybridAgent.retrieve_rag_context(okf_data)
+        ids1 = [c["student_id"] for c in res1]
+
+        for _ in range(5):
+            res_n = await RecruiterHybridAgent.retrieve_rag_context(okf_data)
+            ids_n = [c["student_id"] for c in res_n]
+            assert ids1 == ids_n
+
+
+@pytest.mark.asyncio
+async def test_backlog_filter_works():
+    """10. Backlog filter works ('no backlogs' => backlogs == 0 pushed to Mongo query)."""
+    okf = RecruiterHybridAgent.parse_query_okf("Find Python devs with no backlogs")
+    assert okf["max_backlogs"] == 0
+    assert "python" in okf["target_skills"]
+
+    mock_cursor = MagicMock()
+    mock_cursor.limit.return_value = mock_cursor
+    mock_cursor.to_list = AsyncMock(return_value=[])
+    mock_col = MagicMock()
+    mock_col.find.return_value = mock_cursor
+
+    with patch("app.services.recruiter_ai_agent.get_scoped_students_col", return_value=mock_col):
+        await RecruiterHybridAgent.retrieve_rag_context(okf)
+        called_args, _ = mock_col.find.call_args
+        mongo_query = called_args[0]
+        assert "active_backlogs" in mongo_query
+        assert mongo_query["active_backlogs"] == {"$lte": 0}
+
+
+
 

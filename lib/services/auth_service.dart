@@ -244,22 +244,38 @@ class AuthService {
     return {'notifications': [], 'messages': []};
   }
 
-  /// Register device FCM token (POST /auth/device-token)
+  /// Register device FCM token (POST /notifications/device-token)
   Future<bool> registerDeviceToken(String fcmToken) async {
     try {
       final response = await _dio.post(
-        '/auth/device-token',
-        data: {'fcm_token': fcmToken},
+        '/notifications/device-token',
+        data: {
+          'token': fcmToken,
+          'platform': 'android',
+          'app_version': '1.0.0',
+        },
       );
       return response.statusCode == 200;
     } catch (_) {
-      return false;
+      try {
+        final legacyRes = await _dio.post(
+          '/auth/device-token',
+          data: {'fcm_token': fcmToken},
+        );
+        return legacyRes.statusCode == 200;
+      } catch (_) {
+        return false;
+      }
     }
   }
 
   /// Logout (POST /auth/logout)
   Future<void> logout() async {
     try {
+      try {
+        await _dio.delete('/notifications/device-token');
+      } catch (_) {}
+
       final refreshToken = await _tokenStorage.getRefreshToken();
       if (refreshToken != null && refreshToken.isNotEmpty) {
         await _dio.post('/auth/logout', data: {'refresh_token': refreshToken});

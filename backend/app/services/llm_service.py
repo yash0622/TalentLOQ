@@ -131,11 +131,18 @@ class LLMService:
 
         def _get_messages() -> List[Dict[str, str]]:
             if messages:
-                return list(messages)
+                msgs = [dict(m) for m in messages]
+                has_system = any(m.get("role") == "system" for m in msgs)
+                if system_prompt and not has_system:
+                    msgs.insert(0, {"role": "system", "content": system_prompt})
+                if prompt and (not msgs or msgs[-1].get("content") != prompt):
+                    msgs.append({"role": "user", "content": prompt})
+                return msgs
             msgs = []
             if system_prompt:
                 msgs.append({"role": "system", "content": system_prompt})
-            msgs.append({"role": "user", "content": prompt})
+            if prompt:
+                msgs.append({"role": "user", "content": prompt})
             return msgs
 
         # 1. Try Groq Free Tier
@@ -328,11 +335,18 @@ class LLMService:
         """
         def _get_messages() -> List[Dict[str, str]]:
             if messages:
-                return list(messages)
+                msgs = [dict(m) for m in messages]
+                has_system = any(m.get("role") == "system" for m in msgs)
+                if system_prompt and not has_system:
+                    msgs.insert(0, {"role": "system", "content": system_prompt})
+                if prompt and (not msgs or msgs[-1].get("content") != prompt):
+                    msgs.append({"role": "user", "content": prompt})
+                return msgs
             msgs = []
             if system_prompt:
                 msgs.append({"role": "system", "content": system_prompt})
-            msgs.append({"role": "user", "content": prompt})
+            if prompt:
+                msgs.append({"role": "user", "content": prompt})
             return msgs
 
         if self.groq_client:

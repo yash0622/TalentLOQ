@@ -2,9 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
 import 'auth_service.dart';
+import 'token_storage_service.dart';
+import '../screens/profile/profile_applications_screen.dart';
+import '../screens/profile/document_verification_screen.dart';
+import '../screens/chat/messages_list_screen.dart';
+import '../screens/jobs/jobs_section_screen.dart';
 
 /// Top-level background message handler required by Firebase Messaging
 @pragma('vm:entry-point')
@@ -22,9 +28,13 @@ class NotificationService {
   NotificationService._internal();
   static final NotificationService instance = NotificationService._internal();
 
+  /// Global navigator key for deep linking navigation across the app
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
   final AuthService _authService = AuthService();
+  final TokenStorageService _tokenStorage = TokenStorageService();
 
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
     'high_importance_channel',
@@ -39,7 +49,7 @@ class NotificationService {
 
   bool _initialized = false;
 
-  /// Initializes Firebase Core, Firebase Messaging, and Local Notifications.
+  /// Initializes Firebase Core, Firebase Messaging, and Local Notifications without blocking startup.
   Future<void> initialize() async {
     if (_initialized) return;
 
@@ -51,17 +61,8 @@ class NotificationService {
       // 2. Set Background Message Handler
       FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-      // 3. Request permissions (especially Android 13+ and iOS)
-      final settings = await FirebaseMessaging.instance.requestPermission(
-        alert: true,
-        announcement: false,
-        badge: true,
-        carPlay: false,
-        criticalAlert: false,
-        provisional: false,
-        sound: true,
-      );
-      debugPrint('[FCM] Authorization status: ${settings.authorizationStatus}');
+      // 3. Request permissions (Android 13+ POST_NOTIFICATIONS and iOS)
+      await requestPermissions();
 
       // 4. Initialize Flutter Local Notifications for heads-up foreground alerts
       const androidInit = AndroidInitializationSettings('@mipmap/launcher_icon');
@@ -113,13 +114,16 @@ class NotificationService {
       // 8. Notification opened from background
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
         debugPrint('[FCM OpenedApp] User tapped notification: ${message.data}');
-        // Handle navigation or intent payload here
+        handleDeepLink(message.data);
       });
 
       // 9. Initial message if app was launched from terminated state
       final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
       if (initialMessage != null) {
         debugPrint('[FCM InitialMessage] App opened from terminated notification: ${initialMessage.data}');
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          handleDeepLink(initialMessage.data);
+        });
       }
 
       _initialized = true;
@@ -127,6 +131,21 @@ class NotificationService {
       debugPrint('[FCM] Failed to initialize Firebase Messaging: $e');
       debugPrint(stack.toString());
     }
+  }
+
+  /// Request permissions for iOS and Android 13+ (POST_NOTIFICATIONS)
+  Future<NotificationSettings> requestPermissions() async {
+    final settings = await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      announcement: false,
+      badge: true,
+      carPlay: false,
+      criticalAlert: false,
+      provisional: false,
+      sound: true,
+    );
+    debugPrint('[FCM] Permission authorization status: ${settings.authorizationStatus}');
+    return settings;
   }
 
   /// Fetches FCM token and syncs it with the backend database.
@@ -151,6 +170,17 @@ class NotificationService {
       await _authService.registerDeviceToken(_fcmToken!);
     } else {
       await _fetchAndSyncToken();
+    }
+  }
+
+  /// Revokes device token on logout.
+  Future<void> unregisterOnLogout() async {
+    try {
+      await _authService.logout();
+      await FirebaseMessaging.instance.deleteToken();
+      _fcmToken = null;
+    } catch (e) {
+      debugPrint('[FCM] Error during logout token revocation: $e');
     }
   }
 
@@ -183,7 +213,80 @@ class NotificationService {
     if (payload == null || payload.isEmpty) return;
     try {
       final data = jsonDecode(payload);
-      debugPrint('[FCM] Parsed notification payload data: $data');
+      if (data is Map<String, dynamic>) {
+        handleDeepLink(data);
+      }
     } catch (_) {}
+  }
+
+  /// Deep linking dispatcher based on payload 'type' and 'entity_id'
+  void handleDeepLink(Map<String, dynamic> data) async {
+    final navState = navigatorKey.currentState;
+    if (navState == null) {
+      debugPrint('[FCM DeepLink] NavigatorState not available yet.');
+      return;
+    }
+
+    final type = (data['type'] ?? '').toString().toLowerCase();
+    debugPrint('[FCM DeepLink] Dispatching deep link for type: $type, data: $data');
+
+    final isLoggedIn = await _tokenStorage.getIsLoggedIn();
+    if (!isLoggedIn) {
+      debugPrint('[FCM DeepLink] User not logged in. Deep linking requires login first.');
+      return;
+    }
+
+    switch (type) {
+      case 'drive_published':
+      case 'company_published':
+      case 'deadline_reminder':
+        navState.push(
+          MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              body: JobsSectionScreen(),
+            ),
+          ),
+        );
+        break;
+
+      case 'round_outcome':
+      case 'applicant_shortlisted':
+      case 'applicant_rejected':
+      case 'offer':
+      case 'offer_recorded':
+        navState.push(
+          MaterialPageRoute(
+            builder: (_) => ProfileApplicationsScreen(
+              onSelectJob: (_) {},
+            ),
+          ),
+        );
+        break;
+
+      case 'chat_message':
+      case 'new_message':
+        navState.push(
+          MaterialPageRoute(
+            builder: (_) => MessagesListScreen(
+              onSelectConversation: (_) {},
+            ),
+          ),
+        );
+        break;
+
+      case 'document_status':
+      case 'document_verified':
+      case 'document_rejected':
+        navState.push(
+          MaterialPageRoute(
+            builder: (_) => const DocumentVerificationScreen(),
+          ),
+        );
+        break;
+
+      default:
+        debugPrint('[FCM DeepLink] Unrecognized notification type: $type');
+        break;
+    }
   }
 }

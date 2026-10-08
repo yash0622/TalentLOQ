@@ -4,6 +4,7 @@ import '../../services/recruiter_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/skeleton_widgets.dart';
 import 'add_company_form.dart';
+import 'candidate_detail_screen.dart';
 import 'my_listings_screen.dart';
 import 'recruiter_ai_screen.dart';
 
@@ -31,9 +32,8 @@ class _RecruiterDashboardScreenState extends State<RecruiterDashboardScreen> {
   Future<void> _fetchStats() async {
     setState(() => _isLoading = true);
     final stats = await _recruiterService.getRecruiterStats();
-    final students = await _recruiterService.getRegisteredStudents();
     setState(() {
-      _registeredStudents = (stats['total_registered_students'] as int?) ?? (students.isNotEmpty ? students.length : 0);
+      _registeredStudents = (stats['total_registered_students'] as int?) ?? 0;
       _activeListings = (stats['total_active_listings'] as int?) ?? (stats['total_active_drives'] as int?) ?? 0;
       _offersMade = (stats['total_offers_made'] as int?) ?? 0;
       _isLoading = false;
@@ -374,7 +374,7 @@ class _RecruiterDashboardScreenState extends State<RecruiterDashboardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Placement Officer Control Center',
+                              'Placement Control',
                               style: theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15,
@@ -382,7 +382,7 @@ class _RecruiterDashboardScreenState extends State<RecruiterDashboardScreen> {
                             ),
                             const SizedBox(height: 3),
                             Text(
-                              'Post company listings, evaluate multi-round candidates, and record placement offers.',
+                              'Post jobs, track rounds, record offers.',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: AppColors.lightTextSecondary,
                                 fontSize: 11.5,
@@ -426,7 +426,7 @@ class _RecruiterDashboardScreenState extends State<RecruiterDashboardScreen> {
                                     borderRadius: BorderRadius.circular(16),
                                     onTap: _showStudentsModal,
                                     child: Padding(
-                                      padding: const EdgeInsets.all(16),
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
@@ -434,34 +434,34 @@ class _RecruiterDashboardScreenState extends State<RecruiterDashboardScreen> {
                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
                                               Container(
-                                                padding: const EdgeInsets.all(8),
+                                                padding: const EdgeInsets.all(6),
                                                 decoration: BoxDecoration(
                                                   color: AppColors.primaryLightBg,
-                                                  borderRadius: BorderRadius.circular(10),
+                                                  borderRadius: BorderRadius.circular(8),
                                                 ),
-                                                child: const Icon(Icons.school_rounded, color: AppColors.lightPrimary, size: 20),
+                                                child: const Icon(Icons.school_rounded, color: AppColors.lightPrimary, size: 18),
                                               ),
-                                              const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.lightPrimary),
+                                              const Icon(Icons.arrow_forward_ios_rounded, size: 11, color: AppColors.lightPrimary),
                                             ],
                                           ),
-                                          const Spacer(),
+                                          const SizedBox(height: 6),
                                           Text(
                                             '$_registeredStudents',
                                             style: const TextStyle(
-                                              fontSize: 26,
+                                              fontSize: 20,
                                               fontWeight: FontWeight.bold,
                                               color: AppColors.lightPrimary,
-                                              height: 1.2,
+                                              height: 1.1,
                                             ),
                                           ),
-                                          const SizedBox(height: 4),
+                                          const SizedBox(height: 2),
                                           const Text(
-                                            'Registered\nStudents',
+                                            'Registered Students',
                                             style: TextStyle(
-                                              fontSize: 11.5,
+                                              fontSize: 11,
                                               color: AppColors.lightTextSecondary,
                                               fontWeight: FontWeight.w600,
-                                              height: 1.25,
+                                              height: 1.2,
                                             ),
                                             maxLines: 2,
                                           ),
@@ -482,7 +482,7 @@ class _RecruiterDashboardScreenState extends State<RecruiterDashboardScreen> {
                                     borderRadius: BorderRadius.circular(16),
                                     onTap: _openMyListings,
                                     child: Padding(
-                                      padding: const EdgeInsets.all(16),
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
@@ -490,34 +490,33 @@ class _RecruiterDashboardScreenState extends State<RecruiterDashboardScreen> {
                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
                                               Container(
-                                                padding: const EdgeInsets.all(8),
+                                                padding: const EdgeInsets.all(6),
                                                 decoration: BoxDecoration(
                                                   color: AppColors.successLightBg,
-                                                  borderRadius: BorderRadius.circular(10),
+                                                  borderRadius: BorderRadius.circular(8),
                                                 ),
-                                                child: const Icon(Icons.campaign_rounded, color: AppColors.success, size: 20),
+                                                child: const Icon(Icons.campaign_rounded, color: AppColors.success, size: 18),
                                               ),
-                                              const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.success),
+                                              Text(
+                                                '$_activeListings',
+                                                style: const TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppColors.success,
+                                                  height: 1.1,
+                                                ),
+                                              ),
+                                              const Icon(Icons.arrow_forward_ios_rounded, size: 11, color: AppColors.success),
                                             ],
                                           ),
-                                          const Spacer(),
-                                          Text(
-                                            '$_activeListings',
-                                            style: const TextStyle(
-                                              fontSize: 26,
-                                              fontWeight: FontWeight.bold,
-                                              color: AppColors.success,
-                                              height: 1.2,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
+                                          const SizedBox(height: 6),
                                           const Text(
-                                            'Active Placement\nDrives',
+                                            'Active Placement Drives',
                                             style: TextStyle(
-                                              fontSize: 11.5,
+                                              fontSize: 11,
                                               color: AppColors.lightTextSecondary,
                                               fontWeight: FontWeight.w600,
-                                              height: 1.25,
+                                              height: 1.2,
                                             ),
                                             maxLines: 2,
                                           ),
@@ -615,11 +614,7 @@ class _RecruiterDashboardScreenState extends State<RecruiterDashboardScreen> {
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
-                    gradient: LinearGradient(
-                      colors: isDark
-                          ? [const Color(0xFF1E1736), const Color(0xFF131525)]
-                          : [const Color(0xFFFAF5FF), Colors.white],
-                    ),
+                    color: isDark ? const Color(0xFF16192B) : Colors.white,
                   ),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(16),
@@ -640,56 +635,66 @@ class _RecruiterDashboardScreenState extends State<RecruiterDashboardScreen> {
                           builder: (_) => RecruiterAiScreen(
                             conversation: aiConv,
                             onBack: () => Navigator.pop(context),
+                            onSelectCandidate: (cand) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => CandidateDetailScreen(
+                                    candidate: cand,
+                                    onBack: () => Navigator.pop(context),
+                                    onScheduleInterview: () => Navigator.pop(context),
+                                    onSendMessage: () => Navigator.pop(context),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
                       );
                     },
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       child: Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(11),
+                            padding: const EdgeInsets.all(9),
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF8B5CF6), Color(0xFFEC4899), Color(0xFFF59E0B)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(14),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.35),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
+                              color: isDark ? const Color(0xFF1E1B4B) : const Color(0xFFEEF2FF),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 24),
+                            child: Icon(
+                              Icons.psychology_rounded,
+                              color: isDark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5),
+                              size: 20,
+                            ),
                           ),
-                          const SizedBox(width: 14),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  children: [
-                                    const Text(
-                                      'TalentLOQ Recruiter Assistant',
-                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 3),
                                 const Text(
-                                  'Ask questions about registered students, rank by skills & CGPA, and compare candidates.',
-                                  style: TextStyle(fontSize: 11.5, color: AppColors.lightTextSecondary, height: 1.3),
+                                  'TalentLOQ Assistant',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                const Text(
+                                  'Query students. Rank by skills and CGPA. Compare.',
+                                  style: TextStyle(fontSize: 11, color: AppColors.lightTextSecondary, height: 1.25),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ),
                           ),
                           const SizedBox(width: 8),
-                          const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF8B5CF6)),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 13,
+                            color: isDark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5),
+                          ),
                         ],
                       ),
                     ),
@@ -723,12 +728,12 @@ class _RecruiterDashboardScreenState extends State<RecruiterDashboardScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Post New Company Drive',
+                                'Post New Drive',
                                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                               ),
                               SizedBox(height: 2),
                               Text(
-                                'Create draft or publish new job listing with PDF attachment & CGPA cutoff',
+                                'Create or publish job listings',
                                 style: TextStyle(fontSize: 11.5, color: AppColors.lightTextSecondary, height: 1.3),
                               ),
                             ],
@@ -768,12 +773,12 @@ class _RecruiterDashboardScreenState extends State<RecruiterDashboardScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Manage All Drives & Applicants',
+                                'Manage Drives & Applicants',
                                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                               ),
                               SizedBox(height: 2),
                               Text(
-                                'View active listings, evaluate applicants, and progress round outcomes',
+                                'Active listings. Evaluate applicants. Advance rounds.',
                                 style: TextStyle(fontSize: 11.5, color: AppColors.lightTextSecondary, height: 1.3),
                               ),
                             ],

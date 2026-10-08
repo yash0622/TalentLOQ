@@ -239,9 +239,18 @@ async def get_recommended_drives_for_student(
     student_internships = student.get("internships", [])
     student_resume_text = student.get("resume_text", "")
 
-    # Fetch active drives
-    cursor = drives_collection.find({"status": {"$ne": "closed"}}).sort("created_at", -1)
-    all_drives = await cursor.to_list(length=500)
+    # Fetch active drives with required fields only
+    drive_proj = {
+        "drive_id": 1, "company_name": 1, "company_logo_url": 1, "job_title": 1,
+        "role_title": 1, "package_lpa": 1, "min_cgpa": 1, "cgpa_criteria": 1,
+        "backlogs_allowed": 1, "extracted_required_skills": 1, "required_skills": 1,
+        "description": 1, "application_deadline": 1, "created_at": 1, "status": 1,
+    }
+    try:
+        cursor = drives_collection.find({"status": {"$ne": "closed"}}, drive_proj).sort("created_at", -1)
+    except TypeError:
+        cursor = drives_collection.find({"status": {"$ne": "closed"}}).sort("created_at", -1)
+    all_drives = await cursor.to_list(length=100)
 
     recommended_items: List[RecommendedDriveItem] = []
     for drive in all_drives:
@@ -333,8 +342,14 @@ async def get_student_skill_gap_roadmap(
 
     student_skills = set(s.lower() for s in (student.get("skills") or []))
 
-    cursor = drives_collection.find({"status": {"$ne": "closed"}})
-    drives = await cursor.to_list(length=200)
+    try:
+        cursor = drives_collection.find(
+            {"status": {"$ne": "closed"}},
+            {"extracted_required_skills": 1, "required_skills": 1, "status": 1}
+        )
+    except TypeError:
+        cursor = drives_collection.find({"status": {"$ne": "closed"}})
+    drives = await cursor.to_list(length=100)
 
     from collections import Counter
     missing_skill_counter = Counter()

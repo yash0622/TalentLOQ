@@ -424,7 +424,16 @@ class AutonomousPlacementAgent:
                 return {"processed": 0, "auto_applied": 0}
 
             stats = {"processed": 0, "auto_applied": 0, "ineligible_notified": 0}
-            cursor = students_collection.find({})
+            # Query only students with auto-apply enabled and fetch only evaluation fields
+            student_proj = {
+                "student_id": 1, "user_id": 1, "email": 1, "full_name": 1,
+                "skills": 1, "cgpa": 1, "CGPA": 1, "active_backlogs": 1,
+                "career_preferences": 1, "has_placement_access": 1,
+            }
+            cursor = students_collection.find(
+                {"career_preferences.auto_apply_enabled": True},
+                student_proj
+            )
             async for student in cursor:
                 stats["processed"] += 1
                 try:

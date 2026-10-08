@@ -1,3 +1,4 @@
+from filelock import asyncio
 import uuid
 import re
 import json
@@ -8,11 +9,27 @@ from fastapi import APIRouter, Depends, Query, status, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+import time
+from typing import List, Optional, Dict, Tuple
+
 from app.database import chat_messages_collection, students_collection
 from app.dependencies import get_current_user
 from app.security import sanitize_text
+from app.services.push_notification_service import notify
 
 logger = logging.getLogger("talentloq.chat")
+
+# Track active presence in conversation threads: (user_id, conversation_id) -> timestamp
+_conversation_activity: Dict[Tuple[str, str], float] = {}
+
+def record_activity_in_conversation(user_id: str, conversation_id: str) -> None:
+    _conversation_activity[(user_id, conversation_id)] = time.time()
+
+def is_active_in_conversation(user_id: str, conversation_id: str, threshold: float = 30.0) -> bool:
+    last_seen = _conversation_activity.get((user_id, conversation_id))
+    if not last_seen:
+        return False
+    return (time.time() - last_seen) < threshold
 
 router = APIRouter(prefix="/chat", tags=["Chat & Messaging"])
 
@@ -263,6 +280,11 @@ async def get_conversation_messages(
     )
 
     if is_recruiter_bot:
+        if conversation_id.startswith("conv_") and not conversation_id.startswith(f"conv_{user_id}_") and role != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied to this conversation thread."
+            )
         if conversation_id.startswith("recruiter_ai_bot_"):
             sess = conversation_id[len("recruiter_ai_bot_"):]
             target_conv_id = f"conv_{user_id}_recruiter_ai_bot_{sess}"
@@ -338,6 +360,7 @@ async def get_conversation_messages(
             "is_me": m.get("sender_id") == user_id,
         })
 
+    record_activity_in_conversation(user_id, target_conv_id)
     return {"conversation_id": target_conv_id, "count": len(messages), "messages": messages}
 
 
@@ -447,9 +470,16 @@ async def send_chat_message(
     is_bot = is_recruiter_bot or is_student_bot
 
     if is_recruiter_bot:
+        if data.conversation_id and data.conversation_id.startswith("conv_") and not data.conversation_id.startswith(f"conv_{user_id}_") and role != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: conversation does not belong to recruiter."
+            )
         if data.conversation_id and data.conversation_id.startswith("recruiter_ai_bot_"):
             sess = data.conversation_id[len("recruiter_ai_bot_"):]
             conv_id = f"conv_{user_id}_recruiter_ai_bot_{sess}"
+        elif data.conversation_id and data.conversation_id.startswith(f"conv_{user_id}_recruiter_ai_bot"):
+            conv_id = data.conversation_id
         else:
             conv_id = f"conv_{user_id}_recruiter_ai_bot"
     elif is_student_bot:
@@ -511,6 +541,25 @@ async def send_chat_message(
     }
 
     await chat_messages_collection.insert_one(msg_doc)
+    record_activity_in_conversation(user_id, conv_id)
+
+    if not is_bot:
+        recipient_target = data.recipient_id
+        if not is_active_in_conversation(recipient_target, conv_id):
+            asyncio.create_task(
+                notify(
+                    user_ids=[recipient_target],
+                    type="chat_message",
+                    title=f"New message from {sender_name}",
+                    body=clean_text[:120],
+                    data={
+                        "conversation_id": conv_id,
+                        "type": "chat_message",
+                        "entity_id": conv_id,
+                        "message_id": msg_id,
+                    },
+                )
+            )
 
     bot_msg_data = None
     if is_recruiter_bot:
@@ -583,9 +632,16 @@ async def send_chat_message_stream(
     is_bot = is_recruiter_bot or is_student_bot
 
     if is_recruiter_bot:
+        if data.conversation_id and data.conversation_id.startswith("conv_") and not data.conversation_id.startswith(f"conv_{user_id}_") and role != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: conversation does not belong to recruiter."
+            )
         if data.conversation_id and data.conversation_id.startswith("recruiter_ai_bot_"):
             sess = data.conversation_id[len("recruiter_ai_bot_"):]
             conv_id = f"conv_{user_id}_recruiter_ai_bot_{sess}"
+        elif data.conversation_id and data.conversation_id.startswith(f"conv_{user_id}_recruiter_ai_bot"):
+            conv_id = data.conversation_id
         else:
             conv_id = f"conv_{user_id}_recruiter_ai_bot"
     elif is_student_bot:
@@ -664,4 +720,4 @@ async def send_chat_message_stream(
         else:
             yield f"data: {json.dumps({'done': True, 'id': msg_id, 'text': clean_text})}\n\n"
 
-    return StreamingResponse(sse_generator(), media_type="text/event-stream")
+    return StreamingResponse(sse_generator(), media_type="text/event-stream")

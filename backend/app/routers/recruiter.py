@@ -23,6 +23,7 @@ from app.database import (
     grid_fs,
 )
 from app.notifications import notify_on_publish, notify_on_schedule_change
+from app.services.push_notification_service import notify
 from app.models import (
     JobPostModel,
     CompanyListingModel,
@@ -772,7 +773,11 @@ async def list_registered_students(
         }
 
     try:
-        user_cursor = users_collection.find({"role": "student"})
+        user_proj = {
+            "user_id": 1, "student_id": 1, "email": 1, "full_name": 1,
+            "education": 1, "course": 1, "CGPA": 1, "has_placement_access": 1, "has_resume": 1,
+        }
+        user_cursor = users_collection.find({"role": "student"}, user_proj)
         users = await user_cursor.to_list(length=500)
         for u in users:
             uid = u.get("user_id") or u.get("email")
@@ -782,7 +787,11 @@ async def list_registered_students(
         pass
 
     try:
-        cursor = students_collection.find({})
+        stu_proj = {
+            "user_id": 1, "student_id": 1, "email": 1, "full_name": 1,
+            "education": 1, "course": 1, "CGPA": 1, "has_placement_access": 1, "has_resume": 1,
+        }
+        cursor = students_collection.find({}, stu_proj)
         stu_docs = await cursor.to_list(length=500)
         for s in stu_docs:
             uid = s.get("user_id") or s.get("student_id") or s.get("email")
@@ -1311,7 +1320,7 @@ async def get_recruiter_stats(
         total_active_drives = await drives_collection.count_documents({"status": {"$in": ["published", "active"]}})
         if total_active_drives == 0:
             total_active_drives = await drives_collection.count_documents({})
-        cursor = drives_collection.find({})
+        cursor = drives_collection.find({}, {"offers_made": 1})
         drives = await cursor.to_list(length=500)
         total_offers_made = sum(d.get("offers_made", 0) for d in drives)
     except Exception:
@@ -1517,15 +1526,13 @@ async def approve_document_and_sync_profile(
         )
 
     # 3. Notify student
-    await notifications_collection.insert_one({
-        "notification_id": str(uuid.uuid4()),
-        "user_id": user_id,
-        "title": "Academic Document Verified",
-        "message": f"Your {doc_type.replace('_', ' ').title()} has been verified by the placement coordinator.",
-        "type": "DOCUMENT_VERIFIED",
-        "read": False,
-        "created_at": now_iso,
-    })
+    await notify(
+        user_ids=[user_id],
+        type="document_status",
+        title="Academic Document Verified",
+        body=f"Your {doc_type.replace('_', ' ').title()} has been verified by the placement coordinator.",
+        data={"document_id": document_id, "type": "document_status", "status": "VERIFIED"},
+    )
 
     return {
         "message": "Document successfully approved and student profile synchronized.",
@@ -1564,15 +1571,13 @@ async def reject_document(
         }}
     )
 
-    await notifications_collection.insert_one({
-        "notification_id": str(uuid.uuid4()),
-        "user_id": user_id,
-        "title": f"Document Verification Update: {doc_type.replace('_', ' ').title()}",
-        "message": f"Your uploaded document was rejected: {payload.reason}. Please re-upload a clear copy.",
-        "type": "DOCUMENT_REJECTED",
-        "read": False,
-        "created_at": now_iso,
-    })
+    await notify(
+        user_ids=[user_id],
+        type="document_status",
+        title=f"Document Verification Update: {doc_type.replace('_', ' ').title()}",
+        body=f"Your uploaded document was rejected: {payload.reason}. Please re-upload a clear copy.",
+        data={"document_id": document_id, "type": "document_status", "status": "REJECTED"},
+    )
 
     return {
         "message": "Document rejected and candidate notified.",

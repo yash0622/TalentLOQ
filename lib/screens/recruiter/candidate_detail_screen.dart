@@ -31,11 +31,13 @@ class _CandidateDetailScreenState extends State<CandidateDetailScreen> {
   Map<String, dynamic>? _ugDocument;
   Map<String, dynamic>? _resumeDocument;
   bool _isLoadingDocs = true;
+  late List<String> _skills;
 
   @override
   void initState() {
     super.initState();
     _validationStatus = widget.candidate.validationStatus;
+    _skills = List<String>.from(widget.candidate.skills);
     _fetchAcademicAndDocs();
   }
 
@@ -46,6 +48,10 @@ class _CandidateDetailScreenState extends State<CandidateDetailScreen> {
         setState(() {
           _ugDocument = record['ug_document'] as Map<String, dynamic>?;
           _resumeDocument = record['resume_document'] as Map<String, dynamic>?;
+          if (record['skills'] is List && (record['skills'] as List).isNotEmpty) {
+            final fetched = (record['skills'] as List).map((e) => e.toString().trim()).where((s) => s.isNotEmpty);
+            _skills = {..._skills, ...fetched}.toList();
+          }
           _isLoadingDocs = false;
         });
         return;
@@ -494,6 +500,63 @@ class _CandidateDetailScreenState extends State<CandidateDetailScreen> {
                         ),
                       ],
                     ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Verified Technical & Listed Skills
+                  Text('Candidate Skills & Competencies', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.psychology_outlined, color: AppColors.lightPrimary, size: 18),
+                              const SizedBox(width: 8),
+                              const Text('All Skills', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              const Spacer(),
+                              Text(
+                                '${_skills.length} skills',
+                                style: const TextStyle(fontSize: 11, color: AppColors.lightTextSecondary),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          if (_skills.isNotEmpty) ...[
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 6,
+                              children: _skills.map((skill) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? AppColors.darkSurfaceContainerHigh : const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isDark ? AppColors.darkOutlineVariant : const Color(0xFFE2E8F0),
+                                      width: 0.8,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    skill,
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w500,
+                                      color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ] else ...[
+                            const Text('No skills listed on candidate record.', style: TextStyle(fontSize: 12, color: AppColors.lightTextSecondary)),
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 20),
 

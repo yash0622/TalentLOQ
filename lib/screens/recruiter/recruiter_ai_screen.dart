@@ -8,6 +8,7 @@ import '../../mock_data/mock_data.dart';
 import '../../services/chat_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/chat_date_util.dart';
+import 'candidate_detail_screen.dart';
 
 /// Recruiter AI Recruitment Intelligence Assistant Screen
 /// Implements Hybrid OKF (Objective Knowledge Filtering) + RAG (Retrieval-Augmented Generation)
@@ -41,7 +42,6 @@ class _RecruiterAiScreenState extends State<RecruiterAiScreen>
   late AnimationController _orbRotateController;
   late AnimationController _dotsController;
   final Set<String> _animatedMessageIds = {};
-  final Set<String> _shortlistedCandidateIds = {};
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   String? _activeSessionId = 'recruiter_ai_bot';
   List<Map<String, dynamic>>? _aiSessions;
@@ -269,27 +269,6 @@ class _RecruiterAiScreenState extends State<RecruiterAiScreen>
     }
   }
 
-  void _toggleShortlist(String id, String name) {
-    setState(() {
-      if (_shortlistedCandidateIds.contains(id)) {
-        _shortlistedCandidateIds.remove(id);
-      } else {
-        _shortlistedCandidateIds.add(id);
-      }
-    });
-    final isShortlisted = _shortlistedCandidateIds.contains(id);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          isShortlisted
-              ? '⭐ $name added to your shortlisted candidates!'
-              : '$name removed from shortlist.',
-        ),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
 
   Future<void> _showClearChatDialog() async {
     final confirmed = await showDialog<bool>(
@@ -653,14 +632,6 @@ class _RecruiterAiScreenState extends State<RecruiterAiScreen>
         children: [
           _buildCentralOrb(isDark, size: 90),
           const SizedBox(height: 20),
-          Text(
-            'Connecting to Campus Candidate Knowledge Graph...',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-            ),
-          ),
         ],
       ),
     );
@@ -822,9 +793,7 @@ class _RecruiterAiScreenState extends State<RecruiterAiScreen>
             width: 32,
             height: 32,
             decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
-              ),
+              color: Color(0xFF6366F1),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.psychology_rounded, size: 16, color: Colors.white),
@@ -912,6 +881,30 @@ class _RecruiterAiScreenState extends State<RecruiterAiScreen>
       }
     }
 
+    if (candidateCards.isNotEmpty) {
+      // Strip redundant candidate list bullet points when cards are present
+      final candidateNames = candidateCards
+          .map((c) => (c['full_name'] ?? '').toString().toLowerCase().trim())
+          .where((n) => n.isNotEmpty)
+          .toList();
+      final lines = displayText.split('\n').where((l) {
+        final trimmed = l.trim();
+        final lower = trimmed.toLowerCase();
+        final isBullet = RegExp(r'^\s*(?:[-*•]|\d+\.)').hasMatch(trimmed);
+        if (isBullet && candidateNames.any((name) => lower.contains(name))) {
+          return false;
+        }
+        if (isBullet && (lower.contains('cgpa') || lower.contains('match score') || lower.contains('match'))) {
+          return false;
+        }
+        return !RegExp(r'^\s*(?:[-*•]|\d+\.)\s*(?:\*\*)?[^*:\n]+(?:\*\*)?\s*[-–—:,]').hasMatch(trimmed);
+      }).toList();
+      displayText = lines.join('\n').trim();
+      if (displayText.isEmpty) {
+        displayText = 'Found ${candidateCards.length} matching candidate(s):';
+      }
+    }
+
     if (msg.isMe) {
       return Align(
         alignment: Alignment.centerRight,
@@ -919,11 +912,7 @@ class _RecruiterAiScreenState extends State<RecruiterAiScreen>
           margin: const EdgeInsets.only(left: 48, bottom: 12),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: const Color(0xFF6366F1),
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(20),
               topRight: Radius.circular(20),
@@ -932,9 +921,9 @@ class _RecruiterAiScreenState extends State<RecruiterAiScreen>
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF8B5CF6).withValues(alpha: 0.3),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
+                color: const Color(0xFF6366F1).withValues(alpha: 0.25),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
@@ -980,9 +969,7 @@ class _RecruiterAiScreenState extends State<RecruiterAiScreen>
                   width: 24,
                   height: 24,
                   decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
-                    ),
+                    color: Color(0xFF6366F1),
                     shape: BoxShape.circle,
                   ),
                   child: const Center(
@@ -1136,60 +1123,63 @@ class _RecruiterAiScreenState extends State<RecruiterAiScreen>
     final cgpa = ((cand['cgpa'] ?? 0.0) as num).toDouble();
     final branch = (cand['branch'] ?? 'Computer Science & Engineering').toString();
     final matchScore = ((cand['match_score'] ?? 75) as num).toInt();
-    final matchTitle = (cand['match_title'] ?? 'Role Match').toString();
     final internshipCount = ((cand['internship_count'] ?? 0) as num).toInt();
-    final topSkills = (cand['top_skills'] as List?)?.map((e) => e.toString()).toList() ?? [];
-    final reasons = (cand['reasons'] as List?)?.map((e) => e.toString()).toList() ?? [];
-    final gaps = (cand['gaps'] as List?)?.map((e) => e.toString()).toList() ?? [];
-    final isShortlisted = _shortlistedCandidateIds.contains(candId);
+
+    final rawSkills = (cand['skills'] as List?) ?? (cand['top_skills'] as List?) ?? (cand['matched_skills'] as List?) ?? [];
+    final allSkills = rawSkills.map((e) => e.toString().trim()).where((s) => s.isNotEmpty).toSet().toList();
 
     final initials = name.trim().split(' ').map((e) => e.isNotEmpty ? e[0].toUpperCase() : '').take(2).join('');
 
+    final candObj = Candidate(
+      id: candId,
+      name: name,
+      roleTitle: allSkills.isNotEmpty ? allSkills.first : 'Engineering Candidate',
+      avatarUrl: (cand['avatar_url'] ?? '').toString(),
+      location: 'Vadodara, India',
+      experience: '$internshipCount Internships',
+      education: branch,
+      matchScore: matchScore.toDouble(),
+      skills: allSkills,
+      bio: (cand['summary'] ?? 'Verified candidate from university database.').toString(),
+      status: 'Profile Verified',
+      cgpa: cgpa,
+    );
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF101221) : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(20),
+        color: isDark ? const Color(0xFF101221) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isDark ? const Color(0xFF272C4C) : const Color(0xFFE2E8F0),
-          width: 1.2,
+          width: 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top Row: Avatar + Name/Title + Match Score
           Row(
             children: [
               Container(
-                width: 42,
-                height: 42,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
-                  ),
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEEF2FF),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
                   child: Text(
                     initials,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: isDark ? const Color(0xFFC7D2FE) : const Color(0xFF4338CA),
                       fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                      fontSize: 12.5,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1197,208 +1187,57 @@ class _RecruiterAiScreenState extends State<RecruiterAiScreen>
                     Text(
                       name,
                       style: TextStyle(
-                        fontSize: 14.5,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.bold,
                         color: isDark ? Colors.white : const Color(0xFF0F172A),
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
+                    const SizedBox(height: 1),
                     Text(
-                      matchTitle,
-                      style: const TextStyle(
+                      '$branch · ${cgpa.toStringAsFixed(2)} CGPA',
+                      style: TextStyle(
                         fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF8B5CF6),
+                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0x1F10B981),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF10B981), width: 1),
-                ),
-                child: Text(
-                  '$matchScore% Match',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF10B981),
-                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          // Badges: CGPA, Branch, Internships
-          Row(
-            children: [
-              _buildSmallBadge(
-                Icons.star_rounded,
-                '$cgpa CGPA',
-                const Color(0xFFF59E0B),
-                isDark,
-              ),
-              const SizedBox(width: 6),
-              _buildSmallBadge(
-                Icons.business_center_rounded,
-                '$internshipCount Internships',
-                const Color(0xFF8B5CF6),
-                isDark,
-              ),
-              const SizedBox(width: 6),
-              _buildSmallBadge(
-                Icons.verified_rounded,
-                'Verified',
-                const Color(0xFF0EA5E9),
-                isDark,
-              ),
-            ],
-          ),
-          if (topSkills.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: topSkills.take(6).map((s) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E2238) : const Color(0xFFEDE9FE),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  s,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? const Color(0xFFDDD6FE) : const Color(0xFF6D28D9),
-                  ),
-                ),
-              )).toList(),
-            ),
-          ],
-          // Explainable AI: Recommended Because & Potential Gaps
-          if (reasons.isNotEmpty || gaps.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF171A2C) : const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (reasons.isNotEmpty) ...[
-                    const Text(
-                      'Recommended Because:',
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF10B981),
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    ...reasons.take(3).map((r) => Padding(
-                      padding: const EdgeInsets.only(bottom: 2),
-                      child: Text(
-                        r,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
-                        ),
-                      ),
-                    )),
-                  ],
-                  if (gaps.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Potential Gaps / Areas to Assess:',
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFFF59E0B),
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    ...gaps.take(2).map((g) => Padding(
-                      padding: const EdgeInsets.only(bottom: 2),
-                      child: Text(
-                        g,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                        ),
-                      ),
-                    )),
-                  ],
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          // Action Buttons: View Profile, Compare, Shortlist, Ask AI
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.symmetric(vertical: 6),
                     side: BorderSide(
                       color: isDark ? const Color(0xFF373A63) : const Color(0xFFCBD5E1),
                     ),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   icon: const Icon(Icons.person_outline_rounded, size: 14),
-                  label: const Text('View Profile', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                  onPressed: () {
-                    final candObj = Candidate(
-                      id: candId,
-                      name: name,
-                      roleTitle: topSkills.isNotEmpty ? topSkills.first : 'Engineering Candidate',
-                      avatarUrl: '',
-                      location: 'Vadodara, India',
-                      experience: '$internshipCount Internships',
-                      education: branch,
-                      matchScore: matchScore.toDouble(),
-                      skills: topSkills,
-                      bio: 'Verified candidate from university live database.',
-                      status: 'Profile Verified',
-                      cgpa: cgpa,
-                    );
-                    widget.onSelectCandidate?.call(candObj);
-                  },
+                  label: const Text('View Profile', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600)),
+                  onPressed: () => _openCandidateProfile(candObj),
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               Expanded(
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    side: const BorderSide(color: Color(0xFF8B5CF6)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    side: const BorderSide(color: Color(0xFF6366F1)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  icon: const Icon(Icons.compare_arrows_rounded, size: 14, color: Color(0xFF8B5CF6)),
-                  label: const Text('Compare', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF8B5CF6))),
-                  onPressed: () => _sendMessage('Compare $name with the next highest matching candidate.'),
+                  icon: const Icon(Icons.compare_arrows_rounded, size: 14, color: Color(0xFF6366F1)),
+                  label: const Text('Compare', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF6366F1))),
+                  onPressed: () => _sendMessage('Compare $name with the other matching candidates.'),
                 ),
-              ),
-              const SizedBox(width: 6),
-              IconButton(
-                tooltip: isShortlisted ? 'Shortlisted' : 'Shortlist Candidate',
-                icon: Icon(
-                  isShortlisted ? Icons.star_rounded : Icons.star_border_rounded,
-                  color: isShortlisted ? const Color(0xFFF59E0B) : (isDark ? Colors.white70 : const Color(0xFF64748B)),
-                  size: 22,
-                ),
-                onPressed: () => _toggleShortlist(candId, name),
-              ),
-              IconButton(
-                tooltip: 'Ask Questions',
-                icon: const Icon(Icons.help_outline_rounded, color: Color(0xFFEC4899), size: 20),
-                onPressed: () => _sendMessage('Suggest 3 high-impact technical interview questions for $name based on their experience.'),
               ),
             ],
           ),
@@ -1407,30 +1246,27 @@ class _RecruiterAiScreenState extends State<RecruiterAiScreen>
     );
   }
 
-  Widget _buildSmallBadge(IconData icon, String text, Color color, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: isDark ? 0.15 : 0.08),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.3), width: 0.7),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: color),
-          const SizedBox(width: 3.5),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+  void _openCandidateProfile(Candidate candidate) {
+    if (widget.onSelectCandidate != null) {
+      widget.onSelectCandidate!(candidate);
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CandidateDetailScreen(
+            candidate: candidate,
+            onBack: () => Navigator.pop(context),
+            onScheduleInterview: () {
+              Navigator.pop(context);
+              _sendMessage('Schedule an interview for ${candidate.name}');
+            },
+            onSendMessage: () {
+              Navigator.pop(context);
+            },
           ),
-        ],
-      ),
-    );
+        ),
+      );
+    }
   }
 
   Widget _buildFloatingInputBar(ThemeData theme, bool isDark) {

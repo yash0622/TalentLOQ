@@ -25,6 +25,13 @@ def send_fcm_push_notification(
     Dispatches push notification to FCM device token.
     FCM push integration wrapper (Firebase Cloud Messaging).
     """
+    try:
+        from app.firebase_manager import send_multicast_fcm
+        if fcm_token and not fcm_token.startswith("fcm-device-token-mock"):
+            clean_data = {str(k): str(v) for k, v in (data or {}).items() if v is not None}
+            send_multicast_fcm([fcm_token], title, body, clean_data)
+    except Exception as e:
+        logger.debug(f"[FCM Push] send_multicast_fcm call exception: {e}")
     logger.info(f"[FCM Push] Sent to token '{fcm_token[:10]}...': '{title}' - '{body}' (data: {data})")
     return True
 
@@ -53,10 +60,15 @@ async def notify_on_publish(listing_id: str, target_audience: str = "all") -> Di
     company_name = listing.get("company_name", "Company")
     job_role = listing.get("interview_job", listing.get("job_title", listing.get("drive_title", "Role")))
 
-    # Fetch candidate students safely
+    # Fetch candidate students with minimal projection and optional cutoff filtering
     try:
-        cursor = students_collection.find({})
-        all_students = await cursor.to_list(length=1000)
+        q = {"$or": [{"cgpa": {"$gte": cgpa_cutoff}}, {"CGPA": {"$gte": cgpa_cutoff}}]} if target_audience == "eligible_only" else {}
+        projection = {"user_id": 1, "student_id": 1, "cgpa": 1, "CGPA": 1, "fcm_token": 1}
+        try:
+            cursor = students_collection.find(q, projection).limit(500)
+        except TypeError:
+            cursor = students_collection.find(q)
+        all_students = await cursor.to_list(length=500)
     except Exception as e:
         logger.warning(f"Could not fetch students for notify_on_publish: {e}")
         all_students = []
@@ -104,6 +116,27 @@ async def notify_on_publish(listing_id: str, target_audience: str = "all") -> Di
         except Exception as e:
             logger.warning(f"Could not insert notification doc: {e}")
         notified_count += 1
+
+    try:
+        import asyncio
+        from app.services.push_notification_service import _dispatch_push_worker
+        target_ids = [st.get("student_id") or st.get("user_id") for st in target_students if (st.get("student_id") or st.get("user_id"))]
+        if target_ids:
+            asyncio.create_task(
+                _dispatch_push_worker(
+                    target_ids,
+                    title,
+                    body,
+                    {
+                        "listing_id": listing_id,
+                        "drive_id": listing_id,
+                        "entity_id": listing_id,
+                        "type": "drive_published",
+                    },
+                )
+            )
+    except Exception as e:
+        logger.debug(f"Failed to dispatch background push in notify_on_publish: {e}")
 
     logger.info(f"notify_on_publish finished for listing '{listing_id}': notified {notified_count} students (audience: {target_audience})")
     return {
@@ -258,6 +291,28 @@ async def notify_on_round_advance(
         await chat_messages_collection.insert_one(chat_message_doc)
     except Exception as e:
         logger.warning(f"Could not insert chat message doc: {e}")
+
+    try:
+        import asyncio
+        from app.services.push_notification_service import _dispatch_push_worker
+        notif_type = "offer" if (result == "pass" and final_outcome == "selected") else "round_outcome"
+        asyncio.create_task(
+            _dispatch_push_worker(
+                [student_id],
+                title,
+                body,
+                {
+                    "drive_id": drive_id,
+                    "entity_id": drive_id,
+                    "type": notif_type,
+                    "round_number": round_number,
+                    "result": result,
+                    "final_outcome": final_outcome,
+                },
+            )
+        )
+    except Exception as e:
+        logger.debug(f"Failed to dispatch background push in notify_on_round_advance: {e}")
 
     logger.info(f"notify_on_round_advance sent to student '{student_id}': round {round_number} ({result}), outcome: {final_outcome}")
     return {

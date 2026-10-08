@@ -37,24 +37,28 @@ from app.dependencies import get_current_user, require_role, require_recent_reau
 
 from contextlib import asynccontextmanager
 from app.database import init_db_indexes
+from app.firebase_manager import init_firebase
+from app.services.deadline_reminder_service import deadline_reminder_loop
 
 logger = logging.getLogger("talentloq.main")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize MongoDB indexes on startup
-    try:
-        await init_db_indexes()
-        logger.info("MongoDB indexes initialized successfully.")
-    except (asyncio.CancelledError, KeyboardInterrupt):
-        pass
-    except Exception as e:
-        logger.warning(f"Could not initialize MongoDB indexes on startup: {e}")
+    # Initialize Firebase once at startup
+    init_firebase()
+    # Non-blocking index initialization in background task for fast application startup
+    index_task = asyncio.create_task(init_db_indexes())
+    # Background periodic task for 24h/2h drive deadline reminders
+    deadline_task = asyncio.create_task(deadline_reminder_loop())
     try:
         yield
     except (asyncio.CancelledError, KeyboardInterrupt):
         pass
     finally:
+        if not index_task.done():
+            index_task.cancel()
+        if not deadline_task.done():
+            deadline_task.cancel()
         try:
             from app.database import async_client
             async_client.close()
@@ -129,7 +133,7 @@ async def centralized_exception_handler(request: Request, exc: Exception):
         content={"detail": "Internal server error. Please contact system administrator."}
     )
 
-from app.routers import auth, admin_audit, recruiter, announcements, companies, drives_recruiter, drives_student, files, chat, interviews, documents
+from app.routers import auth, admin_audit, recruiter, announcements, companies, drives_recruiter, drives_student, files, chat, interviews, documents, notifications
 
 # Include Routers
 app.include_router(files.router)
@@ -144,6 +148,7 @@ app.include_router(drives_recruiter.router)
 app.include_router(drives_student.router)
 app.include_router(chat.router)
 app.include_router(interviews.router)
+app.include_router(notifications.router)
 
 @app.get("/", tags=["Health Check"])
 @app.get("/health", tags=["Health Check"])

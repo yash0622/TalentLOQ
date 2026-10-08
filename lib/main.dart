@@ -58,6 +58,7 @@ class _TalentLOQAppState extends State<TalentLOQApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: NotificationService.navigatorKey,
       title: 'TalentLOQ',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,

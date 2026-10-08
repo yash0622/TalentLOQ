@@ -34,7 +34,8 @@ from app.database import (
 )
 from app.document_detection import (
     DocumentVerificationService,
-    )
+)
+from app.services.push_notification_service import notify
 
 router = APIRouter(prefix="/documents", tags=["Document Verification"])
 security_bearer = HTTPBearer(auto_error=False)
@@ -706,6 +707,9 @@ async def review_document_action(
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
 
+    student_id = doc.get("student_id") or doc.get("user_id")
+    doc_type = doc.get("document_type") or "Document"
+
     if action.lower() == "approve":
         await verification_documents_collection.update_one(
             {"document_id": document_id},
@@ -715,7 +719,6 @@ async def review_document_action(
                 "verified_at": datetime.now(timezone.utc).isoformat(),
             }}
         )
-        student_id = doc.get("student_id")
         student_doc = await students_collection.find_one({"student_id": student_id})
         if student_doc:
             await DocumentVerificationService._sync_verified_profile(
@@ -730,6 +733,14 @@ async def review_document_action(
                 confidences={"ocr": 95.0, "extraction": 95.0, "validation": 95.0},
                 extraction_method="manual_approval",
             )
+        if student_id:
+            await notify(
+                user_ids=[student_id],
+                type="document_status",
+                title="Academic Document Verified",
+                body=f"Your {doc_type.replace('_', ' ').title()} has been approved.",
+                data={"document_id": document_id, "type": "document_status", "status": "VERIFIED"},
+            )
         return {"message": "Document manually approved and profile synchronized.", "status": "VERIFIED"}
     else:
         await verification_documents_collection.update_one(
@@ -739,4 +750,12 @@ async def review_document_action(
                 "reviewer_notes": notes,
             }}
         )
+        if student_id:
+            await notify(
+                user_ids=[student_id],
+                type="document_status",
+                title="Document Verification Update",
+                body=f"Your uploaded document was rejected: {notes or 'Please re-upload a clear copy.'}",
+                data={"document_id": document_id, "type": "document_status", "status": "FAILED"},
+            )
         return {"message": "Document rejected by reviewer.", "status": "FAILED"}

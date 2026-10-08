@@ -186,7 +186,11 @@ class AiBotAssistant:
             )
         # 2. Handle queries about available companies / drives
         elif any(phrase in clean_text for phrase in ["how many companies", "which companies", "show companies", "list companies", "any companies", "companies having"]):
-            cursor = drives_collection.find({"status": "published"}).limit(50)
+            drive_proj = {
+                "company_name": 1, "drive_title": 1, "required_skills": 1,
+                "description": 1, "ctc_min": 1, "status": 1
+            }
+            cursor = drives_collection.find({"status": "published"}, drive_proj).limit(50)
             drives = await cursor.to_list(length=50)
 
             # Check matching keywords in user query (e.g. ai, ml, python, etc.)

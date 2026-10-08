@@ -59,7 +59,14 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
   Future<void> _loadBackendDrives() async {
     try {
-      final appsResponse = await _driveService.getMyApplicationsPaginated(page: 1, limit: 100);
+      final results = await Future.wait([
+        _driveService.getMyApplicationsPaginated(page: 1, limit: 20),
+        InterviewService().getMyInterviews(),
+        _driveService.getPublishedDrives(),
+        _driveService.getBroadcastAnnouncements(),
+      ]);
+
+      final dynamic appsResponse = results[0];
       final apps = appsResponse.items;
       final inReview = apps.where((a) {
         final st = (a['status'] ?? '').toString().toLowerCase();
@@ -67,11 +74,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         return st == 'under_review' || st == 'applied' || st == 'in_review' || outcome.contains('progress') || outcome.contains('review') || outcome.contains('pending');
       }).length;
 
-      final interviews = await InterviewService().getMyInterviews();
+      final interviews = results[1] as List<dynamic>;
       final nextIntv = interviews.isNotEmpty ? interviews.first : null;
 
-      final drives = await _driveService.getPublishedDrives();
-      final announcements = await _driveService.getBroadcastAnnouncements();
+      final drives = results[2] as List<dynamic>;
+      final announcements = results[3] as List<Map<String, dynamic>>;
 
       if (mounted) {
         setState(() {

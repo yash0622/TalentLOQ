@@ -30,6 +30,10 @@ import '../widgets/talentloq_branding_header.dart';
 
 import '../services/token_storage_service.dart';
 import '../services/auth_service.dart';
+import '../services/notification_service.dart';
+import '../screens/notifications/notification_inbox_screen.dart';
+import '../screens/notifications/notification_settings_screen.dart';
+import '../widgets/notification_bell_icon.dart';
 
 class MainNavigationWrapper extends StatefulWidget {
   final ThemeMode themeMode;
@@ -122,6 +126,7 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
           _isLoggedIn = true;
           _isRecruiterMode = role == 'recruiter' || role == 'admin';
         }
+        NotificationService.instance.syncTokenWithBackend();
         return;
       }
     } catch (e) {
@@ -136,6 +141,7 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
 
   Future<void> _handleLogout() async {
     await _tokenStorage.saveIsLoggedIn(false);
+    await NotificationService.instance.unregisterOnLogout();
     await _authService.logout();
     setState(() {
       _isLoggedIn = false;
@@ -275,6 +281,7 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
               _isLoggedIn = true;
             });
           }
+          NotificationService.instance.syncTokenWithBackend();
         },
       );
     }
@@ -519,6 +526,18 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
                 ),
               ],
             ),
+            actions: [
+              NotificationBellIcon(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationInboxScreen(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
+            ],
           );
         case 1:
           // JobsSectionScreen renders its own Campus Placement Hub header with TabBar
@@ -820,6 +839,47 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
                         );
                       },
                     ),
+                  ),
+
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 2,
+                    ),
+                    leading: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryLightBg,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.notifications_active_outlined,
+                        color: AppColors.lightPrimary,
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      'Notification Preferences',
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                        color: textPrimary,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Manage alerts & reminders',
+                      style: TextStyle(fontSize: 12, color: textSecondary),
+                    ),
+                    trailing: Icon(Icons.chevron_right_rounded, color: textSecondary, size: 20),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const NotificationSettingsScreen(),
+                        ),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 8),
