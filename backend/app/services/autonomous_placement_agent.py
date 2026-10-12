@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, List, Optional
 import numpy as np
 
@@ -256,6 +256,17 @@ class AutonomousPlacementAgent:
         overlap = skill_matcher_engine.compute_skill_overlap(s_skills, d_skills)
 
         # CASE A: Full Match + Eligible + Auto-Apply Enabled -> AUTONOMOUS APPLICATION
+        # Rate limit safety valve: max 5 auto-applications per 24 hours per student
+        if is_eligible and auto_apply_enabled and has_resume:
+            since_24h = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+            recent_auto_apps = await applications_collection.count_documents({
+                "student_id": student_id,
+                "application_source": "AGENTIC_AUTO_APPLY",
+                "applied_at": {"$gte": since_24h},
+            })
+            if recent_auto_apps >= 5:
+                auto_apply_enabled = False  # Defer to 1-tap recommendation nudge (CASE C)
+
         if is_eligible and auto_apply_enabled and has_resume:
             now_iso = datetime.now(timezone.utc).isoformat()
             app_id = f"app_{uuid.uuid4().hex[:12]}"

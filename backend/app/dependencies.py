@@ -1,9 +1,8 @@
 from datetime import datetime, timezone
-from typing import Dict, Any, Callable, Optional
+from typing import Dict, Any, Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.jwt_utils import decode_token
-from app.database import users_collection
 
 security_bearer = HTTPBearer()
 

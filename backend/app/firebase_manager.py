@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from typing import List, Dict, Any, Tuple, Optional
+from typing import List, Dict, Tuple, Optional
 import firebase_admin
 from firebase_admin import credentials, messaging
 

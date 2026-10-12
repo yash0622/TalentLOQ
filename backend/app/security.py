@@ -5,7 +5,6 @@ import hashlib
 import logging
 import bcrypt
 from datetime import datetime
-from passlib.context import CryptContext
 from app.config import settings
 
 logger = logging.getLogger("talentloq.security")

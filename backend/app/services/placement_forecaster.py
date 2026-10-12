@@ -4,7 +4,6 @@ Uses LightGBM gradient boosted decision trees to predict student placement readi
 and selection probability based on academic records, skill match, backlogs, and interview history.
 """
 from typing import Dict, Any, List, Optional
-import os
 import numpy as np
 
 _LGBM_MODEL = None

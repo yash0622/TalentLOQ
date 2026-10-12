@@ -1,6 +1,5 @@
 import io
 import logging
-from pathlib import Path
 import re
 import uuid
 from datetime import datetime, timezone
@@ -19,7 +18,6 @@ from app.database import (
     support_tickets_collection,
     audit_logs_collection,
     verification_documents_collection,
-    notifications_collection,
     grid_fs,
 )
 from app.notifications import notify_on_publish, notify_on_schedule_change
@@ -27,10 +25,8 @@ from app.services.push_notification_service import notify
 from app.models import (
     JobPostModel,
     CompanyListingModel,
-    CandidateApplicationModel,
     InterviewModel,
     AnnouncementModel,
-    SupportTicketModel,
     AuditLogModel,
     JobCreateRequest,
     JobUpdateRequest,

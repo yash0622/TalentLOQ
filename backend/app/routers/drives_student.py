@@ -233,7 +233,6 @@ async def get_recommended_drives_for_student(
     if not student_skills:
         return PaginatedResponse(items=[], page=page, limit=limit, total_count=0, has_more=False)
 
-    from app.services.hybrid_matcher import compute_hybrid_match_score
     student_resume_vec = student.get("resume_vector")
     student_dep_skills = student.get("deployment_skills", [])
     student_internships = student.get("internships", [])

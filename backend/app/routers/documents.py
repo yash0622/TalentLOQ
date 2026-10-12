@@ -16,20 +16,18 @@ from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
 
 logger = logging.getLogger("talentloq.documents")
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from bson import ObjectId
 
 from app.jwt_utils import decode_token
 from app.dependencies import require_roles
 from app.database import (
-    async_db,
     students_collection,
     users_collection,
     verification_documents_collection,
     verification_audits_collection,
     support_tickets_collection,
-    grid_fs,
     get_ai_match_cache_collection,
 )
 from app.document_detection import (

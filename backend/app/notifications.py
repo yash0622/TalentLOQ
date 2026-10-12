@@ -1,7 +1,7 @@
 import uuid
 import logging
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 
 from app.database import (
     company_listings_collection,

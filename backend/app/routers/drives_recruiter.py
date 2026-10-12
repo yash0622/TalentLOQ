@@ -2,7 +2,6 @@ import asyncio
 import io
 import json
 import logging
-from pathlib import Path
 
 _background_tasks: set[asyncio.Task] = set()
 
@@ -32,22 +31,17 @@ from pydantic import BaseModel, Field
 from app.dependencies import require_role
 from app.models import (
     DriveModel,
-    DriveCreate,
     DriveUpdate,
-    DriveResponse,
     RoundResultUpdate,
     AuditLogModel,
     SelectionRoundModel,
     PlacementPolicyFlagsModel,
-    AdvancedEligibilityModel,
     sanitize_string,
     PaginatedResponse,
     RecruiterDriveLeanResponse,
     ApplicantResponse,
-    RecruiterStatsResponse,
     MatchingStudentItem,
 )
-from app.eligibility import compute_eligibility
 from app.notifications import (
     notify_on_publish,
     notify_on_schedule_change,

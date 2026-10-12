@@ -1,26 +1,20 @@
-# TalentLOQ — Campus Placement & Recruitment Tracking Platform
+# TalentLOQ — Autonomous Campus Placement & AI Hiring Ecosystem
 
-> **Connecting Students to Opportunity** | A Next-Generation Campus Recruitment Ecosystem for Students, Corporate Recruiters, and University Placement Cells.
+> **Connecting Students to Opportunity** | A Next-Generation Multi-Agent Campus Recruitment Ecosystem for Students, Corporate Recruiters, and University Placement Cells.
 
 ---
 
 ## 1. Overview
 
-**TalentLOQ** is an enterprise-grade, cross-platform placement tracking platform engineered to automate and digitize the end-to-end campus recruitment lifecycle. Built to replace error-prone manual spreadsheets, physical paperwork, and fragmented communication channels, TalentLOQ provides a unified digital experience connecting **Students**, **Corporate Recruiters**, and **University Placement Officers**.
+**TalentLOQ** is an enterprise-grade, cross-platform placement tracking and hiring intelligence platform engineered to automate and digitize the end-to-end campus recruitment lifecycle. Built to replace error-prone manual spreadsheets, physical paperwork, and fragmented communication channels, TalentLOQ provides a unified digital experience connecting **Students**, **Corporate Recruiters**, and **University Placement Officers**.
 
 ### Problem Solved
-Traditional university hiring processes suffer from communication delays, lack of real-time application status visibility for students, high administrative sorting overhead for recruiters, and privacy risks when handling unencrypted academic records. TalentLOQ solves these challenges by offering automated CGPA eligibility screening, an autonomous AI-powered Placement Matching Agent with real-time token telemetry, live application tracking across interview rounds, native PDF resume viewing, direct recruiter-applicant messaging, a dedicated Candidate Validation Dashboard, and bank-grade data security.
-
-### Core Capabilities
-* **Automated Eligibility Engine:** Instant CGPA cutoff and backlog qualification gate before application submission.
-* **Placement Intelligence Agents:** Calibrated multi-factor fit scoring (Core Skills, Project Depth, Role Readiness, Learnability) powered by intelligent Placement Matching Agents with automated failover and heuristic resilience.
-* **Real-Time Token & Latency Observability:** Terminal token banners displaying prompt, completion, and total tokens per Agent query alongside HTTP request latency metrics.
-* **Candidate Validation Dashboard:** Centralized recruiter screening interface to inspect applicant profiles, review AI match metrics, and validate credentials across drives.
-* **Scheduled Campus Interviews Hub:** Real-time scheduling, tracking, and outcome logging across Aptitude, Technical, and HR interview rounds.
-* **Direct Candidate Messaging:** Recruiter-to-student in-app chat and selection round advancement notices.
-* **Embedded Resume Vault:** Integrated native PDF viewer for uploaded student resumes.
-* **Enterprise Security Suite:** Fernet field-level encryption (AES-128-CBC + HMAC-SHA256), short-lived JWT access tokens, OTP 2FA, TLS certificate pinning, and audit trails.
-* **Production-Grade Containerization:** Multi-stage Docker builds, Docker Compose orchestration, and scalable Kubernetes (`k8s/`) deployment manifests with Kustomize.
+Traditional university hiring processes suffer from communication delays, lack of real-time application status visibility for students, high administrative sorting overhead for recruiters, and privacy risks when handling unencrypted academic records. TalentLOQ solves these challenges with:
+- **Zero-Cost Deterministic ATS Doctor:** Sub-millisecond resume scoring and keyword gap analysis running 100% offline.
+- **Autonomous Placement Copilot:** Autonomous background evaluation of new drives matching student preferences with automated rate-capped applications.
+- **Recruiter AI Hybrid Agent:** Natural-language candidate search combining Optimal Keyword Filtering (OKF), RAG retrieval, and Groq LLaMA 3.3 streaming without hallucinations.
+- **Multi-Channel Push Notifications:** Firebase Cloud Messaging (FCM) v1 multicast dispatch, in-app notification inbox, and a 24h / 2h automated deadline reminder daemon.
+- **Candidate Validation & Screening Cheat Sheets:** 30-second recruiter screening cards with role-adaptive rubrics and custom interview questions.
 
 ---
 
@@ -28,31 +22,32 @@ Traditional university hiring processes suffer from communication delays, lack o
 
 ### 🎓 Student Portal
 * **Live Placement Drives Feed:** Browse active corporate placement drives filtered by degree eligibility and minimum CGPA criteria.
-* **1-Tap Application Submission:** Apply instantly using pre-verified academic records and stored PDF resumes.
-* **Real-Time Application Tracker:** Live status tracking through Aptitude, Technical, and HR interview rounds.
-* **Native PDF Resume Viewer:** View and verify uploaded PDF resumes directly within the application without third-party tools.
-* **Direct Recruiter Chat:** Receive immediate selection round notices, interview notes, and messages directly from recruiters.
+* **Resume ATS Doctor (100% Offline):** Instant pre-apply ATS fit check (`0–100`) scoring keyword overlap, strong action verbs, quantifiable metrics (`%`, `+`, `$`, `₹`, `QPS`), and layout parseability with prioritized fix suggestions.
+* **1-Tap Application Submission:** Apply instantly using verified academic records and stored PDF resumes.
+* **Real-Time Application Tracker:** Live status tracking through Aptitude, Technical, and HR interview rounds with outcome indicators.
+* **Notification Center & Deadline Alerts:** Multi-channel push alerts (FCM) and in-app inbox with automated 24h and 2h reminders before drive deadlines.
+* **Native PDF Resume Viewer:** View and verify uploaded PDF resumes directly within the application.
+* **Direct Recruiter Chat:** In-app conversation thread with live presence indicators and interview notices.
 
 ### 🏢 Recruiter & Placement Control Center
-* **Candidate Validation Dashboard:** Live applicant verification across all drives with multi-state filter chips (`All`, `Pending`, `Valid`, `Not Valid`), candidate CGPA & AI Match pills, 1-tap validation status toggles, and direct offer setup.
-* **Drive Publishing Engine:** Create, draft, and publish company placement listings specifying min CGPA cutoffs, CTC packages, job roles, and PDF attachments.
-* **AI Match Insights Modal:** Real-time screening cheat sheet with generated technical questions, semantic skill equivalence mapping, and project evidence mining.
-* **Scheduled Campus Interviews Hub:** Dedicated schedule manager organizing upcoming candidate sessions with interview type, date/time, and status tracking.
-* **Applicant Evaluation Dashboard:** Grade candidate progress across selection rounds (Pass / Fail / Pending) with custom interview feedback notes.
+* **Candidate Validation Dashboard:** Live applicant verification across drives with multi-state filter chips (`All`, `Pending`, `Valid`, `Not Valid`), candidate CGPA, AI Match pills, and direct offer setup.
+* **Recruiter AI Hybrid Agent:** Natural-language conversational copilot powered by Optimal Keyword Filtering (OKF) and Groq LLaMA 3.3 for sub-second candidate shortlisting.
+* **30-Second AI Screening Cheat Sheet:** Candidate strengths, blindspots, custom interview icebreakers, and round-calibrated technical questions.
+* **Drive Publishing Engine:** Create and publish company placement listings specifying min CGPA cutoffs, CTC packages, job roles, eligibility criteria, and brochure attachments.
+* **Talent Comparator & DevOps Scorer:** Multi-candidate ranking evaluating Core Tech (40%), Cloud/DevOps taxonomy (30%), and Internships (30%).
+* **Scheduled Campus Interviews Hub:** Schedule manager organizing candidate sessions with interview type, date/time, and status tracking.
 * **Offer Setup & Dispatch:** Set up custom compensation, joining dates, and formal offer letters dispatched directly to student dashboards.
 
 ### 🤖 Multi-Agent Placement & Observability
-* **Multi-Agent Placement Architecture:** Resilient, multi-tiered AI Agents orchestrating candidate screening, skill verification, and rubric evaluation, backed by deterministic heuristic scoring and Mongo TTL caching.
-* **Live Terminal Token Telemetry:** Prominent terminal banners printed on every Agent inference displaying exact prompt tokens, completion tokens, and total tokens consumed.
-* **API Metrics Profiler:** Built-in middleware logging method, endpoint path, HTTP status, and millisecond latency for all REST calls.
+* **Multi-Agent Architecture:** 6 specialized autonomous agents and ML engines handling parsing, matching, auto-apply, screening, and forecasting.
+* **Token & Latency Observability:** Terminal banners displaying prompt, completion, and total tokens per LLM query alongside HTTP request latency metrics.
+* **Immutable Audit Trail:** All agent decisions (auto-apply, alert, match) logged immutably to `agent_runs_collection`.
 
 ### 🔒 Security, Compliance & System Resilience
 * **Field-Level Encryption (Fernet):** Encrypts sensitive academic data (CGPA, backlogs, contact info) at rest in MongoDB using Fernet (AES-128-CBC with HMAC-SHA256 authentication).
 * **Multi-Factor Authentication (OTP 2FA):** Email-based OTP verification for sensitive login attempts and password resets.
-* **Device Fingerprinting:** Captures unique `X-Device-ID` headers to detect and block untrusted device logins.
-* **Rate Limiting & Threat Prevention:** `slowapi` rate-limiting middleware to guard authentication endpoints against brute-force attacks.
-* **Windows Hot-Reload Resilience:** Automated `WindowsProactorEventLoopPolicy` configuration and `_BaseSelectorEventLoop` teardown safeguards preventing asyncio `_ssock` crashes during developer hot-reload on Windows with Python 3.12.
-* **Theme-Aware Branding:** Automatic light and dark theme UI switching across native splash screens, launcher icons, and app headers.
+* **Rate Limiting & Threat Prevention:** `slowapi` rate-limiting middleware guarding authentication endpoints against brute-force attacks.
+* **Windows Hot-Reload Resilience:** Automated `WindowsProactorEventLoopPolicy` configuration and `_BaseSelectorEventLoop` teardown safeguards preventing asyncio crashes on Windows Python 3.12.
 
 ---
 
@@ -60,62 +55,62 @@ Traditional university hiring processes suffer from communication delays, lack o
 
 | Category | Technology | Usage Details |
 | :--- | :--- | :--- |
-| **Frontend Framework** | **Flutter (Dart `^3.12.2`)** | Cross-platform mobile & web client app |
-| **UI Design System** | **Material 3 / Custom Design System** | Dynamic Light & Dark mode, curated AppColors design system |
-| **Networking & Pinning** | **Dio (`^5.4.1`)** | HTTP client with TLS Certificate Pinning (`CertPinningConfig`) |
-| **Local Secure Storage** | **`flutter_secure_storage`** | Encrypted JWT token and device ID storage |
-| **Backend Framework** | **Python 3.10+ / FastAPI** | Asynchronous REST API server (`app/main.py`) |
-| **AI Placement Intelligence** | **Multi-Agent AI Engine** | Cascading intelligent agents with real-time token tracking |
-| **Data Validation** | **Pydantic v2** | Request/response schema validation (`app/models.py`) |
+| **Frontend Framework** | **Flutter (Dart `^3.12.2`)** | Cross-platform mobile client app (Android & iOS) |
+| **UI Design System** | **Material 3** | Dynamic Light & Dark mode, custom AppColors design system |
+| **Networking & Pinning** | **Dio (`^5.11.1`)** | HTTP client with TLS Certificate Pinning & interceptors |
+| **Push Notifications** | **Firebase Cloud Messaging (FCM)** | Remote push dispatch, foreground notifications, & deep-linking |
+| **Local Storage** | **`flutter_secure_storage`** | Encrypted JWT token and device ID storage |
+| **Backend Framework** | **Python 3.12 / FastAPI** | Asynchronous REST API server & SSE streaming (`app/main.py`) |
+| **LLM Inference** | **Groq Cloud (LLaMA 3.3 70B & 3.1 8B)** | Ultra-low latency qualitative screening and conversational copilot |
+| **Local NLP & ATS** | **spaCy `en_core_web_sm` + Aho-Corasick** | 100% offline, zero-cost keyword and skill taxonomy matching |
+| **Vector Embeddings** | **FastEmbed (BAAI/bge-small-en-v1.5)** | Dense semantic similarity embeddings running via ONNX runtime |
+| **Document OCR** | **RapidOCR / EasyOCR / PyMuPDF** | Two-tier document extraction: native PDF parsing + OCR fallback |
 | **Database Engine** | **MongoDB (Async Motor Driver)** | NoSQL document database (`app/database.py`) |
 | **File Storage** | **MongoDB GridFS** | Binary PDF resume & document bucket storage |
-| **Security & Auth** | **PyJWT / Passlib (Bcrypt)** | JWT bearer tokens & hashed password validation |
-| **Rate Limiting** | **SlowAPI** | Endpoint rate limiting (`get_remote_address`) |
-| **Document Processing** | **PyPDF2 / Multimodal Vision Agents** | Document classification & multimodal OCR agent pipeline |
-| **Containerization** | **Docker & Docker Compose** | Multi-stage production container images |
-| **Orchestration** | **Kubernetes (K8s)** | Enterprise manifests with Kustomize, PVC, and Ingress |
-| **Testing** | **Pytest (170 tests passing)** | Complete backend unit, integration, and security test suite |
+| **Security & Auth** | **PyJWT / Bcrypt / Fernet** | JWT bearer tokens, hashed passwords, and AES field-level encryption |
+| **Testing** | **Pytest** | Comprehensive test suite for ATS, push notifications, and agent logic |
 
 ---
 
-## 4. System Architecture
-
-TalentLOQ utilizes a decoupled **3-Tier Architecture** ensuring clear separation of concerns, high throughput, and data isolation.
+## 4. Multi-Agent System Architecture
 
 ```mermaid
-flowchart TD
-    subgraph Client ["1. Client Layer (Flutter Cross-Platform)"]
-        UI["Flutter UI (Android / Web / iOS)"]
-        Dio["Dio Network Client + TLS Pinning"]
-        Storage["Flutter Secure Storage"]
-        UI --> Dio
-        UI --> Storage
+graph TD
+    subgraph Student Layer [Student Mobile App]
+        S_Resume[Resume Upload / Profile]
+        S_Feed[Drive Listings & Feed]
+        S_Chat[Career Bot Chat]
     end
 
-    subgraph Gateway ["2. Security Gateway & API Layer (FastAPI)"]
-        API["FastAPI REST Endpoints"]
-        Auth["JWT & OTP Auth Engine"]
-        AES["Fernet Field Encryption Engine"]
-        Limiter["SlowAPI Rate Limiter"]
-        Observability["API Metrics & Token Telemetry"]
-        AI_Engine["Placement Intelligence Agents"]
-        Parser["Document Detection & Multimodal Vision Agents"]
-        API --> Auth
-        API --> AES
-        API --> Limiter
-        API --> Observability
-        API --> AI_Engine
-        API --> Parser
+    subgraph Intelligence & Agent Layer [FastAPI Backend]
+        Agent_ATS[1. Resume Doctor<br/>spaCy + Aho-Corasick + Strict Metrics]
+        Agent_Copilot[2. Placement Copilot<br/>FastEmbed + Rule Policy + 24h Rate Limiter]
+        Agent_Bot[3. Career Chatbot<br/>Bounded Intent Classifier]
+        Agent_Parser[4. Job Scanner<br/>PhraseMatcher JD Structuring]
+        Agent_Finder[5. Candidate Finder<br/>OKF Grammar + RAG + Groq LLaMA 3.3]
+        Agent_Screener[6. Interview Screener<br/>30s Cheat Sheet + Rubric Evaluator]
     end
 
-    subgraph Database ["3. Data & Storage Layer (MongoDB)"]
-        Mongo[("MongoDB Collections\n(users, students, drives,\napplications, interviews, cache)")]
-        GridFS[("GridFS Bucket\n(Resumes & PDFs)")]
+    subgraph Messaging & Push [FCM & Daemons]
+        FCM_Daemon[Deadline Reminder Daemon<br/>24h & 2h Push Dispatch]
+        FCM_Service[Push Notification Service<br/>500-Token Multicast Batching]
     end
 
-    Dio -- "Encrypted HTTPS / TLS Pinning" --> API
-    API -- "Async Motor Driver" --> Mongo
-    API -- "Async Stream Upload/Download" --> GridFS
+    subgraph Data Layer [MongoDB & GridFS]
+        DB[(MongoDB Collections)]
+        GridFS[(GridFS Resume Vault)]
+    end
+
+    S_Resume --> Agent_ATS
+    S_Feed --> Agent_ATS
+    S_Chat --> Agent_Bot
+    Agent_Bot --> Agent_Copilot
+    Agent_Copilot --> DB
+    Agent_Parser --> DB
+    Agent_Finder --> DB
+    Agent_Screener --> DB
+    FCM_Daemon --> FCM_Service
+    FCM_Service --> S_Feed
 ```
 
 ---
@@ -124,103 +119,58 @@ flowchart TD
 
 ```text
 TalentLOQ/
-├── assets/
-│   └── logo/                      # Extracted branding assets (splash, launcher icon, headers)
+├── assets/                        # App branding assets (splash, launcher icons)
 ├── backend/
 │   ├── app/
-│   │   ├── document_detection/    # Resume classification & multimodal OCR engine
+│   │   ├── document_detection/    # Two-tier resume classification & OCR extraction
 │   │   │   ├── classifier.py      # Structural document classification logic
-│   │   │   ├── extractor.py       # PDF text & key-value parsing engine
-│   │   │   ├── gemini_extractor.py# Multimodal OCR agent with token observability
-│   │   │   └── schemas.py         # Document classification data models
+│   │   │   └── extractor.py       # Native PDF (PyMuPDF) + OCR fallback (RapidOCR/EasyOCR)
 │   │   ├── routers/               # FastAPI route controllers
-│   │   │   ├── auth.py            # Authentication, OTP, profile, & notification endpoints
-│   │   │   ├── drives_recruiter.py# Recruiter drive publishing & applicant grading endpoints
-│   │   │   ├── drives_student.py  # Student drive browsing & application endpoints
-│   │   │   └── recruiter.py       # Candidate validation, applicant queries, & company endpoints
-│   │   ├── services/              # AI & business logic services
-│   │   │   ├── groq_matcher.py    # AI Placement Match Agent with token telemetry
-│   │   │   └── llm_service.py     # Multi-Agent inference & failover orchestration
+│   │   │   ├── auth.py            # Auth, OTP, registration, & profile endpoints
+│   │   │   ├── chat.py            # Recruiter-student chat & presence tracking
+│   │   │   ├── documents.py       # Verification documents & audit trail
+│   │   │   ├── drives_recruiter.py# Recruiter drive management & AI screening
+│   │   │   ├── drives_student.py  # Student drive browsing & ATS fit check
+│   │   │   ├── files.py           # Secure GridFS file streaming & token downloads
+│   │   │   ├── interviews.py      # Campus interview scheduling
+│   │   │   ├── notifications.py   # FCM token registration & in-app inbox
+│   │   │   └── recruiter.py       # Candidate validation, applicant queries, & stats
+│   │   ├── services/              # Autonomous agents & intelligent engines
+│   │   │   ├── ai_bot_assistant.py         # Career Chatbot & natural language parser
+│   │   │   ├── autonomous_placement_agent.py# Placement Copilot with 24h rate limit
+│   │   │   ├── deadline_reminder_service.py # Background 24h & 2h reminder daemon
+│   │   │   ├── firebase_manager.py          # Firebase Admin SDK v1 singleton
+│   │   │   ├── groq_matcher.py             # Interview Screener & 30s cheat sheet
+│   │   │   ├── push_notification_service.py # FCM multicast & in-app inbox engine
+│   │   │   ├── recruiter_ai_agent.py        # Candidate Finder (OKF + RAG + LLaMA 3.3)
+│   │   │   ├── resume_ats_doctor.py         # 100% offline Resume ATS Doctor
+│   │   │   ├── skill_matcher.py            # spaCy PhraseMatcher & canonical taxonomy
+│   │   │   └── talent_comparator.py        # 40/30/30 multi-candidate ranking engine
 │   │   ├── config.py              # Application settings & environment configuration
-│   │   ├── database.py            # MongoDB Motor client & GridFS initialization
-│   │   ├── dependencies.py        # Authentication & Role-Based Access Control (RBAC)
-│   │   ├── encryption.py          # Fernet field encryption implementation
-│   │   ├── jwt_utils.py           # Short-lived access & refresh token utilities
-│   │   ├── main.py                # FastAPI entry point, Windows event loop safeguard, & middlewares
-│   │   ├── middleware.py          # SecurityHeadersMiddleware & ApiMetricsLoggingMiddleware
-│   │   ├── models.py              # Pydantic data schemas & response models
-│   │   ├── notifications.py       # Notification & direct messaging dispatch engine
-│   │   └── security.py            # Password hashing & security utilities
-│   ├── tests/                     # Automated Pytest suite (170 tests passing)
-│   ├── Dockerfile                 # Multi-stage production backend container image
-│   └── requirements.txt           # Python backend dependencies
-├── k8s/                           # Production Kubernetes orchestration manifests
-│   ├── kustomization.yaml         # Kustomize root manifest
-│   ├── namespace.yaml             # Dedicated talentloq namespace
-│   ├── configmap.yaml             # Environment configuration map
-│   ├── secret.yaml                # Encrypted secrets definition
-│   ├── mongodb.yaml               # MongoDB StatefulSet with PersistentVolumeClaim
-│   ├── backend.yaml               # FastAPI Backend Deployment & Service
-│   ├── frontend.yaml              # Flutter Web Nginx Deployment & Service
-│   └── ingress.yaml               # Ingress routing configuration
-├── lib/
-│   ├── controllers/               # UI Paging & state controllers
-│   ├── models/                    # Dart data models (Job, Candidate, Application, etc.)
+│   │   ├── database.py            # MongoDB Motor client & collection indexes
+│   │   ├── dependencies.py        # Role-Based Access Control (RBAC) dependencies
+│   │   ├── eligibility.py         # Campus placement policy qualification engine
+│   │   ├── encryption.py          # Fernet field-level encryption
+│   │   └── main.py                # FastAPI entry point, lifespan, & middlewares
+│   ├── tests/                     # Automated test suites
+│   ├── Dockerfile                 # Production backend container image
+│   └── requirements.txt           # Python dependencies
+├── lib/                           # Flutter Mobile Application
 │   ├── navigation/                # Main Navigation Wrapper & Role-Based Router
 │   ├── network/                   # Dio ApiClient & TLS Cert Pinning configuration
-│   ├── screens/                   # UI Screens (Auth, Recruiter, Student, Dashboard, Validation)
-│   │   ├── recruiter/
-│   │   │   ├── company_portal_screen.dart    # Drives, Validation Dashboard, & Interviews tabs
-│   │   │   ├── candidate_detail_screen.dart  # Deep profile, skills, & AI match overview
-│   │   │   └── round_result_screen.dart      # Interview grading & round advancement
-│   │   └── ...
-│   ├── services/                  # Business logic services (RecruiterService, AuthService, etc.)
+│   ├── screens/                   # UI Screens (Auth, Jobs, Profile, Recruiter, Notifications)
+│   │   ├── notifications/         # Notification Inbox & Preferences screens
+│   │   ├── recruiter/             # Recruiter Dashboard, Candidate Detail, AI Chat
+│   │   └── jobs/                  # Job details with live ATS check meter
+│   ├── services/                  # Dart service clients (NotificationService, AuthService, etc.)
 │   ├── theme/                     # AppColors & AppTheme Material 3 styles
-│   └── main.dart                  # Flutter application entry point
-├── docker-compose.yml             # Local multi-container stack orchestration
-├── Dockerfile                     # Multi-stage Flutter Web production container image
-├── pubspec.yaml                   # Flutter dependencies & asset declarations
+│   └── main.dart                  # Flutter entry point with global navigatorKey
 └── README.md                      # Project documentation
 ```
 
 ---
 
-## 6. Placement Intelligence Agents & Real-Time Token Telemetry
-
-TalentLOQ incorporates an **Enterprise Placement Intelligence Agent** ([`backend/app/services/groq_matcher.py`](file:///c:/Flutter/TalentLOQ/backend/app/services/groq_matcher.py)):
-
-### 1. Multi-Dimensional Rubric Calibration
-Candidate suitability is evaluated across four role-adaptive rubric dimensions:
-* **Core Technical Skills (30–50%):** Evaluates depth and alignment of primary technical competencies.
-* **Project Evidence & Depth (20–40%):** Scans portfolio for real-world complexity, production frameworks, and architecture.
-* **Role Readiness (10–25%):** Assesses graduation readiness, tools familiarity (Git, Docker, CI/CD), and industry best practices.
-* **Learnability & Skill Gap (10–20%):** Determines adjacency of existing skills to missing job requirements.
-
-### 2. Live Terminal Token Observability
-Every Agent inference automatically captures and prints a formatted terminal banner:
-
-```text
-+=================== [AGENT TOKEN TELEMETRY] ===================+
-  Agent:             Placement Matching Agent
-  Task:              Candidate-Drive Rubric Analysis
-  Prompt Tokens:     788
-  Completion Tokens: 1,460
-  Total Tokens Used: 2,248
-+==============================================================+
-```
-
-### 3. HTTP Request Latency Logging
-FastAPI's [`ApiMetricsLoggingMiddleware`](file:///c:/Flutter/TalentLOQ/backend/app/middleware.py) records latency and HTTP status in real time:
-
-```text
-⚡ [API CALL] GET    /health                             -> 200 (1.1ms)
-⚡ [API CALL] GET    /recruiter/validation/applicants    -> 200 (18.4ms)
-⚡ [API CALL] POST   /recruiter/ai-match                 -> 200 (1120.5ms)
-```
-
----
-
-## 7. Installation & Setup
+## 6. Installation & Setup
 
 ### 1. Clone Repository
 ```bash
@@ -249,7 +199,7 @@ flutter pub get
 
 ---
 
-## 8. Environment Configuration
+## 7. Environment Configuration
 
 Create a `.env` file inside `backend/` based on the following template:
 
@@ -269,8 +219,12 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 REFRESH_TOKEN_EXPIRE_DAYS=7
 ENCRYPTION_KEY=your_32_byte_base64_aes_encryption_key_here
 
-# AI Placement Agent Configuration
-AI_AGENT_ENABLED=true
+# Groq Cloud API Key
+GROQ_API_KEY=your_groq_api_key_here
+
+# Firebase Cloud Messaging Credentials
+# Path to service account JSON file OR raw JSON string:
+FIREBASE_CREDENTIALS=path/to/serviceAccountKey.json
 
 # CORS Configuration
 ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000,http://127.0.0.1:8000
@@ -278,7 +232,7 @@ ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000,http://127.0.0.1:800
 
 ---
 
-## 9. Running the Application
+## 8. Running the Application
 
 ### Start Backend API Server
 ```bash
@@ -295,7 +249,7 @@ flutter run
 
 ---
 
-## 10. API Endpoints Reference
+## 9. Key API Endpoints
 
 | Method | Endpoint | Description | Auth Required |
 | :--- | :--- | :--- | :--- |
@@ -303,83 +257,40 @@ flutter run
 | `POST` | `/auth/login` | Authenticate user and receive access/refresh tokens | None |
 | `POST` | `/auth/otp/send` | Request email OTP for 2FA verification | None |
 | `POST` | `/auth/otp/verify` | Verify email OTP code | None |
-| `GET` | `/auth/notifications` | Fetch user alerts and selection notices | Bearer Token |
-| `POST` | `/auth/resume/upload` | Upload candidate PDF resume to GridFS | Bearer Token |
+| `GET` | `/drives/{id}/ats-check` | 100% offline ATS score and keyword gap analysis | Student Bearer |
+| `POST` | `/notifications/device-token` | Register or refresh FCM device token | Bearer Token |
+| `DELETE`| `/notifications/device-token` | Revoke FCM device token on logout | Bearer Token |
+| `GET` | `/notifications` | Cursor-paginated in-app notification inbox | Bearer Token |
+| `POST` | `/notifications/read-all` | Mark all inbox notifications as read | Bearer Token |
+| `GET` | `/notifications/preferences` | Get user notification category toggles | Bearer Token |
 | `GET` | `/recruiter/drives` | List published placement drives | Optional Bearer |
 | `POST` | `/recruiter/drives` | Create a new company placement drive | Recruiter Bearer |
-| `GET` | `/recruiter/validation/applicants` | Fetch applicants across drives for validation | Recruiter Bearer |
+| `GET` | `/recruiter/drives/{id}/applicants/{sid}/ai-insight` | 30s candidate screening cheat sheet & interview questions | Recruiter Bearer |
 | `POST` | `/recruiter/applications/{id}/validate` | Update candidate validation status (`valid`/`not_valid`) | Recruiter Bearer |
-| `POST` | `/recruiter/ai-match` | Generate calibrated AI Match Report & cheat sheet | Recruiter Bearer |
-| `POST` | `/recruiter/drives/{drive_id}/applicants/{student_id}/round` | Grade candidate round and dispatch direct alert | Recruiter Bearer |
-| `GET` | `/recruiter/interviews` | List scheduled campus interviews | Recruiter Bearer |
 
 ---
 
-## 11. Automated Testing Suite
+## 10. Automated Testing
 
-TalentLOQ maintains a comprehensive automated testing suite with **170 passing tests**:
+TalentLOQ maintains automated unit and integration tests across all services:
 
 ```bash
 cd backend
 python -m pytest tests/
 ```
 
-```text
-============================= test session starts =============================
-collected 170 items
-
-tests\test_advanced_parsers.py .....                                     [  2%]
-tests\test_application_visibility.py .....                               [  5%]
-tests\test_auth.py .......                                               [ 10%]
-tests\test_auth_flow.py ........                                         [ 14%]
-tests\test_companies.py ..                                               [ 15%]
-tests\test_document_detection.py ..............                          [ 24%]
-tests\test_document_verification.py ...............                      [ 32%]
-tests\test_drives.py .                                                   [ 33%]
-tests\test_eligibility.py ....                                           [ 35%]
-tests\test_email_draft.py ..                                             [ 37%]
-tests\test_groq_matcher.py .....                                         [ 40%]
-tests\test_marks_table_extractor.py .....                                [ 42%]
-tests\test_notifications.py ...                                          [ 44%]
-tests\test_parser_robustness.py ........................................ [ 68%]
-tests\test_part3_security.py .......                                     [ 80%]
-tests\test_part5_security_checklist.py ......                            [ 84%]
-tests\test_part6_security_hardening.py .....                             [ 87%]
-tests\test_recruiter.py ....                                             [ 89%]
-tests\test_resume_internship_extraction.py .                             [ 90%]
-tests\test_security_audit_fixes.py ..........                            [ 95%]
-tests\test_skill_matching.py ....                                        [ 98%]
-tests\test_talent_comparator.py ...                                      [100%]
-
-====================== 170 passed, 3 warnings in 15.98s =======================
-```
+Test coverage includes:
+- `tests/test_resume_ats_doctor.py`: Deterministic ATS scoring, keyword overlap, bullet start verbs, layout health, and currency/metric parsing.
+- `tests/test_notifications.py`: In-app notification creation and read states.
+- `tests/test_push_notifications.py`: FCM multicast batching, token deduplication, dead-token pruning, preference filtering, and cursor pagination.
+- `tests/test_recruiter_ai_agent.py`: OKF grammar parsing, RAG student retrieval, SSE streaming, and zero-hallucination guarantees.
 
 ---
 
-## 12. Deployment & Containerization
-
-### 🐳 Docker Compose Deployment
-```bash
-docker-compose up -d --build
-```
-* **Web App Frontend:** [http://localhost](http://localhost)
-* **FastAPI Backend:** [http://localhost:8000](http://localhost:8000)
-* **MongoDB Database:** `localhost:27017`
-
-### ☸️ Kubernetes (K8s) Cluster Deployment
-```bash
-kubectl apply -k k8s/
-```
-Verify cluster health:
-```bash
-kubectl get pods,svc,ingress -n talentloq
-```
-
----
-
-## 13. License & Acknowledgements
+## 11. License & Acknowledgements
 
 * **Flutter Framework** for cross-platform UI development.
 * **FastAPI** for high-performance Python backend routing.
 * **MongoDB & Motor** for async NoSQL document and GridFS storage.
-* **Intelligent AI Agents** for automated candidate-role alignment and multimodal document parsing.
+* **Groq Cloud** for ultra-fast LLaMA 3.3 LLM inference.
+* **Firebase Cloud Messaging** for cross-platform push notifications.

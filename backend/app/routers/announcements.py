@@ -1,4 +1,3 @@
-from typing import Dict, Any
 from fastapi import APIRouter
 from app.database import announcements_collection
 

@@ -1,16 +1,13 @@
-from filelock import asyncio
+import time
 import uuid
 import re
 import json
 import logging
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Optional, Dict, Tuple
 from fastapi import APIRouter, Depends, Query, status, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-
-import time
-from typing import List, Optional, Dict, Tuple
 
 from app.database import chat_messages_collection, students_collection
 from app.dependencies import get_current_user

@@ -290,3 +290,33 @@ def test_indian_phone_and_punctuation_metrics():
     assert res["metric_count"] >= 3
 
 
+def test_currency_and_scale_units_metrics():
+    """
+    Asserts that currencies ($50k, ₹12 LPA) and throughput/scale metrics (5M records, 500 QPS)
+    are recognized as valid quantifiable impact metrics.
+    """
+    resume_text = """
+    Aarav Sharma
+    aarav@example.com | 98765 43210
+
+    Education
+    B.Tech 2021-2025
+
+    Skills
+    Python, FastAPI, Redis
+
+    Experience
+    - Managed $50k project budget and generated ₹12 LPA equivalent pipeline.
+    - Processed 5M records daily at peak throughput of 500 QPS.
+    """
+    res = ResumeAtsDoctor.analyze_resume_fit(
+        resume_text=resume_text,
+        student_skills=["Python", "FastAPI"],
+        projects=[],
+        drive_doc={"drive_title": "Backend Dev", "required_skills": ["Python"]},
+    )
+    assert res["has_quantifiable_metrics"] is True
+    assert res["metric_count"] >= 4
+
+
+

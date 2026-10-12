@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from bson import ObjectId
 from fastapi import APIRouter, Depends, Query, status, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field

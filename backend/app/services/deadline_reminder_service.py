@@ -1,11 +1,10 @@
 import asyncio
 import logging
 from datetime import datetime, timezone, timedelta
-from typing import List, Dict, Any
+from typing import Any
 
 from app.database import (
     drives_collection,
-    company_listings_collection,
     students_collection,
     applications_collection,
 )

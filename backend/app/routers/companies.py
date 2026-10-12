@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 
 from app.database import (
     students_collection,
@@ -11,12 +11,10 @@ from app.database import (
     drives_collection,
 )
 from app.models import (
-    CompanyListingModel,
     CandidateApplicationModel,
-    ApplicationResponse,
     AuditLogModel,
 )
-from app.dependencies import get_current_user, get_optional_current_user, require_role
+from app.dependencies import get_optional_current_user, require_role
 
 logger = logging.getLogger("talentloq.companies")
 

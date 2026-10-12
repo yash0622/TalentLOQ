@@ -1,6 +1,6 @@
 import re
-from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, Depends, Query, status
+from typing import Optional, Dict, Any
+from fastapi import APIRouter, Depends, Query
 from app.database import audit_logs_collection, async_db
 from app.dependencies import require_role, require_recent_reauth
 

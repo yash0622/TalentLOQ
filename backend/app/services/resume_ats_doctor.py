@@ -31,18 +31,15 @@ SECTION_PATTERNS = {
 
 # Strict unit/symbol-bearing impact metrics regex.
 # Eliminates false positives from bare graduation years (2024, 2026), phone numbers, or CGPA 10,
-# while supporting %, +, x, k, ms, s/sec/seconds, mb, gb without boundary mismatches on punctuation.
+# while supporting %, +, currency prefixes ($/₹/€/£), scale (k/m/million/b/billion/lpa),
+# throughput (qps/rps), and performance metrics (x, ms, mb, gb, s/sec).
 STRICT_METRICS_REGEX = re.compile(
-    r'(?<![\w.])\d+(?:\.\d+)?\s*(?:%|\+)'
-    r'|(?<![\w.])\d+(?:\.\d+)?\s*(?:x|k|ms|mb|gb|s|sec|seconds?)\b',
+    r'(?<![\w.])[$₹€£]\s*\d+(?:,\d+)*(?:\.\d+)?(?:\s*(?:k|m|million|b|billion|lpa|lakhs?))?\b'
+    r'|(?<![\w.])\d+(?:\.\d+)?\s*(?:%|\+)'
+    r'|(?<![\w.])\d+(?:\.\d+)?\s*(?:x|k|m|million|b|billion|lpa|lakhs?|qps|rps|ms|mb|gb|s|sec|seconds?)\b',
     re.IGNORECASE
 )
 
-# Pattern recognizing right-aligned dates, years, and durations in resume headers/entries
-RIGHT_ALIGNED_DATE_REGEX = re.compile(
-    r'(?:\b(?:19|20)\d{2}\b|\bpresent\b|\bcurrent\b|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b)',
-    re.IGNORECASE
-)
 
 # Bullet start detector (handles unicode bullet glyphs, dashes, asterisks, numbered lists, and optional markdown bold/emphasis)
 BULLET_START_REGEX = re.compile(

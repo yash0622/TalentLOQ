@@ -2,10 +2,10 @@ import uuid
 import logging
 from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-from app.database import interviews_collection, students_collection, users_collection, notifications_collection
+from app.database import interviews_collection, students_collection, notifications_collection
 from app.dependencies import get_current_user, require_role
 
 logger = logging.getLogger("talentloq.interviews")

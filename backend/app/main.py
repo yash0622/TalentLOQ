@@ -21,7 +21,7 @@ if sys.platform == "win32":
     except Exception:
         pass
 
-from fastapi import FastAPI, Request, Depends, HTTPException, status
+from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -33,7 +33,6 @@ from app.routers import auth
 from app.routers.auth import limiter
 from app.config import settings
 from app.middleware import SecurityHeadersMiddleware, ApiMetricsLoggingMiddleware
-from app.dependencies import get_current_user, require_role, require_recent_reauth
 
 from contextlib import asynccontextmanager
 from app.database import init_db_indexes

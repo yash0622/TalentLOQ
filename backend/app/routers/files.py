@@ -8,7 +8,6 @@ from fastapi import APIRouter, HTTPException, Depends, status, Query, Background
 from fastapi.responses import Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.database import (
-    grid_fs,
     async_db,
     verification_documents_collection,
     students_collection,

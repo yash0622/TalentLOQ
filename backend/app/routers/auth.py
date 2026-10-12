@@ -1,6 +1,5 @@
 import logging
 import io
-import re
 import hmac
 
 logger = logging.getLogger("talentloq.auth")
@@ -21,7 +20,7 @@ from app.database import (
     notifications_collection,
     chat_messages_collection,
     verification_documents_collection,
-    grid_fs, get_grid_fs,
+    get_grid_fs,
     get_ai_match_cache_collection,
 )
 from app.models import (
@@ -584,7 +583,6 @@ async def change_password(
     return {"message": "Password changed successfully. Please log in with your new password."}
 
 
-from pathlib import Path
 import uuid
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 

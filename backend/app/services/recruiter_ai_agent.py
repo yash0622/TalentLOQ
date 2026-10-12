@@ -1,4 +1,3 @@
-import os
 import re
 import uuid
 import json
@@ -7,8 +6,6 @@ import asyncio
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional, Tuple, Set
 
-import motor.motor_asyncio
-from app.config import settings
 from app.database import (
     students_collection,
     chat_messages_collection,
