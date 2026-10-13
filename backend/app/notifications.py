@@ -11,9 +11,18 @@ from app.database import (
     applications_collection,
     notifications_collection,
     chat_messages_collection,
+    device_tokens_collection,
 )
 
 logger = logging.getLogger("talentloq.notifications")
+
+async def _resolve_fcm_token(student: Optional[Dict[str, Any]], user_id: str) -> Optional[str]:
+    token = student.get("fcm_token") if student else None
+    if not token or str(token).startswith("fcm-"):
+        dt = await device_tokens_collection.find_one({"user_id": user_id})
+        if dt:
+            token = dt.get("token")
+    return token
 
 def send_fcm_push_notification(
     fcm_token: str,
@@ -89,7 +98,7 @@ async def notify_on_publish(listing_id: str, target_audience: str = "all") -> Di
     for st in target_students:
         student_id = st.get("student_id") or st.get("user_id")
         email = st.get("email", "student@talentloq.edu")
-        fcm_token = st.get("fcm_token", "fcm-device-token-mock")
+        fcm_token = (await _resolve_fcm_token(st, student_id)) or "fcm-device-token-mock"
 
         send_fcm_push_notification(
             fcm_token=fcm_token,
@@ -181,7 +190,7 @@ async def notify_on_schedule_change(listing_id: str) -> Dict[str, Any]:
         # Get student contact info
         student = await students_collection.find_one({"student_id": student_id}) or await users_collection.find_one({"user_id": student_id})
         email = student.get("email", "student@talentloq.edu") if student else "student@talentloq.edu"
-        fcm_token = student.get("fcm_token", "fcm-device-token-mock") if student else "fcm-token-mock"
+        fcm_token = (await _resolve_fcm_token(student, student_id)) or "fcm-token-mock"
 
         send_fcm_push_notification(
             fcm_token=fcm_token,
@@ -232,7 +241,7 @@ async def notify_on_round_advance(
 
     student = await students_collection.find_one({"student_id": student_id}) or await users_collection.find_one({"user_id": student_id})
     email = student.get("email", "student@talentloq.edu") if student else "student@talentloq.edu"
-    fcm_token = student.get("fcm_token", "fcm-token-mock") if student else "fcm-token-mock"
+    fcm_token = (await _resolve_fcm_token(student, student_id)) or "fcm-token-mock"
 
     if result == "pass" and final_outcome == "selected":
         title = f"Offer Selection: {company_name}!"

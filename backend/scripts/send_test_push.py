@@ -29,6 +29,25 @@ async def main():
     print(f"Initializing Firebase...")
     init_firebase()
 
+    # Rebind Motor collections to the active event loop
+    import motor.motor_asyncio
+    import app.database as db
+    from app.config import settings
+    db.async_client = motor.motor_asyncio.AsyncIOMotorClient(settings.MONGODB_URL)
+    db.async_db = db.async_client[settings.DATABASE_NAME]
+    db.notifications_collection = db.async_db["notifications"]
+    db.device_tokens_collection = db.async_db["device_tokens"]
+    db.notification_preferences_collection = db.async_db["notification_preferences"]
+    db.students_collection = db.async_db["students"]
+    db.users_collection = db.async_db["users"]
+
+    import app.services.push_notification_service as pns
+    pns.notifications_collection = db.notifications_collection
+    pns.device_tokens_collection = db.device_tokens_collection
+    pns.notification_preferences_collection = db.notification_preferences_collection
+    pns.users_collection = db.users_collection
+    pns.students_collection = db.students_collection
+
     print(f"Sending test notification to user '{args.user_id}'...")
     res = await notify(
         user_ids=[args.user_id],

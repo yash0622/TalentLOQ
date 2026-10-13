@@ -9,6 +9,8 @@ from app.database import (
     device_tokens_collection,
     notifications_collection,
     notification_preferences_collection,
+    users_collection,
+    students_collection,
 )
 from app.dependencies import get_current_user, get_optional_current_user
 from app.services.push_notification_service import (
@@ -48,7 +50,7 @@ class TestPushRequest(BaseModel):
 @router.post("/device-token", status_code=status.HTTP_200_OK)
 async def register_device_token(
     payload: DeviceTokenRequest,
-    user_payload: dict = Depends(get_current_user),
+    user_payload: Optional[dict] = Depends(get_optional_current_user),
 ):
     """
     POST /notifications/device-token
@@ -60,7 +62,7 @@ async def register_device_token(
     if not token_str:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Device token cannot be empty")
 
-    user_id = user_payload.get("sub", "")
+    user_id = user_payload.get("sub", "") if user_payload else ""
     now = datetime.now(timezone.utc)
 
     # Upsert with reassign on unique token
@@ -79,6 +81,20 @@ async def register_device_token(
         },
         upsert=True,
     )
+
+    if user_id:
+        update_payload = {
+            "fcm_token": token_str,
+            "fcm_token_updated_at": now,
+        }
+        await users_collection.update_one(
+            {"$or": [{"user_id": user_id}, {"_id": ObjectId(user_id)} if ObjectId.is_valid(user_id) else {"user_id": user_id}]},
+            {"$set": update_payload},
+        )
+        await students_collection.update_one(
+            {"$or": [{"student_id": user_id}, {"user_id": user_id}]},
+            {"$set": update_payload},
+        )
 
     logger.info(f"[DeviceToken] Registered token for user '{user_id}' on platform '{payload.platform}'")
     return {"status": "ok", "message": "Device token registered successfully."}

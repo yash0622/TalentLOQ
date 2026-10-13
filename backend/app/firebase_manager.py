@@ -11,7 +11,8 @@ _firebase_initialized = False
 
 def init_firebase() -> bool:
     """
-    Initializes Firebase Admin SDK once from FIREBASE_CREDENTIALS environment variable.
+    Initializes Firebase Admin SDK once from FIREBASE_CREDENTIALS environment variable
+    or auto-detected service account JSON file.
     FIREBASE_CREDENTIALS can be:
       1. A path to a service account JSON file, or
       2. A raw JSON string containing the service account key.
@@ -24,17 +25,66 @@ def init_firebase() -> bool:
         return True
 
     cred_env = os.environ.get("FIREBASE_CREDENTIALS", "").strip()
-    if not cred_env:
-        logger.warning("[FCM] FIREBASE_CREDENTIALS not set; FCM running in simulation/mock mode.")
+    candidate_path: Optional[str] = None
+    cred_json_dict: Optional[dict] = None
+
+    backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    root_dir = os.path.abspath(os.path.join(backend_dir, ".."))
+
+    if cred_env:
+        if os.path.isfile(cred_env):
+            candidate_path = os.path.abspath(cred_env)
+        else:
+            for base in [backend_dir, root_dir, os.getcwd()]:
+                candidate = os.path.join(base, cred_env)
+                if os.path.isfile(candidate):
+                    candidate_path = os.path.abspath(candidate)
+                    break
+            if not candidate_path and cred_env.startswith("{"):
+                try:
+                    cred_json_dict = json.loads(cred_env)
+                except Exception:
+                    pass
+    else:
+        # Check standard default filenames
+        default_names = [
+            "serviceAccountKey.json",
+            "firebase_credentials.json",
+            "firebase-service-account.json",
+        ]
+        search_dirs = [backend_dir, root_dir, os.getcwd()]
+        for d in search_dirs:
+            for name in default_names:
+                p = os.path.join(d, name)
+                if os.path.isfile(p):
+                    candidate_path = os.path.abspath(p)
+                    break
+            if candidate_path:
+                break
+            # Also check for any *firebase-adminsdk*.json file
+            if os.path.isdir(d):
+                for f in os.listdir(d):
+                    if "firebase-adminsdk" in f.lower() and f.endswith(".json"):
+                        candidate_path = os.path.abspath(os.path.join(d, f))
+                        break
+            if candidate_path:
+                break
+
+    if not candidate_path and not cred_json_dict:
+        logger.warning(
+            "[FCM] Firebase service account credentials not found; FCM running in simulation/mock mode. "
+            "To send to real devices, place serviceAccountKey.json in the backend folder or set FIREBASE_CREDENTIALS."
+        )
         _firebase_initialized = False
         return False
 
     try:
-        if os.path.isfile(cred_env):
-            cred = credentials.Certificate(cred_env)
+        if candidate_path:
+            logger.info(f"[FCM] Initializing Firebase Admin SDK with key file: {candidate_path}")
+            cred = credentials.Certificate(candidate_path)
         else:
-            parsed = json.loads(cred_env)
-            cred = credentials.Certificate(parsed)
+            logger.info("[FCM] Initializing Firebase Admin SDK with JSON string credentials.")
+            cred = credentials.Certificate(cred_json_dict)
 
         firebase_admin.initialize_app(cred)
         _firebase_initialized = True
@@ -83,6 +133,15 @@ def send_multicast_fcm(
         message = messaging.MulticastMessage(
             tokens=tokens,
             notification=messaging.Notification(title=title, body=body),
+            android=messaging.AndroidConfig(
+                priority="high",
+                notification=messaging.AndroidNotification(
+                    channel_id="high_importance_channel",
+                    sound="default",
+                    default_sound=True,
+                    default_vibrate_timings=True,
+                ),
+            ),
             data=clean_data,
         )
         batch_response = messaging.send_each_for_multicast(message)

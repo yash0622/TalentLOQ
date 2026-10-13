@@ -40,6 +40,9 @@ app.*.symbols
 .env
 *.env
 backend/.env
+*serviceAccountKey*.json
+*firebase-adminsdk*.json
+firebase_credentials.json
 k8s/secret.yaml
 *secret.yaml
 !k8s/secret.example.yaml
