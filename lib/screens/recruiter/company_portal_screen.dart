@@ -97,7 +97,7 @@ class _CompanyPortalScreenState extends State<CompanyPortalScreen> with SingleTi
     final name = (item['name'] ?? item['candidate_name'] ?? 'Candidate').toString();
     final role = (item['drive_title'] ?? item['position'] ?? 'Candidate').toString();
     final studentId = (item['student_id'] ?? item['id'] ?? item['app_id'] ?? '').toString();
-    final cgpaVal = double.tryParse((item['cgpa'] ?? 8.0).toString()) ?? 8.0;
+    final cgpaVal = double.tryParse((item['cgpa'] ?? item['CGPA'] ?? 0.0).toString()) ?? 0.0;
     final matchVal = double.tryParse((item['match_score'] ?? 90).toString()) ?? 90.0;
     final skillsList = List<String>.from(item['skills'] ?? ['Problem Solving', 'Core CS']);
     final resume = (item['resume_link'] ?? '').toString();
@@ -1075,7 +1075,7 @@ class _CompanyPortalScreenState extends State<CompanyPortalScreen> with SingleTi
     final companyName = (item['company_name'] ?? 'Company').toString();
     final driveTitle = (item['drive_title'] ?? 'Placement Role').toString();
     final course = (item['course'] ?? item['education'] ?? 'B.Tech CSE').toString();
-    final cgpa = (item['cgpa'] ?? 8.0).toString();
+    final cgpa = (item['cgpa'] ?? item['CGPA'] ?? 'N/A').toString();
     final vStatus = (item['validation_status'] ?? 'pending').toString().toLowerCase();
     final currentRound = item['current_round'] ?? 1;
     final finalOutcome = (item['final_outcome'] ?? '').toString().toLowerCase();

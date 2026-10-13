@@ -287,7 +287,7 @@ class StudentRegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
     education: str = Field(default="B.Tech Computer Science")
-    CGPA: float = Field(default=8.0, ge=0.0, le=10.0, alias="cgpa")
+    CGPA: float = Field(default=0.0, ge=0.0, le=10.0, alias="cgpa")
     active_backlogs: int = Field(default=0, ge=0)
     closed_backlogs: int = Field(default=0, ge=0)
     skills: List[str] = Field(default_factory=list)
@@ -332,6 +332,14 @@ class DeviceTokenRequest(BaseModel):
 
 class PasswordChangeRequest(BaseModel):
     old_password: str
+    new_password: str = Field(min_length=8)
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    otp: str = Field(min_length=6, max_length=6)
     new_password: str = Field(min_length=8)
 
 class CareerPreferencesUpdateRequest(BaseModel):
@@ -673,6 +681,7 @@ class DriveLeanResponse(BaseModel):
     ctc_max: float
     min_cgpa: float
     is_eligible: Optional[bool] = None
+    student_cgpa: Optional[float] = None
     extracted_required_skills: List[str] = Field(default_factory=list)
 
 class MatchingStudentItem(BaseModel):

@@ -118,6 +118,7 @@ async def list_published_placement_drives(
             ctc_max=float(d.get("ctc_max", 12.0)),
             min_cgpa=float(d.get("min_cgpa") or d.get("cgpa_criteria", 6.0)),
             is_eligible=is_eligible,
+            student_cgpa=float(student_doc.get("CGPA") or student_doc.get("cgpa") or 0.0) if student_doc else None,
         ))
 
     has_more = (skip + len(items)) < total_count
@@ -423,6 +424,8 @@ async def get_placement_drive_detail(
         student_doc = await students_collection.find_one({"student_id": sid}) or await students_collection.find_one({"user_id": sid}) or await users_collection.find_one({"user_id": sid})
 
     drive["is_eligible"] = compute_eligibility(student_doc, drive) if student_doc else False
+    if student_doc:
+        drive["student_cgpa"] = float(student_doc.get("CGPA") or student_doc.get("cgpa") or 0.0)
 
     # Applied state is intentionally scoped to the requesting student's JWT.
     # Never infer this from a drive-level counter or another student's record.

@@ -176,9 +176,10 @@ class NotificationService {
   /// Revokes device token on logout.
   Future<void> unregisterOnLogout() async {
     try {
-      await _authService.logout();
-      await FirebaseMessaging.instance.deleteToken();
       _fcmToken = null;
+      await FirebaseMessaging.instance
+          .deleteToken()
+          .timeout(const Duration(seconds: 2));
     } catch (e) {
       debugPrint('[FCM] Error during logout token revocation: $e');
     }

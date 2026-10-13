@@ -130,7 +130,7 @@ class _RecruiterDashboardScreenState extends State<RecruiterDashboardScreen> {
                                   final name = (s['full_name'] ?? s['name'] ?? 'Student Candidate').toString();
                                   final email = (s['email'] ?? 'student@univ.edu').toString();
                                   final course = (s['course'] ?? 'BTECH_CSE').toString();
-                                  final cgpa = (s['CGPA'] ?? s['cgpa'] ?? 8.0).toString();
+                                  final cgpa = (s['CGPA'] ?? s['cgpa'] ?? 'N/A').toString();
                                   final hasAccess = s['has_placement_access'] ?? true;
 
                                   return Card(

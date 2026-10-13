@@ -113,7 +113,7 @@ class _RoundResultScreenState extends State<RoundResultScreen> {
     final isDark = theme.brightness == Brightness.dark;
     final app = widget.applicantData;
     final name = (app['name'] ?? app['full_name'] ?? app['student_name'] ?? 'Candidate Name').toString();
-    final cgpa = (app['cgpa'] ?? app['CGPA'] ?? 8.0).toString();
+    final cgpa = (app['cgpa'] ?? app['CGPA'] ?? 'N/A').toString();
     final course = (app['course'] ?? app['degree'] ?? 'BTECH_CSE').toString();
     final isEligible = app['is_eligible'] ?? app['meets_cgpa_criteria'] ?? true;
     final currentRound = app['current_round'] ?? 0;

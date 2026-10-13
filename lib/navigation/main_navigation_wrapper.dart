@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/services.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
@@ -79,6 +80,8 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
           _currentTab = 0;
         });
       }
+      unawaited(_tokenStorage.saveIsLoggedIn(false));
+      unawaited(_tokenStorage.clearTokens());
     };
     _checkAuthStatus();
   }
@@ -140,9 +143,7 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
   }
 
   Future<void> _handleLogout() async {
-    await _tokenStorage.saveIsLoggedIn(false);
-    await NotificationService.instance.unregisterOnLogout();
-    await _authService.logout();
+    // 1. Instantly transition UI to logged-out state (zero visual delay)
     setState(() {
       _isLoggedIn = false;
       _isRecruiterMode = false;
@@ -152,6 +153,7 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
       _selectedConversation = null;
       _showInterviewScheduler = false;
     });
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -160,6 +162,18 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
         ),
       );
     }
+
+    // 2. Update local storage immediately
+    await _tokenStorage.saveIsLoggedIn(false);
+
+    // 3. Perform network & Firebase token revocations in background
+    unawaited(Future.wait([
+      _authService.logout(),
+      NotificationService.instance.unregisterOnLogout(),
+    ]).catchError((e) {
+      debugPrint('[LOGOUT] Background cleanup error: $e');
+      return <dynamic>[];
+    }));
   }
 
   void _handleBackAction() {

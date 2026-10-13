@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/drive_service.dart';
 import '../../services/application_visibility_state.dart';
+import '../../services/token_storage_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/pdf_viewer_widget.dart';
 import '../../widgets/skeleton_widgets.dart';
@@ -8,7 +9,7 @@ import '../../widgets/skeleton_widgets.dart';
 class CompanyDetailScreen extends StatefulWidget {
   final String listingId;
   final Map<String, dynamic>? initialData;
-  final double studentCgpa;
+  final double? studentCgpa;
   final bool hasResume;
   final VoidCallback? onNavigateToProfile;
 
@@ -16,7 +17,7 @@ class CompanyDetailScreen extends StatefulWidget {
     super.key,
     required this.listingId,
     this.initialData,
-    this.studentCgpa = 8.0,
+    this.studentCgpa,
     this.hasResume = true,
     this.onNavigateToProfile,
   });
@@ -34,6 +35,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
   bool _isApplying = false;
   Map<String, dynamic>? _atsAnalysis;
   bool _isLoadingAts = false;
+  double? _studentCgpa;
 
   @override
   void initState() {
@@ -42,9 +44,28 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
       _detail = widget.initialData;
       _isLoading = false;
     }
+    _loadStudentCgpa();
     _fetchDetail();
     _checkMyStatus();
     _fetchAtsCheck();
+  }
+
+  Future<void> _loadStudentCgpa() async {
+    try {
+      final profile = await TokenStorageService().getStudentProfile();
+      final cg = (profile['cgpa'] as num?)?.toDouble();
+      if (cg != null && cg > 0.0 && mounted) {
+        setState(() => _studentCgpa = cg);
+      }
+    } catch (_) {}
+  }
+
+  double get _effectiveCgpa {
+    final detailCgpa = (_detail?['student_cgpa'] as num?)?.toDouble();
+    if (detailCgpa != null && detailCgpa > 0.0) return detailCgpa;
+    if (_studentCgpa != null && _studentCgpa! > 0.0) return _studentCgpa!;
+    if (widget.studentCgpa != null && widget.studentCgpa! > 0.0) return widget.studentCgpa!;
+    return 0.0;
   }
 
   Future<void> _fetchAtsCheck() async {
@@ -135,7 +156,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
           content: Text(
             'You do not meet all eligibility criteria for this posting.\n\n'
             '• Min CGPA Cutoff: ${(_detail?['cgpa_criteria'] ?? _detail?['min_cgpa'] ?? 6.0)}\n'
-            '• Your CGPA: ${widget.studentCgpa.toStringAsFixed(2)}\n\n'
+            '• Your CGPA: ${_effectiveCgpa > 0.0 ? _effectiveCgpa.toStringAsFixed(2) : "N/A"}\n\n'
             'Your application will record an eligibility flag. Apply anyway?',
           ),
           actions: [
@@ -877,13 +898,16 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
               size: 20,
             ),
             const SizedBox(width: 8),
-            Text(
-              'Resume ATS Doctor & Fit',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+            Expanded(
+              child: Text(
+                'Resume Score',
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-            const Spacer(),
+            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(

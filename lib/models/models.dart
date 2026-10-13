@@ -72,7 +72,7 @@ class Candidate {
     this.skillGaps = const [],
     this.isAutoApplied = false,
     this.studentApproved = true,
-    this.cgpa = 8.0,
+    this.cgpa = 0.0,
     this.activeBacklogs = 0,
     this.closedBacklogs = 0,
     this.resumeUrl,

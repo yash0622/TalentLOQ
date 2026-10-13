@@ -61,7 +61,7 @@ class SmartAIMatchResponse(BaseModel):
     fit_level: str = Field(..., description="'High Fit' | 'Medium Fit' | 'Needs Preparation'")
     role_archetype: str = Field("General Software Engineering", description="Detected job archetype")
     calibrated_weights: Dict[str, int] = Field(default_factory=lambda: {"core": 40, "project": 30, "readiness": 15, "learnability": 15})
-    current_round: int = Field(1, ge=1, description="Interview round this evaluation is targeted for")
+    current_round: int = Field(1, ge=0, description="Interview round this evaluation is targeted for")
     rubric_breakdown: RubricBreakdown
     semantic_equivalences: List[SemanticEquivalence] = Field(default_factory=list)
     project_evidence: List[ProjectEvidence] = Field(default_factory=list)
@@ -616,7 +616,7 @@ Placement Role:
             )
 
         # Round Focus & Objectives
-        if current_round == 1:
+        if current_round <= 1:
             round_focus = "Round 1 Objective: Validate core syntax, fundamental problem-solving, and foundational logic."
         elif current_round == 2:
             round_focus = "Round 2 Objective: Deep-dive into project architecture, API concurrency, and design trade-offs."

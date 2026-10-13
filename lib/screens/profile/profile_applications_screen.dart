@@ -283,6 +283,14 @@ class _ProfileApplicationsScreenState extends State<ProfileApplicationsScreen> {
       List<dynamic> internships = (remoteProfile['internships'] is List)
           ? remoteProfile['internships'] as List
           : [];
+      if (internships.isNotEmpty) {
+        internshipCount = internships.length;
+      } else if (internshipCount > 10) {
+        internshipCount = 1;
+      }
+
+      final noiseRegex = RegExp(r'^(?:\d{4}|\d+\+|[0-9]+|january|february|march|april|may|june|july|august|september|october|november|december|intern|trainee|developer|engineer|technology|solutions|services|across|resolved|reusable|bugs|layout|team|projects?)$', caseSensitive: false);
+      techSkills = techSkills.where((s) => !noiseRegex.hasMatch(s.trim()) && !s.contains(RegExp(r'\d{4}')) && s.trim().length > 1).toList();
       List<String> deploymentSkills = [];
       if (remoteProfile['deployment_skills'] is List) {
         deploymentSkills = List<String>.from(remoteProfile['deployment_skills'] as List);
@@ -574,26 +582,32 @@ class _ProfileApplicationsScreenState extends State<ProfileApplicationsScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: tierColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(10),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: tierColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(Icons.analytics_rounded, color: tierColor, size: 22),
                         ),
-                        child: Icon(Icons.analytics_rounded, color: tierColor, size: 22),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Resume ATS Score',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Resume ATS Score',
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(

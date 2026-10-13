@@ -393,9 +393,11 @@ class SkillMatcherEngine:
                                 canon = self.taxonomy[tok_lower]
                                 if not technical_only or (not is_soft_skill(canon) and not is_spoken_language(canon)):
                                     found_canonical.add(canon)
-                            elif len(raw_tok.split()) <= 3:
-                                if not technical_only or (not is_soft_skill(raw_tok) and not is_spoken_language(raw_tok)):
-                                    found_canonical.add(raw_tok)
+                            elif len(raw_tok.split()) <= 2:
+                                from app.document_detection.parsers import ResumeParser
+                                if ResumeParser._is_valid_skill_token(raw_tok):
+                                    if not technical_only or (not is_soft_skill(raw_tok) and not is_spoken_language(raw_tok)):
+                                        found_canonical.add(raw_tok.title())
                 except Exception as e:
                     logger.debug(f"GLiNER zero-shot extraction notice: {e}")
 

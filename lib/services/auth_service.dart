@@ -272,18 +272,62 @@ class AuthService {
   /// Logout (POST /auth/logout)
   Future<void> logout() async {
     try {
-      try {
-        await _dio.delete('/notifications/device-token');
-      } catch (_) {}
-
       final refreshToken = await _tokenStorage.getRefreshToken();
-      if (refreshToken != null && refreshToken.isNotEmpty) {
-        await _dio.post('/auth/logout', data: {'refresh_token': refreshToken});
-      }
+      await Future.wait([
+        _dio.delete('/notifications/device-token').catchError((_) => Response(requestOptions: RequestOptions())),
+        if (refreshToken != null && refreshToken.isNotEmpty)
+          _dio.post('/auth/logout', data: {'refresh_token': refreshToken}).catchError((_) => Response(requestOptions: RequestOptions())),
+      ]).timeout(const Duration(seconds: 2), onTimeout: () => []);
     } catch (_) {
       // Ignore errors on logout
     } finally {
       await _tokenStorage.clearTokens();
+    }
+  }
+
+  /// Request Password Reset OTP (POST /auth/forgot-password)
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    try {
+      final response = await _dio.post(
+        '/auth/forgot-password',
+        data: {'email': email.trim().toLowerCase()},
+      );
+      if (response.data is Map) {
+        return Map<String, dynamic>.from(response.data as Map);
+      }
+      return {'message': 'Verification code sent.'};
+    } on DioException catch (e) {
+      final errorDetail = e.response?.data is Map
+          ? (e.response?.data['detail'] ?? e.response?.data['message'] ?? e.message)
+          : e.message;
+      throw Exception(errorDetail ?? 'Failed to request password reset.');
+    }
+  }
+
+  /// Reset Password with OTP (POST /auth/reset-password)
+  Future<Map<String, dynamic>> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/auth/reset-password',
+        data: {
+          'email': email.trim().toLowerCase(),
+          'otp': otp.trim(),
+          'new_password': newPassword.trim(),
+        },
+      );
+      if (response.data is Map) {
+        return Map<String, dynamic>.from(response.data as Map);
+      }
+      return {'message': 'Password reset successfully.'};
+    } on DioException catch (e) {
+      final errorDetail = e.response?.data is Map
+          ? (e.response?.data['detail'] ?? e.response?.data['message'] ?? e.message)
+          : e.message;
+      throw Exception(errorDetail ?? 'Failed to reset password.');
     }
   }
 }

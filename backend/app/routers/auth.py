@@ -32,6 +32,8 @@ from app.models import (
     LogoutRequest,
     DeviceTokenRequest,
     PasswordChangeRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
     CareerPreferencesUpdateRequest,
     DEFAULT_CAREER_PREFERENCES,
     UserModel,
@@ -581,6 +583,129 @@ async def change_password(
         pass
 
     return {"message": "Password changed successfully. Please log in with your new password."}
+
+
+# ---------------------------------------------------------------------------
+# Forgot Password & Reset Password Endpoints
+# ---------------------------------------------------------------------------
+@router.post("/forgot-password")
+@limiter.limit("5/15minute")
+async def forgot_password(data: ForgotPasswordRequest, request: Request):
+    """
+    Sends a 6-digit OTP to the registered user's email address for password reset.
+    """
+    email_clean = data.email.lower().strip()
+    user_doc = await users_collection.find_one({"email": email_clean})
+    if not user_doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No account found with this email address.",
+        )
+
+    user = UserModel(**user_doc)
+    now = datetime.now(timezone.utc)
+    otp_code = generate_otp()
+    otp_expires = now + timedelta(minutes=settings.TEMP_TOKEN_EXPIRE_MINUTES)
+
+    await otps_collection.delete_many({"user_id": user.user_id})
+    otp_doc = OTPModel(
+        user_id=user.user_id,
+        otp_hash=hash_token(otp_code),
+        expires_at=otp_expires,
+    )
+    await otps_collection.insert_one(otp_doc.model_dump())
+
+    send_otp_email(user.email, otp_code)
+
+    try:
+        client_ip = request.client.host if request.client else "127.0.0.1"
+        user_agent = request.headers.get("user-agent", "unknown")
+        audit = AuditLogModel(
+            user_id=user.user_id,
+            action="FORGOT_PASSWORD_OTP_SENT",
+            ip=client_ip,
+            device=user_agent,
+        )
+        await audit_logs_collection.insert_one(audit.model_dump())
+    except Exception:
+        pass
+
+    resp: Dict[str, Any] = {
+        "status": "otp_sent",
+        "message": f"Verification code sent to {email_clean}.",
+    }
+    if settings.SHOW_DEV_OTP:
+        resp["dev_otp"] = otp_code
+    return resp
+
+
+@router.post("/reset-password")
+@limiter.limit("5/15minute")
+async def reset_password(data: ResetPasswordRequest, request: Request):
+    """
+    Verifies 6-digit OTP and resets the account password.
+    """
+    email_clean = data.email.lower().strip()
+    user_doc = await users_collection.find_one({"email": email_clean})
+    if not user_doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No account found with this email address.",
+        )
+
+    user = UserModel(**user_doc)
+    otp_record = await otps_collection.find_one({"user_id": user.user_id})
+    if not otp_record:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No active verification code found or code expired.",
+        )
+
+    now = datetime.now(timezone.utc)
+    expires_at = otp_record["expires_at"].replace(tzinfo=timezone.utc) if otp_record["expires_at"].tzinfo is None else otp_record["expires_at"]
+
+    if now > expires_at or not hmac.compare_digest(otp_record["otp_hash"], hash_token(data.otp)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification code.",
+        )
+
+    # Clean up OTP
+    await otps_collection.delete_many({"user_id": user.user_id})
+
+    # Update password
+    new_hash = hash_password(data.new_password)
+    await users_collection.update_one(
+        {"user_id": user.user_id},
+        {"$set": {
+            "password_hash": new_hash,
+            "failed_login_attempts": 0,
+            "lockout_until": None,
+            "must_change_password": False,
+        }}
+    )
+
+    # Invalidate existing refresh tokens
+    await refresh_tokens_collection.update_many(
+        {"user_id": user.user_id},
+        {"$set": {"revoked": True}}
+    )
+
+    try:
+        client_ip = request.client.host if request.client else "127.0.0.1"
+        user_agent = request.headers.get("user-agent", "unknown")
+        audit = AuditLogModel(
+            user_id=user.user_id,
+            action="PASSWORD_RESET_SUCCESS",
+            ip=client_ip,
+            device=user_agent,
+        )
+        await audit_logs_collection.insert_one(audit.model_dump())
+    except Exception:
+        pass
+
+    return {"message": "Password reset successfully. You can now log in with your new password."}
+
 
 
 import uuid

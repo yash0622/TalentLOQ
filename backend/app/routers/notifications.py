@@ -10,7 +10,7 @@ from app.database import (
     notifications_collection,
     notification_preferences_collection,
 )
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, get_optional_current_user
 from app.services.push_notification_service import (
     notify,
     DEFAULT_PREFERENCES,
@@ -87,19 +87,23 @@ async def register_device_token(
 @router.delete("/device-token", status_code=status.HTTP_200_OK)
 async def delete_device_token(
     token: Optional[str] = Query(None, description="Specific token to unregister; if omitted, clears all for user"),
-    user_payload: dict = Depends(get_current_user),
+    user_payload: Optional[dict] = Depends(get_optional_current_user),
 ):
     """
     DELETE /notifications/device-token
     Called on user logout to revoke push delivery to this device.
     """
-    user_id = user_payload.get("sub", "")
-    query: Dict[str, Any] = {"user_id": user_id}
+    user_id = user_payload.get("sub", "") if user_payload else ""
+    query: Dict[str, Any] = {}
+    if user_id:
+        query["user_id"] = user_id
     if token and token.strip():
         query["token"] = token.strip()
+    if not query:
+        return {"status": "ok", "deleted_count": 0}
 
     result = await device_tokens_collection.delete_many(query)
-    logger.info(f"[DeviceToken] Deleted {result.deleted_count} token(s) for user '{user_id}'")
+    logger.info(f"[DeviceToken] Deleted {result.deleted_count} token(s) for user '{user_id or token}'")
     return {"status": "ok", "deleted_count": result.deleted_count}
 
 

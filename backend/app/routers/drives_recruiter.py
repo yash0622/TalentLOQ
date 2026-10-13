@@ -1070,7 +1070,7 @@ async def get_applicant_ai_insight(
             {"listing_id": drive_id, "user_id": student_id},
         ]
     })
-    current_round = int(app.get("current_round", 1)) if app else 1
+    current_round = max(1, int(app.get("current_round", 1) or 1)) if app else 1
     round_history = app.get("round_history", []) if app else []
 
     return await GroqMatcherService.analyze_match(

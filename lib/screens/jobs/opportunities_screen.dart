@@ -9,7 +9,7 @@ import 'company_detail_screen.dart';
 import '../../services/application_visibility_state.dart';
 
 class OpportunitiesScreen extends StatefulWidget {
-  final double studentCgpa;
+  final double? studentCgpa;
   final bool hasResume;
   final VoidCallback? onNavigateToProfile;
   final bool embedInTab;
@@ -17,7 +17,7 @@ class OpportunitiesScreen extends StatefulWidget {
 
   const OpportunitiesScreen({
     super.key,
-    this.studentCgpa = 8.0,
+    this.studentCgpa,
     this.hasResume = true,
     this.onNavigateToProfile,
     this.embedInTab = false,

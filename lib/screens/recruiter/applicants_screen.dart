@@ -197,7 +197,7 @@ class _ApplicantsScreenState extends State<ApplicantsScreen> {
     final email = (app['email'] ?? app['email_address'] ?? 'Not Specified').toString();
     final phone = (app['phone_number'] ?? app['phone'] ?? app['mobile'] ?? 'Not Specified').toString();
     final course = (app['course'] ?? app['degree'] ?? 'BTECH_CSE').toString();
-    final cgpa = (app['cgpa'] ?? app['CGPA'] ?? 8.0).toString();
+    final cgpa = (app['cgpa'] ?? app['CGPA'] ?? 'N/A').toString();
     final meetsCgpa = app['is_eligible'] ?? app['meets_cgpa_criteria'] ?? true;
     final appliedAt = _formatAppliedAt(app['applied_at']);
     final currentRound = (app['current_round'] ?? 0).toString();
@@ -612,7 +612,7 @@ class _ApplicantsScreenState extends State<ApplicantsScreen> {
                 ),
                 itemBuilder: (context, app, index) {
                   final studentName = (app['name'] ?? app['full_name'] ?? 'Student Candidate').toString();
-                  final cgpa = (app['cgpa'] ?? app['CGPA'] ?? 8.0).toString();
+                  final cgpa = (app['cgpa'] ?? app['CGPA'] ?? 'N/A').toString();
                   final meetsCgpa = app['is_eligible'] ?? app['meets_cgpa_criteria'] ?? true;
                   final appliedAt = app['applied_at'] ?? 'Recently';
                   final resumeLink = (app['resume_link'] ?? app['resume_id_used'] ?? app['resume_url'] ?? app['resume_id'] ?? '').toString();

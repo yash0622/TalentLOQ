@@ -71,16 +71,20 @@ class DocumentVerificationService:
         # 0. Pre-Flight Image Quality Gate & Non-Destructive Enhancer (OpenCV + Pillow)
         quality_check = await asyncio.to_thread(ImageQualityPreprocessor.check_quality, contents, filename=clean_filename)
         if quality_check.is_image and not quality_check.is_acceptable:
-            logger.warning(
-                "Upload rejected at pre-flight gate for user_id=%s, file=%s: %s",
-                user_id,
-                clean_filename,
-                quality_check.rejection_reason,
-            )
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=quality_check.rejection_reason,
-            )
+            # Only abort with 400 if the image file is genuinely corrupt / unparseable
+            if "corrupt" in (quality_check.rejection_reason or "").lower() or "unsupported" in (quality_check.rejection_reason or "").lower():
+                logger.warning(
+                    "Upload rejected at pre-flight gate for user_id=%s, file=%s: %s",
+                    user_id,
+                    clean_filename,
+                    quality_check.rejection_reason,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=quality_check.rejection_reason,
+                )
+            else:
+                logger.info("Pre-flight image quality advisory for %s: %s", clean_filename, quality_check.rejection_reason)
 
         if quality_check.is_image:
             contents, opt_meta = await asyncio.to_thread(ImageQualityPreprocessor.preprocess_and_optimize, contents, filename=clean_filename)
@@ -587,7 +591,10 @@ class DocumentVerificationService:
 
             # Internships & Work Experience
             internships_list = parsed_fields.get("internships") or []
-            internship_cnt = parsed_fields.get("internship_count", len(internships_list))
+            if isinstance(internships_list, list) and len(internships_list) > 0:
+                internship_cnt = len(internships_list)
+            else:
+                internship_cnt = min(int(parsed_fields.get("internship_count") or 0), 10)
             apply_field("internships", internships_list, "Resume Internships")
             apply_field("internship_count", int(internship_cnt), "Resume Internships Count")
 

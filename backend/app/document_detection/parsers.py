@@ -410,13 +410,35 @@ class BaseParser:
 class ResumeParser(BaseParser):
     @staticmethod
     def _is_valid_skill_token(token: str) -> bool:
-        """Validate dynamic skill candidate: reject noise, institutions, ordinals, course codes, degrees."""
-        if not (2 <= len(token) <= 30):
+        """Validate dynamic skill candidate: reject noise, dates, roles, institutions, stopwords, fragments."""
+        token = token.strip(" ,;()•-·\t\r\n.:\"'")
+        if not (2 <= len(token) <= 25):
             return False
-        if token.isdigit():
+        # Reject numbers, years, versions without letters, or things like "000+", "100+", "2024"
+        if re.search(r'^\d|\d\+|\b\d{3,}\b|\b(?:19|20)\d{2}\b', token):
             return False
         lower = token.lower()
         if lower in _SKILL_NOISE_WORDS:
+            return False
+        # Reject months or date ranges like "2023 - may", "jan", "may"
+        if re.search(r'\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)\b', lower):
+            return False
+        # Reject job roles, internships, titles (e.g. "AI-ML Intern", "Web Development Intern")
+        role_words = ("intern", "internship", "trainee", "developer", "engineer", "lead", "analyst", "assistant", "manager", "officer", "executive", "head", "specialist")
+        if any(re.search(r'\b' + re.escape(rw) + r'\b', lower) for rw in role_words):
+            return False
+        # Reject company/org suffixes (e.g. "Arth Technology")
+        company_words = ("technology", "technologies", "solutions", "services", "consultancy", "ltd", "pvt", "inc", "corp", "company", "enterprises", "innovations", "systems")
+        if any(re.search(r'\b' + re.escape(cw) + r'\b', lower) for cw in company_words):
+            return False
+        # Reject stopwords & sentence prepositions/conjunctions (e.g. "across mobile", "an", "and Firefox.", "and Llama")
+        stop_words = ("and", "an", "the", "across", "for", "from", "with", "into", "over", "under", "by", "to", "of", "in", "at", "as", "on", "per", "about", "such")
+        words = lower.split()
+        if any(w in stop_words for w in words):
+            return False
+        # Reject generic resume verbs / descriptors leaking from bullets (e.g. "resolved layout bugs", "reusable codebases", "power theft", "concurrent operators")
+        desc_words = ("resolved", "reusable", "concurrent", "operators", "detection", "theft", "tablet", "mobile", "bugs", "layout", "codebases", "backend", "frontend", "fullstack", "architect", "pipeline")
+        if any(re.search(r'\b' + re.escape(dw) + r'\b', lower) for dw in desc_words):
             return False
         # Reject ordinals / grade years like "3rd year", "1st sem", "10th"
         if re.match(r'^\d+(?:st|nd|rd|th)\b', lower):
@@ -425,7 +447,7 @@ class ResumeParser(BaseParser):
         if re.match(r'^[a-z]{2,4}\s*\d{2,4}$', lower):
             return False
         # Reject organizational and academic boilerplate words
-        org_words = ("school", "college", "university", "institute", "ltd", "pvt", "inc", "corp", "department", "semester", "academic")
+        org_words = ("school", "college", "university", "institute", "department", "semester", "academic")
         if any(w in lower for w in org_words):
             return False
         # Reject academic degrees leaking into skills
@@ -435,8 +457,8 @@ class ResumeParser(BaseParser):
         section_headers = ("professional experience", "work experience", "technical skills", "projects", "education", "certifications", "publications", "experience", "profile", "summary")
         if lower in section_headers:
             return False
-        # Phrases of 4+ words that are not recognized canonical skills are noise
-        if len(token.split()) >= 4:
+        # Phrases of 3+ words that are not recognized canonical skills are noise
+        if len(words) >= 3:
             return False
         return True
 
@@ -478,6 +500,13 @@ class ResumeParser(BaseParser):
                 line_clean = line.strip()
                 if not line_clean:
                     continue
+                # If hit next section header or date range, break out
+                line_lower = line_clean.lower()
+                if any(hdr in line_lower for hdr in ["experience", "employment", "internship", "project", "education", "declaration"]):
+                    if len(line_clean.split()) <= 4:
+                        break
+                if re.search(r'\b(?:19|20)\d{2}\b', line_clean) and any(m in line_lower for m in ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec", "present"]):
+                    break
                 if ":" in line_clean:
                     _, items_str = line_clean.split(":", 1)
                 else:
@@ -663,16 +692,17 @@ class ResumeParser(BaseParser):
                         "description": f"Internship at {clean_m}"
                     })
 
+        # Ground truth: actual parsed internships count
         internship_count = len(internships)
-        # Check if text explicitly says e.g. "Completed 2 internships" or "2+ internships"
-        num_match = re.search(r'\b(\d+)\+?\s*internships?\b', text_lower)
-        if num_match:
-            try:
-                explicit_cnt = int(num_match.group(1))
-                if explicit_cnt > internship_count:
-                    internship_count = explicit_cnt
-            except Exception:
-                pass
+        if internship_count == 0:
+            num_match = re.search(r'\b([1-5])\+?\s*internships?\b', text_lower)
+            if num_match:
+                try:
+                    internship_count = int(num_match.group(1))
+                except Exception:
+                    pass
+        else:
+            internship_count = min(internship_count, 10)
 
         # Filter out soft skills and spoken languages from technical_skills
         from app.services.skill_matcher import is_soft_skill, is_spoken_language

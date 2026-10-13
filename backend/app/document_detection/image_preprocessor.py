@@ -111,11 +111,10 @@ class ImageQualityPreprocessor:
             }
 
             # Check 1: Severe underexposure (pitch black / taken in dark without flash)
-            if mean_brightness < DARK_THRESHOLD_MEAN:
+            if mean_brightness < 15.0:
                 logger.warning(
-                    "Image rejected due to underexposure: brightness=%.2f < threshold=%.2f for %s",
+                    "Image rejected due to severe underexposure: brightness=%.2f for %s",
                     mean_brightness,
-                    DARK_THRESHOLD_MEAN,
                     filename,
                 )
                 return QualityCheckResult(
@@ -131,11 +130,13 @@ class ImageQualityPreprocessor:
                 )
 
             # Check 2: Severe overexposure / washout (near pure white with no contrast / text)
-            if mean_brightness > GLARE_THRESHOLD_MEAN and std_brightness < 8.0:
+            # Only flag if there is essentially zero ink variance and no text edges detected
+            if mean_brightness > 252.0 and std_brightness < 2.0 and laplacian_var < 5.0:
                 logger.warning(
-                    "Image rejected due to glare washout: brightness=%.2f, std=%.2f for %s",
+                    "Image rejected due to glare washout: brightness=%.2f, std=%.2f, laplacian=%.2f for %s",
                     mean_brightness,
                     std_brightness,
+                    laplacian_var,
                     filename,
                 )
                 return QualityCheckResult(
@@ -144,18 +145,17 @@ class ImageQualityPreprocessor:
                     blur_score=laplacian_var,
                     brightness_score=mean_brightness,
                     rejection_reason=(
-                        "Image is washed out by bright glare with no visible text. "
+                        "Image appears blank or washed out with no visible text. "
                         "Please retake the photo avoiding direct reflection or flash glare on laminated paper."
                     ),
                     metadata=metadata,
                 )
 
-            # Check 3: Severe motion blur or out-of-focus lens
-            if laplacian_var < BLUR_THRESHOLD_LAPLACIAN:
+            # Check 3: Severe motion blur or out-of-focus camera capture
+            if laplacian_var < 15.0 and std_brightness > 10.0:
                 logger.warning(
-                    "Image rejected due to severe blur: score=%.2f < threshold=%.2f for %s",
+                    "Image flagged for blur: score=%.2f < threshold=15.0 for %s",
                     laplacian_var,
-                    BLUR_THRESHOLD_LAPLACIAN,
                     filename,
                 )
                 return QualityCheckResult(

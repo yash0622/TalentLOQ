@@ -10,7 +10,11 @@ ALLOWED_MIME_TYPES = {
     "text/plain",
     "application/octet-stream",
     "image/jpeg",
+    "image/jpg",
     "image/png",
+    "image/x-png",
+    "image/pjpeg",
+    "image/webp",
 }
 
 ALLOWED_EXTENSIONS = {
@@ -21,6 +25,7 @@ ALLOWED_EXTENSIONS = {
     ".jpg",
     ".jpeg",
     ".png",
+    ".webp",
 }
 
 MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024  # 5MB limit
@@ -61,13 +66,27 @@ def validate_file_upload(file: UploadFile, contents: bytes) -> Tuple[str, str]:
             detail=f"Invalid file extension '{ext}'. Allowed extensions: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
         )
 
-    # 3. MIME type validation
-    content_type = (file.content_type or "").lower()
-    if content_type not in ALLOWED_MIME_TYPES:
+    # 3. MIME type validation (normalize and strip parameters like '; charset=...')
+    raw_content_type = (file.content_type or "").lower().split(";")[0].strip()
+    if not raw_content_type or raw_content_type == "application/octet-stream":
+        # Infer content type from validated extension
+        if ext in (".png",):
+            raw_content_type = "image/png"
+        elif ext in (".jpg", ".jpeg"):
+            raw_content_type = "image/jpeg"
+        elif ext in (".webp",):
+            raw_content_type = "image/webp"
+        elif ext == ".pdf":
+            raw_content_type = "application/pdf"
+        else:
+            raw_content_type = "application/octet-stream"
+
+    if raw_content_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid MIME type '{content_type}'. Allowed MIME types: {', '.join(sorted(ALLOWED_MIME_TYPES))}"
+            detail=f"Invalid MIME type '{raw_content_type}'. Allowed MIME types: {', '.join(sorted(ALLOWED_MIME_TYPES))}"
         )
+    content_type = raw_content_type
 
     # 4. Max file size enforcement (5MB)
     if len(contents) > MAX_FILE_SIZE_BYTES:
